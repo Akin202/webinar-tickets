@@ -69,12 +69,12 @@ export const Countdown: React.FC<CountdownProps> = ({ targetIso }) => {
       {units.map((unit) => (
         <div
           key={unit.label}
-          className={`flex flex-col items-center justify-center min-w-[70px] sm:min-w-[80px] px-2.5 py-2.5 rounded-xl bg-[#0e1117] border border-[#21262d] shadow-sm relative overflow-hidden ${
+          className={`flex flex-col items-center justify-center min-w-[70px] sm:min-w-[80px] px-2.5 py-2.5 rounded-xl bg-brand-card border border-brand-border shadow-sm relative overflow-hidden ${
             prefersReducedMotion ? '' : 'transition-transform duration-200 hover:scale-105'
           }`}
         >
-          <div className="absolute top-0 inset-x-0 h-0.5 bg-[#e2ff00]/40" />
-          <span className="text-2xl sm:text-3xl font-black text-[#e2ff00] tracking-tight font-display">
+          <div className="absolute top-0 inset-x-0 h-0.5 bg-brand-primary/40" />
+          <span className="text-2xl sm:text-3xl font-black text-brand-primary tracking-tight font-display">
             {String(unit.value).padStart(2, '0')}
           </span>
           <span className="text-[10px] sm:text-xs font-bold tracking-widest text-slate-400 uppercase mt-0.5">

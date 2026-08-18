@@ -1,6 +1,0 @@
-{
-  "name": "LAST DANCE — Engineering Signout After Party",
-  "description": "Official ticketing platform for LAST DANCE Engineering Signout After Party at The Grid. High-octane party passes, instant QR check-in, and offline door scanner.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

@@ -118,7 +118,10 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  // Resend ticket stub
+  // TODO(handoff): this only shows a toast — no email is sent. Wire to
+  // Resend once ticket delivery exists (Session 2). Must be rate-limited
+  // and written to an audit log; resending is a support action on real
+  // buyer data.
   const handleResend = (order: Order, e: React.MouseEvent) => {
     e.stopPropagation();
     triggerNotice(`Ticket link resent to ${order.buyerEmail}`);
@@ -186,10 +189,10 @@ export const AdminPage: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] text-[#1a1f2c] font-sans antialiased pb-16">
+    <div className="min-h-screen bg-tool-surface text-tool-ink font-sans antialiased pb-16">
       {/* Action Notification Toast */}
       {actionNotice && (
-        <div className="fixed top-4 right-4 z-50 bg-[#1e293b] text-white text-xs font-semibold px-4 py-3 rounded-lg shadow-xl flex items-center gap-2 border border-slate-700">
+        <div className="fixed top-4 right-4 z-50 bg-tool-ink-muted text-white text-xs font-semibold px-4 py-3 rounded-lg shadow-xl flex items-center gap-2 border border-slate-700">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{actionNotice}</span>
         </div>
@@ -240,7 +243,7 @@ export const AdminPage: React.FC = () => {
             <Link
               to="/scan"
               id="admin-open-scanner-btn"
-              className="min-h-[36px] px-3 py-1.5 bg-[#0f172a] hover:bg-[#1e293b] text-white rounded text-xs font-bold flex items-center gap-1.5 transition-colors"
+              className="min-h-[36px] px-3 py-1.5 bg-tool-ink-deep hover:bg-tool-ink-muted text-white rounded text-xs font-bold flex items-center gap-1.5 transition-colors"
             >
               <QrCode className="w-3.5 h-3.5" />
               <span>Door Scanner</span>
@@ -587,7 +590,7 @@ export const AdminPage: React.FC = () => {
                             {order.buyerPhone}
                           </td>
                           <td className="py-2.5 px-3 text-center font-mono font-bold text-gray-900">
-                            {order.ticketCount}
+                            {order.quantity}
                           </td>
                           <td className="py-2.5 px-3 font-mono font-bold text-gray-900">
                             {koboToNaira(order.totalKobo)}

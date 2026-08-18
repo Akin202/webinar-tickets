@@ -297,13 +297,13 @@ export const ScanPage: React.FC<ScanPageProps> = ({
   }, [currentResult]);
 
   return (
-    <div className="min-h-screen bg-[#090b10] text-white flex flex-col font-sans select-none overflow-hidden">
+    <div className="min-h-screen bg-scan-surface text-white flex flex-col font-sans select-none overflow-hidden">
       {/* ========================================================
           1. PERSISTENT TOP BAR (Always Visible)
       ======================================================== */}
       <header
         id="scanner-top-bar"
-        className="bg-[#12151e] border-b border-slate-800 px-3 py-2.5 flex items-center justify-between text-xs z-30"
+        className="bg-scan-card border-b border-slate-800 px-3 py-2.5 flex items-center justify-between text-xs z-30"
       >
         <div className="flex items-center gap-3">
           {/* Online / Offline Dot */}
@@ -333,7 +333,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({
 
         {/* Admitted Count vs Capacity */}
         <div className="flex items-center gap-2">
-          <div className="bg-[#1c2230] px-2.5 py-1 rounded text-center">
+          <div className="bg-scan-border px-2.5 py-1 rounded text-center">
             <span className="text-[10px] text-slate-400 uppercase tracking-wider block leading-none">
               Admitted
             </span>
@@ -438,7 +438,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value.toUpperCase())}
                   placeholder="e.g. SGN-7K2M-882194-A"
-                  className="w-full min-h-[56px] px-4 rounded-xl bg-[#151924] border-2 border-slate-700 text-white font-mono text-center text-lg font-black tracking-wider focus:border-emerald-500 focus:outline-none uppercase"
+                  className="w-full min-h-[56px] px-4 rounded-xl bg-scan-raised border-2 border-slate-700 text-white font-mono text-center text-lg font-black tracking-wider focus:border-emerald-500 focus:outline-none uppercase"
                   autoFocus
                 />
 
@@ -462,7 +462,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({
               onClick={() =>
                 setScannerMode((m) => (m === 'camera' ? 'manual' : 'camera'))
               }
-              className="w-full min-h-[48px] bg-[#1a202e] hover:bg-[#252d40] border border-slate-700 text-slate-200 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
+              className="w-full min-h-[48px] bg-scan-raised hover:bg-scan-border-strong border border-slate-700 text-slate-200 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
             >
               {scannerMode === 'camera' ? (
                 <>
@@ -491,14 +491,14 @@ export const ScanPage: React.FC<ScanPageProps> = ({
           onClick={handleNextScan}
           className={`fixed inset-0 z-50 flex flex-col justify-between p-5 sm:p-8 cursor-pointer select-none text-white transition-all duration-200 ${
             currentResult.kind === 'admitted'
-              ? 'bg-[#047857] ring-8 ring-emerald-300/50'
+              ? 'bg-scan-admit ring-8 ring-emerald-300/50'
               : currentResult.kind === 'already_used'
-              ? 'bg-[#991b1b] ring-8 ring-amber-400/60'
+              ? 'bg-scan-already ring-8 ring-amber-400/60'
               : currentResult.kind === 'not_found'
-              ? 'bg-[#7f1d1d] ring-8 ring-rose-300/40'
+              ? 'bg-scan-notfound ring-8 ring-rose-300/40'
               : currentResult.kind === 'voided'
-              ? 'bg-[#881337] ring-8 ring-rose-400/50'
-              : 'bg-[#b45309] ring-8 ring-amber-300/50'
+              ? 'bg-scan-void ring-8 ring-rose-400/50'
+              : 'bg-scan-unpaid ring-8 ring-amber-300/50'
           }`}
         >
           {pulseFlash && (
@@ -510,7 +510,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({
               className="w-full h-4 rounded-full overflow-hidden border border-yellow-400 mb-2"
               style={{
                 backgroundImage:
-                  'repeating-linear-gradient(45deg, #000000, #000000 12px, #facc15 12px, #facc15 24px)',
+                  'repeating-linear-gradient(45deg, var(--scan-hazard-ink), var(--scan-hazard-ink) 12px, var(--scan-hazard) 12px, var(--scan-hazard) 24px)',
               }}
               title="Duplicate Hazard Indicator"
             />
@@ -520,7 +520,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {currentResult.kind === 'admitted' && (
-                <div className="w-14 h-14 rounded-full bg-white text-[#047857] border-4 border-emerald-200 flex items-center justify-center font-black shadow-lg animate-pulse">
+                <div className="w-14 h-14 rounded-full bg-white text-scan-admit border-4 border-emerald-200 flex items-center justify-center font-black shadow-lg animate-pulse">
                   <CheckCircle2 className="w-9 h-9" />
                 </div>
               )}
@@ -530,17 +530,17 @@ export const ScanPage: React.FC<ScanPageProps> = ({
                 </div>
               )}
               {currentResult.kind === 'not_found' && (
-                <div className="w-14 h-14 rounded-full bg-white text-[#991b1b] border-4 border-rose-300 flex items-center justify-center font-black shadow-lg">
+                <div className="w-14 h-14 rounded-full bg-white text-scan-already border-4 border-rose-300 flex items-center justify-center font-black shadow-lg">
                   <XCircle className="w-9 h-9" />
                 </div>
               )}
               {currentResult.kind === 'voided' && (
-                <div className="w-14 h-14 rounded-full bg-white text-[#881337] border-4 border-rose-300 flex items-center justify-center font-black shadow-lg">
+                <div className="w-14 h-14 rounded-full bg-white text-scan-void border-4 border-rose-300 flex items-center justify-center font-black shadow-lg">
                   <XCircle className="w-9 h-9" />
                 </div>
               )}
               {currentResult.kind === 'unpaid' && (
-                <div className="w-14 h-14 rounded-full bg-white text-[#b45309] border-4 border-amber-300 flex items-center justify-center font-black shadow-lg">
+                <div className="w-14 h-14 rounded-full bg-white text-scan-unpaid border-4 border-amber-300 flex items-center justify-center font-black shadow-lg">
                   <AlertTriangle className="w-9 h-9" />
                 </div>
               )}
@@ -688,7 +688,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({
               className="w-full h-4 rounded-full overflow-hidden border border-yellow-400 mb-3"
               style={{
                 backgroundImage:
-                  'repeating-linear-gradient(45deg, #000000, #000000 12px, #facc15 12px, #facc15 24px)',
+                  'repeating-linear-gradient(45deg, var(--scan-hazard-ink), var(--scan-hazard-ink) 12px, var(--scan-hazard) 12px, var(--scan-hazard) 24px)',
               }}
             />
           )}

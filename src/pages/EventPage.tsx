@@ -84,11 +84,11 @@ export const EventPage: React.FC = () => {
   const unitPriceFormatted = koboToNaira(eventConfig.ticketing.priceKobo);
 
   return (
-    <div className="min-h-screen bg-[#060709] text-white flex flex-col selection:bg-[#e2ff00] selection:text-black">
+    <div className="min-h-screen bg-brand-surface text-white flex flex-col selection:bg-brand-primary selection:text-black">
       {/* ========================================================
           1. TOP TICKER RIBBON (Poster Ticker Tape)
       ======================================================== */}
-      <div className="w-full bg-[#e2ff00] text-black py-1.5 px-4 overflow-hidden select-none border-b border-black font-mono-code font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-between">
+      <div className="w-full bg-brand-primary text-black py-1.5 px-4 overflow-hidden select-none border-b border-black font-mono-code font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-between">
         <div className="flex items-center gap-6 animate-pulse whitespace-nowrap mx-auto">
           <span>⚡ {eventConfig.event.tagline.toUpperCase()}</span>
           <span>•</span>
@@ -107,7 +107,7 @@ export const EventPage: React.FC = () => {
       ======================================================== */}
       <header
         id="event-hero"
-        className="relative w-full overflow-hidden border-b border-[#21262d] bg-[#080a0e] pt-6 sm:pt-10 pb-12 sm:pb-16 px-4 sm:px-6"
+        className="relative w-full overflow-hidden border-b border-brand-border bg-brand-raised pt-6 sm:pt-10 pb-12 sm:pb-16 px-4 sm:px-6"
       >
         {/* Background Nightclub Atmosphere */}
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
@@ -117,25 +117,25 @@ export const EventPage: React.FC = () => {
               backgroundImage: `url('${eventConfig.brand.heroImageUrl}')`,
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#060709] via-[#060709]/80 to-[#060709]/60" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#060709_90%)]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-brand-surface via-brand-surface/80 to-brand-surface/60" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,var(--brand-surface)_90%)]" />
         </div>
 
         {/* Flyer Container */}
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
           {/* Main Poster Box Frame */}
-          <div className="w-full rounded-3xl bg-[#0a0d12]/90 border-2 border-[#21262d] p-6 sm:p-10 shadow-2xl backdrop-blur-md relative overflow-hidden">
+          <div className="w-full rounded-3xl bg-brand-card/90 border-2 border-brand-border p-6 sm:p-10 shadow-2xl backdrop-blur-md relative overflow-hidden">
             {/* Top Acid Neon Glow Line */}
-            <div className="absolute top-0 inset-x-0 h-1.5 bg-[#e2ff00] shadow-[0_0_15px_#e2ff00]" />
+            <div className="absolute top-0 inset-x-0 h-1.5 bg-brand-primary shadow-[0_0_15px_var(--brand-primary)]" />
 
             {/* Poster Header: Giant condensed LAST DANCE Title */}
             <div className="text-center pt-2 pb-4">
-              <h1 className="text-6xl sm:text-8xl md:text-9xl font-black tracking-tighter text-[#e2ff00] uppercase font-display leading-[0.88] drop-shadow-[0_4px_24px_rgba(226,255,0,0.35)] select-none">
+              <h1 className="text-6xl sm:text-8xl md:text-9xl font-black tracking-tighter text-brand-primary uppercase font-display leading-[0.88] drop-shadow-[0_4px_24px_rgba(226,255,0,0.35)] select-none">
                 {eventConfig.event.tagline.toUpperCase()}
               </h1>
 
               {/* Sub-banners: ENGINEERING SIGNOUT (Left) & AFTER PARTY (Right) */}
-              <div className="flex items-center justify-between mt-3 sm:mt-4 pt-2 border-t-2 border-b-2 border-[#e2ff00]/40 text-[#e2ff00] font-black uppercase text-xs sm:text-lg md:text-xl tracking-widest px-2 font-mono-code">
+              <div className="flex items-center justify-between mt-3 sm:mt-4 pt-2 border-t-2 border-b-2 border-brand-primary/40 text-brand-primary font-black uppercase text-xs sm:text-lg md:text-xl tracking-widest px-2 font-mono-code">
                 <span>ENGINEERING SIGNOUT</span>
                 <span className="hidden sm:inline text-white">•</span>
                 <span>AFTER PARTY</span>
@@ -149,30 +149,30 @@ export const EventPage: React.FC = () => {
               </p>
 
               {/* Dress Code & Vibe Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#161b22] border border-[#30363d] text-xs sm:text-sm font-bold text-[#e2ff00]">
-                <Shirt className="w-4 h-4 text-[#e2ff00]" />
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-card-hover border border-brand-border-strong text-xs sm:text-sm font-bold text-brand-primary">
+                <Shirt className="w-4 h-4 text-brand-primary" />
                 <span>Dress Code: {eventConfig.event.dressCode}</span>
               </div>
             </div>
 
             {/* Poster Bottom Anchors (Flyer style: Doors Open, Venue, Date) */}
-            <div className="pt-4 border-t-2 border-[#21262d] flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+            <div className="pt-4 border-t-2 border-brand-border flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
               {/* Left Time Stamp */}
               <div className="flex flex-col items-center sm:items-start">
                 <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
                   Doors Open
                 </span>
-                <span className="text-4xl sm:text-6xl font-black text-[#e2ff00] font-display tracking-tight leading-none">
+                <span className="text-4xl sm:text-6xl font-black text-brand-primary font-display tracking-tight leading-none">
                   {eventConfig.event.doorsOpen}
                 </span>
               </div>
 
               {/* Center Venue Stamp */}
-              <div className="flex flex-col items-center justify-center px-4 py-2 rounded-2xl bg-[#161b22] border border-[#e2ff00]/30 shadow-inner">
+              <div className="flex flex-col items-center justify-center px-4 py-2 rounded-2xl bg-brand-card-hover border border-brand-primary/30 shadow-inner">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
                   Official Venue
                 </span>
-                <span className="text-xl sm:text-2xl font-black text-[#e2ff00] font-display tracking-[0.2em] uppercase">
+                <span className="text-xl sm:text-2xl font-black text-brand-primary font-display tracking-[0.2em] uppercase">
                   {eventConfig.event.venueName}
                 </span>
                 <span className="text-[11px] text-slate-400 font-mono truncate max-w-[220px]">
@@ -185,14 +185,14 @@ export const EventPage: React.FC = () => {
                 <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
                   Event Date
                 </span>
-                <span className="text-4xl sm:text-6xl font-black text-[#e2ff00] font-display tracking-tight leading-none">
+                <span className="text-4xl sm:text-6xl font-black text-brand-primary font-display tracking-tight leading-none">
                   25/08
                 </span>
               </div>
             </div>
 
             {/* Countdown to Event */}
-            <div className="mt-8 pt-6 border-t border-[#21262d] text-center">
+            <div className="mt-8 pt-6 border-t border-brand-border text-center">
               <span className="text-xs uppercase tracking-widest text-slate-400 font-bold block mb-2">
                 Countdown to Doors Open ({eventConfig.event.doorsOpen})
               </span>
@@ -204,7 +204,7 @@ export const EventPage: React.FC = () => {
               <Link
                 to="/checkout"
                 id="hero-primary-cta-btn"
-                className={`w-full sm:w-auto min-h-[56px] px-10 py-4 rounded-2xl bg-[#e2ff00] hover:bg-[#c9e600] text-black font-black text-lg sm:text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-[0_0_25px_rgba(226,255,0,0.4)] ${
+                className={`w-full sm:w-auto min-h-[56px] px-10 py-4 rounded-2xl bg-brand-primary hover:bg-brand-primary-hover text-black font-black text-lg sm:text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-[0_0_25px_rgba(226,255,0,0.4)] ${
                   prefersReducedMotion ? '' : 'transition-transform duration-150 active:scale-95'
                 }`}
               >
@@ -217,13 +217,13 @@ export const EventPage: React.FC = () => {
                 type="button"
                 id="hero-share-btn"
                 onClick={handleShare}
-                className="w-full sm:w-auto min-h-[56px] px-6 py-4 rounded-2xl bg-[#161b22] hover:bg-[#21262d] border border-[#30363d] text-white font-bold text-base flex items-center justify-center gap-2 transition-colors"
+                className="w-full sm:w-auto min-h-[56px] px-6 py-4 rounded-2xl bg-brand-card-hover hover:bg-brand-border border border-brand-border-strong text-white font-bold text-base flex items-center justify-center gap-2 transition-colors"
                 aria-label="Share event link"
               >
                 {copiedLink ? (
                   <>
-                    <CheckCircle className="w-5 h-5 text-[#e2ff00]" />
-                    <span className="text-[#e2ff00]">Link Copied!</span>
+                    <CheckCircle className="w-5 h-5 text-brand-primary" />
+                    <span className="text-brand-primary">Link Copied!</span>
                   </>
                 ) : (
                   <>
@@ -243,7 +243,7 @@ export const EventPage: React.FC = () => {
       <section
         id="live-status-strip"
         aria-label="Live ticket capacity status"
-        className="w-full bg-[#080a0e] border-b border-[#21262d] py-6 px-4 sm:px-6"
+        className="w-full bg-brand-raised border-b border-brand-border py-6 px-4 sm:px-6"
       >
         <div className="max-w-3xl mx-auto">
           <CapacityMeter
@@ -274,11 +274,11 @@ export const EventPage: React.FC = () => {
               <div
                 key={itemTitle}
                 id={`include-card-${index}`}
-                className={`p-6 rounded-2xl bg-[#0e1117] border border-[#21262d] flex flex-col gap-3 relative overflow-hidden group ${
-                  prefersReducedMotion ? '' : 'transition-all duration-200 hover:border-[#e2ff00]/50 hover:-translate-y-1'
+                className={`p-6 rounded-2xl bg-brand-card border border-brand-border flex flex-col gap-3 relative overflow-hidden group ${
+                  prefersReducedMotion ? '' : 'transition-all duration-200 hover:border-brand-primary/50 hover:-translate-y-1'
                 }`}
               >
-                <div className="w-12 h-12 rounded-xl bg-[#161b22] border border-[#21262d] flex items-center justify-center text-[#e2ff00] group-hover:bg-[#e2ff00] group-hover:text-black transition-colors">
+                <div className="w-12 h-12 rounded-xl bg-brand-card-hover border border-brand-border flex items-center justify-center text-brand-primary group-hover:bg-brand-primary group-hover:text-black transition-colors">
                   <Sparkles className="w-6 h-6" />
                 </div>
                 <h3 className="text-lg sm:text-xl font-bold text-white leading-snug">
@@ -298,7 +298,7 @@ export const EventPage: React.FC = () => {
       ======================================================== */}
       <section
         id="the-details-section"
-        className="w-full py-12 sm:py-16 px-4 sm:px-6 bg-[#0a0d12] border-y border-[#21262d]"
+        className="w-full py-12 sm:py-16 px-4 sm:px-6 bg-brand-card border-y border-brand-border"
       >
         <div className="max-w-4xl mx-auto">
           <SectionHeading
@@ -347,10 +347,10 @@ export const EventPage: React.FC = () => {
         id="pricing-cta-section"
         className="w-full py-16 sm:py-20 px-4 sm:px-6 max-w-4xl mx-auto text-center"
       >
-        <div className="p-8 sm:p-12 rounded-3xl bg-[#0e1117] border-2 border-[#e2ff00]/40 flex flex-col items-center relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 inset-x-0 h-1.5 bg-[#e2ff00]" />
+        <div className="p-8 sm:p-12 rounded-3xl bg-brand-card border-2 border-brand-primary/40 flex flex-col items-center relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 inset-x-0 h-1.5 bg-brand-primary" />
 
-          <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-[#e2ff00] mb-2 px-3 py-1 rounded-full bg-[#e2ff00]/10 border border-[#e2ff00]/30">
+          <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-brand-primary mb-2 px-3 py-1 rounded-full bg-brand-primary/10 border border-brand-primary/30">
             Official Admission Pass
           </span>
 
@@ -374,7 +374,7 @@ export const EventPage: React.FC = () => {
           <Link
             to="/checkout"
             id="pricing-section-cta-btn"
-            className={`w-full sm:w-auto min-h-[58px] px-12 py-4 rounded-2xl bg-[#e2ff00] hover:bg-[#c9e600] text-black font-black text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(226,255,0,0.5)] ${
+            className={`w-full sm:w-auto min-h-[58px] px-12 py-4 rounded-2xl bg-brand-primary hover:bg-brand-primary-hover text-black font-black text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(226,255,0,0.5)] ${
               prefersReducedMotion ? '' : 'transition-transform duration-150 active:scale-95'
             }`}
           >
@@ -393,7 +393,7 @@ export const EventPage: React.FC = () => {
       ======================================================== */}
       <section
         id="faq-section"
-        className="w-full py-12 sm:py-16 px-4 sm:px-6 max-w-3xl mx-auto border-t border-[#21262d]"
+        className="w-full py-12 sm:py-16 px-4 sm:px-6 max-w-3xl mx-auto border-t border-brand-border"
       >
         <SectionHeading
           title="Frequently Asked Questions"
@@ -408,7 +408,7 @@ export const EventPage: React.FC = () => {
               <div
                 key={faq.question}
                 id={`faq-item-${index}`}
-                className="rounded-2xl bg-[#0e1117] border border-[#21262d] overflow-hidden"
+                className="rounded-2xl bg-brand-card border border-brand-border overflow-hidden"
               >
                 <button
                   type="button"
@@ -416,13 +416,13 @@ export const EventPage: React.FC = () => {
                   onClick={() => toggleFaq(index)}
                   aria-expanded={isOpen}
                   aria-controls={`faq-answer-${index}`}
-                  className="w-full min-h-[54px] p-4 sm:p-5 flex items-center justify-between gap-4 text-left transition-colors hover:bg-[#161b22]"
+                  className="w-full min-h-[54px] p-4 sm:p-5 flex items-center justify-between gap-4 text-left transition-colors hover:bg-brand-card-hover"
                 >
                   <span className="text-base sm:text-lg font-bold text-white leading-snug">
                     {faq.question}
                   </span>
                   <div
-                    className="w-8 h-8 rounded-full bg-[#161b22] flex items-center justify-center text-[#e2ff00] flex-shrink-0"
+                    className="w-8 h-8 rounded-full bg-brand-card-hover flex items-center justify-center text-brand-primary flex-shrink-0"
                     style={{
                       transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                       transition: prefersReducedMotion ? 'none' : 'transform 0.2s ease',
@@ -435,7 +435,7 @@ export const EventPage: React.FC = () => {
                 {isOpen && (
                   <div
                     id={`faq-answer-${index}`}
-                    className="px-4 pb-5 sm:px-5 sm:pb-6 text-sm sm:text-base text-slate-300 leading-relaxed border-t border-[#21262d] pt-3"
+                    className="px-4 pb-5 sm:px-5 sm:pb-6 text-sm sm:text-base text-slate-300 leading-relaxed border-t border-brand-border pt-3"
                   >
                     {faq.answer}
                   </div>
@@ -447,7 +447,7 @@ export const EventPage: React.FC = () => {
           {/* Refund policy box */}
           <div
             id="faq-refund-policy-box"
-            className="p-5 rounded-2xl bg-[#161b22] border border-[#21262d] text-xs sm:text-sm text-slate-300 mt-6"
+            className="p-5 rounded-2xl bg-brand-card-hover border border-brand-border text-xs sm:text-sm text-slate-300 mt-6"
           >
             <strong className="text-white font-bold block mb-1">
               Official Policy:
@@ -460,15 +460,15 @@ export const EventPage: React.FC = () => {
       {/* ========================================================
           8. STICKY MOBILE BUY BAR
       ======================================================== */}
-      <div className="fixed bottom-0 inset-x-0 z-40 sm:hidden bg-[#060709]/95 border-t border-[#21262d] p-3 backdrop-blur-lg flex items-center justify-between gap-3">
+      <div className="fixed bottom-0 inset-x-0 z-40 sm:hidden bg-brand-surface/95 border-t border-brand-border p-3 backdrop-blur-lg flex items-center justify-between gap-3">
         <div className="flex flex-col">
           <span className="text-[10px] uppercase font-bold text-slate-400">LAST DANCE PASS</span>
-          <span className="text-lg font-black text-[#e2ff00] font-mono leading-none">{unitPriceFormatted}</span>
+          <span className="text-lg font-black text-brand-primary font-mono leading-none">{unitPriceFormatted}</span>
         </div>
         <Link
           to="/checkout"
           id="mobile-sticky-buy-btn"
-          className="min-h-[44px] px-6 py-2.5 rounded-xl bg-[#e2ff00] text-black font-black text-sm uppercase flex items-center gap-1.5 shadow-lg active:scale-95"
+          className="min-h-[44px] px-6 py-2.5 rounded-xl bg-brand-primary text-black font-black text-sm uppercase flex items-center gap-1.5 shadow-lg active:scale-95"
         >
           <span>GET PASS →</span>
         </Link>
@@ -479,12 +479,12 @@ export const EventPage: React.FC = () => {
       ======================================================== */}
       <footer
         id="event-footer"
-        className="w-full mt-auto bg-[#080a0e] border-t border-[#21262d] py-12 px-4 sm:px-6 pb-20 sm:pb-12"
+        className="w-full mt-auto bg-brand-raised border-t border-brand-border py-12 px-4 sm:px-6 pb-20 sm:pb-12"
       >
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center md:items-start justify-between gap-8 text-center md:text-left">
           {/* Organiser Column */}
           <div className="max-w-sm">
-            <h3 className="text-2xl font-black text-[#e2ff00] font-display uppercase tracking-tight mb-1">
+            <h3 className="text-2xl font-black text-brand-primary font-display uppercase tracking-tight mb-1">
               {eventConfig.event.name}
             </h3>
             <p className="text-sm text-slate-400 mb-2">
@@ -504,7 +504,7 @@ export const EventPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto pt-8 mt-8 border-t border-[#21262d] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div className="max-w-5xl mx-auto pt-8 mt-8 border-t border-brand-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p>© 2026 {eventConfig.event.name} • {eventConfig.event.hostedBy}. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link to="/admin" className="hover:text-white transition-colors">

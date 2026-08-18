@@ -18,7 +18,8 @@ import {
 // ============================================================
 // CONTRACT — the ONLY boundary between UI and data.
 // Components import from here and nowhere else.
-// TODO(handoff): replace every body with real queries.
+// TODO(handoff): every function below returns mock data. Each carries its
+//   own marker describing what the real implementation must do.
 // Signatures must NOT change — components depend on them.
 // ============================================================
 
@@ -29,6 +30,8 @@ let currentStaffUser: StaffUser | null = { ...mockStaffUser };
 
 const delay = (ms = 180) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// TODO(handoff): Replace with a SECURITY DEFINER aggregate function. anon
+//   must get counts only, never rows.
 export async function getSalesSummary(): Promise<SalesSummary> {
   await delay(150);
   const sold = currentTickets.filter((t) => t.status !== 'void').length;
@@ -59,6 +62,10 @@ export async function getSalesSummary(): Promise<SalesSummary> {
   };
 }
 
+// TODO(handoff): Replace with POST /api/checkout. Compute total_kobo
+//   SERVER-SIDE from event_settings; never trust a client amount. Check
+//   capacity and sales_close_at inside a transaction. Rate-limit per IP and
+//   per phone.
 export async function initiatePurchase(input: {
   buyerName: string;
   buyerEmail: string;
@@ -116,6 +123,8 @@ export async function initiatePurchase(input: {
   };
 }
 
+// TODO(handoff): Read-only verify against Paystack. The webhook is
+//   authoritative - this must never mark an order paid.
 export async function confirmPurchase(
   reference: string
 ): Promise<{ order: Order; tickets: Ticket[] }> {
@@ -128,6 +137,8 @@ export async function confirmPurchase(
   return { order, tickets };
 }
 
+// TODO(handoff): Server-side lookup. Door role may read code, holder_name,
+//   holder_matric_number and status ONLY.
 export async function getTicketByCode(code: string): Promise<Ticket | null> {
   await delay(150);
   const clean = code.trim().toUpperCase();
@@ -135,6 +146,8 @@ export async function getTicketByCode(code: string): Promise<Ticket | null> {
   return ticket ? { ...ticket } : null;
 }
 
+// TODO(handoff): Server component using the service role key, gated on an
+//   unguessable reference.
 export async function getOrderByReference(reference: string): Promise<{
   order: Order;
   tickets: Ticket[];
@@ -148,6 +161,8 @@ export async function getOrderByReference(reference: string): Promise<{
   return { order: { ...order }, tickets: [...tickets] };
 }
 
+// TODO(handoff): Gate on featureFlags.allowNameChange, close at
+//   sales_close_at, rate-limit, and write every rename to an audit log.
 export async function renameTicketHolder(
   ticketId: string,
   holderName: string,
@@ -161,11 +176,17 @@ export async function renameTicketHolder(
 }
 
 // ---- Door / scanner ----
+// TODO(handoff): Return the MINIMAL manifest only - code, holder_name,
+//   holder_matric_number, status. Buyer phone and email must never reach a
+//   door phone.
 export async function getCheckInManifest(): Promise<Ticket[]> {
   await delay(200);
   return [...currentTickets];
 }
 
+// TODO(handoff): First scan wins. Implement as a conditional UPDATE (SET
+//   status='checked_in' WHERE status='valid') and treat zero rows affected as
+//   already_used. Do NOT read-then-write - two doors will race.
 export async function checkInTicket(input: {
   code: string;
   staffId: string;
@@ -269,6 +290,8 @@ export async function checkInTicket(input: {
   };
 }
 
+// TODO(handoff): Server resolves conflicts by earliest scanned_at. Surface
+//   duplicates in the admin conflicts view.
 export async function syncQueuedCheckIns(
   queued: Array<{ code: string; staffId: string; deviceId: string; scannedAt: string }>
 ): Promise<CheckInResult[]> {
@@ -282,6 +305,7 @@ export async function syncQueuedCheckIns(
 }
 
 // ---- Admin ----
+// TODO(handoff): Admin role only. Paginate server-side.
 export async function listOrders(opts?: {
   status?: Order['status'];
   query?: string;
@@ -316,6 +340,7 @@ export async function listOrders(opts?: {
   };
 }
 
+// TODO(handoff): Admin role only.
 export async function listTickets(opts?: {
   status?: Ticket['status'];
   query?: string;
@@ -340,6 +365,8 @@ export async function listTickets(opts?: {
   return filtered;
 }
 
+// TODO(handoff): Admin only. Append to the check_ins audit log; never
+//   hard-delete.
 export async function voidTicket(ticketId: string, reason: string): Promise<void> {
   await delay(150);
   const ticket = currentTickets.find((t) => t.id === ticketId);
@@ -348,6 +375,8 @@ export async function voidTicket(ticketId: string, reason: string): Promise<void
   }
 }
 
+// TODO(handoff): Admin only. Must count against capacity like any other
+//   ticket.
 export async function issueComplimentaryTicket(input: {
   holderName: string;
   holderMatricNumber: string | null;
@@ -393,6 +422,8 @@ export async function issueComplimentaryTicket(input: {
   return newTicket;
 }
 
+// TODO(handoff): Admin only. This is ~400 students' names, phone numbers and
+//   matric numbers - log every export.
 export async function exportOrdersCsv(): Promise<string> {
   await delay(150);
   const headers = ['Order Reference', 'Buyer Name', 'Email', 'Phone', 'Matric Number', 'Quantity', 'Total NGN', 'Status', 'Date'];
@@ -410,6 +441,7 @@ export async function exportOrdersCsv(): Promise<string> {
   return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 }
 
+// TODO(handoff): Read from the Supabase Auth session, not from client state.
 export async function getCurrentStaffUser(): Promise<StaffUser | null> {
   await delay(100);
   return currentStaffUser ? { ...currentStaffUser } : null;

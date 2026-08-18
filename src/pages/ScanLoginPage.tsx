@@ -7,12 +7,18 @@ export const ScanLoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [pin, setPin] = useState<string>('');
 
+  // TODO(handoff): there is NO authentication here. Any PIN — any four
+  // digits — navigates straight to /scan, and /scan itself is unguarded.
+  // Session 2: verify the PIN against Supabase Auth, establish a staff
+  // session lasting 24h (staff must not be logged out mid-event), and put
+  // middleware in front of /scan and /admin.
+
   const handleDigit = (digit: string) => {
     if (pin.length < 6) {
       const newPin = pin + digit;
       setPin(newPin);
       if (newPin.length === 4) {
-        // Auto-navigate once standard 4-digit PIN is entered
+        // TODO(handoff): auto-advance on length, with no verification.
         setTimeout(() => navigate('/scan'), 300);
       }
     }
@@ -28,11 +34,12 @@ export const ScanLoginPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // TODO(handoff): verify the PIN server-side before granting entry.
     navigate('/scan');
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] text-[#1a1f2c] font-sans flex flex-col justify-between p-4 sm:p-6">
+    <div className="min-h-screen bg-tool-surface text-tool-ink font-sans flex flex-col justify-between p-4 sm:p-6">
       {/* Top Header */}
       <header className="flex items-center justify-between">
         <Link

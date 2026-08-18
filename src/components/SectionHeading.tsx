@@ -21,7 +21,7 @@ export const SectionHeading: React.FC<SectionHeadingProps> = ({
       className={`mb-6 sm:mb-8 ${align === 'center' ? 'text-center mx-auto' : 'text-left'}`}
     >
       {eyebrow && (
-        <span className="inline-block text-xs sm:text-sm font-bold uppercase tracking-widest text-[#e2ff00] mb-1.5 px-2.5 py-0.5 rounded bg-[#e2ff00]/10 border border-[#e2ff00]/20">
+        <span className="inline-block text-xs sm:text-sm font-bold uppercase tracking-widest text-brand-primary mb-1.5 px-2.5 py-0.5 rounded bg-brand-primary/10 border border-brand-primary/20">
           {eyebrow}
         </span>
       )}

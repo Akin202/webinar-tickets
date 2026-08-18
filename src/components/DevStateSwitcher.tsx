@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Wrench,
@@ -7,8 +7,8 @@ import {
   CreditCard,
   Ticket as TicketIcon,
 } from 'lucide-react';
-import { PurchaseState, TicketStatus, CheckInResult } from '@/types/ticketing';
-import { mockOrders, mockTickets } from '@/lib/mock-data';
+import { PurchaseState, TicketStatus, CheckInResult, Order, Ticket } from '@/types/ticketing';
+import { listOrders, listTickets, getOrderByReference } from '@/lib/data-access';
 
 export interface DevStateSwitcherProps {
   forcedPurchaseState?: PurchaseState;
@@ -31,6 +31,33 @@ export const DevStateSwitcher: React.FC<DevStateSwitcherProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Fixtures for the forced states come through the data-access seam, never
+  // from mock-data directly — components must not know where data lives.
+  const [sampleOrder, setSampleOrder] = useState<Order | null>(null);
+  const [sampleTickets, setSampleTickets] = useState<Ticket[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [{ orders }, tickets] = await Promise.all([
+          listOrders({ limit: 1 }),
+          listTickets(),
+        ]);
+        if (cancelled || !orders[0]) return;
+        const result = await getOrderByReference(orders[0].reference);
+        if (cancelled || !result) return;
+        setSampleOrder(result.order);
+        setSampleTickets(tickets);
+      } catch {
+        // Dev-only affordance. A fixture load failure must never break the app.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const isCheckout = location.pathname.startsWith('/checkout');
   const isTicket = location.pathname.startsWith('/ticket');
   const isScan = location.pathname.startsWith('/scan');
@@ -44,14 +71,18 @@ export const DevStateSwitcher: React.FC<DevStateSwitcherProps> = ({
       state: { status: 'redirecting', authorizationUrl: '#' },
     },
     { label: 'Confirming (Payment Interstitial)', state: { status: 'confirming' } },
-    {
-      label: 'Success (Order Confirmed)',
-      state: {
-        status: 'success',
-        order: mockOrders[0],
-        tickets: mockTickets.filter((t) => t.orderId === mockOrders[0].id),
-      },
-    },
+    ...(sampleOrder
+      ? [
+          {
+            label: 'Success (Order Confirmed)',
+            state: {
+              status: 'success',
+              order: sampleOrder,
+              tickets: sampleTickets.filter((t) => t.orderId === sampleOrder.id),
+            } as PurchaseState,
+          },
+        ]
+      : []),
     { label: 'Sold Out (Capacity Reached)', state: { status: 'sold_out' } },
     { label: 'Sales Closed (Ended)', state: { status: 'sales_closed' } },
     {
@@ -69,43 +100,49 @@ export const DevStateSwitcher: React.FC<DevStateSwitcherProps> = ({
     { label: 'Void / Cancelled', status: 'void' },
   ];
 
+  // 'not_found' needs no ticket, so it is always available. The rest depend on
+  // loaded fixtures.
   const scanResults: { label: string; result: CheckInResult }[] = [
-    {
-      label: 'Admitted (Green)',
-      result: {
-        kind: 'admitted',
-        ticket: mockTickets[0],
-        admittedCount: 143,
-      },
-    },
-    {
-      label: 'Already Scanned (Red)',
-      result: {
-        kind: 'already_used',
-        ticket: mockTickets[1],
-        firstScannedAt: '2026-08-25T23:45:00Z',
-        firstScannedBy: 'Gate Door Lead (Emeka)',
-      },
-    },
+    ...(sampleTickets.length > 0
+      ? ([
+          {
+            label: 'Admitted (Green)',
+            result: {
+              kind: 'admitted',
+              ticket: sampleTickets[0],
+              admittedCount: 143,
+            },
+          },
+          {
+            label: 'Already Scanned (Red)',
+            result: {
+              kind: 'already_used',
+              ticket: sampleTickets[1] ?? sampleTickets[0],
+              firstScannedAt: '2026-08-25T23:45:00Z',
+              firstScannedBy: 'Gate Door Lead (Emeka)',
+            },
+          },
+          {
+            label: 'Voided (Red)',
+            result: {
+              kind: 'voided',
+              ticket: { ...(sampleTickets[2] ?? sampleTickets[0]), status: 'void' },
+            },
+          },
+          {
+            label: 'Unpaid (Amber)',
+            result: {
+              kind: 'unpaid',
+              ticket: sampleTickets[3] ?? sampleTickets[0],
+            },
+          },
+        ] as { label: string; result: CheckInResult }[])
+      : []),
     {
       label: 'Not Found (Dark Red)',
       result: {
         kind: 'not_found',
         scannedCode: 'UNRECOGNIZED-FAKE-QR-88912',
-      },
-    },
-    {
-      label: 'Voided (Red)',
-      result: {
-        kind: 'voided',
-        ticket: { ...mockTickets[2], status: 'void' },
-      },
-    },
-    {
-      label: 'Unpaid (Amber)',
-      result: {
-        kind: 'unpaid',
-        ticket: mockTickets[3] || mockTickets[0],
       },
     },
   ];
@@ -126,7 +163,7 @@ export const DevStateSwitcher: React.FC<DevStateSwitcherProps> = ({
           className={`min-h-[44px] px-3.5 py-2.5 rounded-full shadow-2xl flex items-center gap-2 text-xs font-black uppercase tracking-wider transition-all hover:scale-105 active:scale-95 border ${
             hasActiveOverride
               ? 'bg-amber-500 text-black border-amber-400 animate-bounce'
-              : 'bg-[#111319] text-white border-slate-700 hover:border-emerald-500'
+              : 'bg-brand-card text-white border-slate-700 hover:border-emerald-500'
           }`}
         >
           <Wrench className="w-4 h-4 text-emerald-400" />
@@ -139,7 +176,7 @@ export const DevStateSwitcher: React.FC<DevStateSwitcherProps> = ({
         /* Expanded Drawer */
         <div
           id="dev-switcher-panel"
-          className="w-80 sm:w-96 rounded-2xl bg-[#0f1219] border border-slate-700 shadow-2xl p-4 text-white space-y-3.5 max-h-[85vh] overflow-y-auto"
+          className="w-80 sm:w-96 rounded-2xl bg-brand-card border border-slate-700 shadow-2xl p-4 text-white space-y-3.5 max-h-[85vh] overflow-y-auto"
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">

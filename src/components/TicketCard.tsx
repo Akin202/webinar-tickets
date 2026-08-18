@@ -20,6 +20,15 @@ import { eventConfig } from '@/config/event.config';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
 import { renameTicketHolder } from '@/lib/data-access';
 
+/**
+ * QR contrast is FUNCTIONAL, not decorative — do not wire these to the
+ * brand palette. The code has to scan off a dim phone screen held under
+ * bad lighting at the door. Maximum luminance contrast wins; an on-brand
+ * QR that fails to scan costs an entry.
+ */
+const QR_BG = '#ffffff';
+const QR_FG = '#090a0f';
+
 export interface TicketCardProps {
   ticket: Ticket;
   forcedStatus?: TicketStatus;
@@ -85,17 +94,17 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         id={`ticket-card-${ticket.code}`}
         className={`relative overflow-hidden rounded-3xl border transition-all shadow-2xl ${
           activeStatus === 'valid'
-            ? 'bg-[#12141a] border-brand-primary/40 shadow-brand-primary/10'
+            ? 'bg-brand-card border-brand-primary/40 shadow-brand-primary/10'
             : activeStatus === 'checked_in'
-            ? 'bg-[#15161c] border-brand-muted/30 shadow-black/40'
-            : 'bg-[#181214] border-brand-urgent/40 shadow-brand-urgent/10'
+            ? 'bg-brand-card-hover border-brand-muted/30 shadow-black/40'
+            : 'bg-brand-card-danger border-brand-urgent/40 shadow-brand-urgent/10'
         }`}
       >
         {/* Top Metallic / Glow Accent Strip */}
         <div
           className={`h-2 w-full ${
             activeStatus === 'valid'
-              ? 'bg-[#e2ff00] shadow-[0_0_12px_#e2ff00]'
+              ? 'bg-brand-primary shadow-[0_0_12px_var(--brand-primary)]'
               : activeStatus === 'checked_in'
               ? 'bg-slate-700'
               : 'bg-rose-500'
@@ -103,10 +112,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         />
 
         {/* Ticket Header */}
-        <div className="p-6 pb-4 border-b border-[#21262d]">
+        <div className="p-6 pb-4 border-b border-brand-border">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#e2ff00] font-mono-code">
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-brand-primary font-mono-code">
                 Official Admission Pass
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase mt-0.5 font-display">
@@ -120,13 +129,13 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             {/* Status Pill */}
             <div>
               {activeStatus === 'valid' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e2ff00]/15 text-[#e2ff00] text-xs font-black uppercase tracking-wider border border-[#e2ff00]/40">
-                  <span className="w-2 h-2 rounded-full bg-[#e2ff00] animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-primary/15 text-brand-primary text-xs font-black uppercase tracking-wider border border-brand-primary/40">
+                  <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse" />
                   <span>Valid</span>
                 </span>
               )}
               {activeStatus === 'checked_in' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#161b22] text-slate-400 text-xs font-black uppercase tracking-wider border border-[#30363d]">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-card-hover text-slate-400 text-xs font-black uppercase tracking-wider border border-brand-border-strong">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Checked In</span>
                 </span>
@@ -150,8 +159,8 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               size={210}
               level="H"
               includeMargin={false}
-              bgColor="#ffffff"
-              fgColor="#090a0f"
+              bgColor={QR_BG}
+              fgColor={QR_FG}
               className={`transition-opacity duration-300 ${
                 activeStatus !== 'valid' ? 'opacity-30' : 'opacity-100'
               }`}
@@ -291,7 +300,12 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         {/* Footer Actions */}
         <div className="p-6 pt-4 bg-brand-subtle/40 space-y-3">
           <div className="grid grid-cols-2 gap-2">
-            {/* Save as image stub */}
+            {/* TODO(handoff): this does NOT save anything. It shows a
+                "screenshot this" notice. Implement real client-side PNG
+                export of the ticket card (Session 2) — this is the primary
+                delivery path in practice: students save the pass to their
+                gallery and forward it on WhatsApp. Must work on Android
+                Chrome, and the downloaded file must actually scan. */}
             <button
               type="button"
               onClick={() => {
@@ -317,7 +331,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           </div>
 
           <WhatsAppSupportButton
-            ticketCode={ticket.code}
+            orderRef={ticket.code}
             label="Need help with this ticket?"
           />
         </div>

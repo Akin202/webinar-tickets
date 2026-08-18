@@ -13,8 +13,13 @@ import { CheckoutValues, PurchaseState, Order, Ticket } from '@/types/ticketing'
 import { CheckoutForm } from '@/components/CheckoutForm';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { initiatePurchase, confirmPurchase } from '@/lib/data-access';
-import { mockOrders, mockTickets } from '@/lib/mock-data';
+import {
+  initiatePurchase,
+  confirmPurchase,
+  listOrders,
+  getOrderByReference,
+} from '@/lib/data-access';
+import { IS_DEV } from '@/lib/dev-mode';
 
 interface CheckoutPageProps {
   forcedState?: PurchaseState;
@@ -31,6 +36,9 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
   // Internal state when not overridden by dev switcher
   const [internalState, setInternalState] = useState<PurchaseState>({ status: 'idle' });
   const [waitlistJoined, setWaitlistJoined] = useState<boolean>(false);
+  // Reference of the in-flight purchase, so the dev simulate buttons can
+  // confirm the real order rather than reaching for a mock fixture.
+  const [activeReference, setActiveReference] = useState<string | null>(null);
 
   // Active state priority: dev switcher forced state > internal state
   const purchaseState = forcedState || internalState;
@@ -53,6 +61,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         quantity: values.quantity,
       });
 
+      setActiveReference(res.reference);
       setPurchaseState({
         status: 'redirecting',
         authorizationUrl: res.authorizationUrl,
@@ -76,6 +85,32 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
 
   const handleRetry = () => {
     setPurchaseState({ status: 'idle' });
+  };
+
+  /**
+   * DEV ONLY. Jumps straight to the success state without a live Paystack
+   * round-trip. Goes through the data-access seam like everything else.
+   */
+  const simulatePaymentSuccess = async () => {
+    try {
+      if (activeReference) {
+        const confirmed = await confirmPurchase(activeReference);
+        setPurchaseState({ status: 'success', ...confirmed });
+        return;
+      }
+      // Forced into this state by the dev switcher, so there is no live
+      // reference — fall back to the most recent paid order.
+      const { orders } = await listOrders({ status: 'paid', limit: 1 });
+      if (!orders[0]) throw new Error('No paid order available to preview');
+      const result = await getOrderByReference(orders[0].reference);
+      if (!result) throw new Error('Order reference not found');
+      setPurchaseState({ status: 'success', ...result });
+    } catch (err: any) {
+      setPurchaseState({
+        status: 'error',
+        message: err?.message || 'Unable to load a sample order.',
+      });
+    }
   };
 
   return (
@@ -126,25 +161,19 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
             </div>
 
             <div className="pt-2 flex flex-col gap-3">
-              <button
-                type="button"
-                id="redirect-simulated-success-btn"
-                onClick={() => {
-                  setPurchaseState({ status: 'confirming' });
-                  setTimeout(() => {
-                    const sampleOrder = mockOrders[0];
-                    const sampleTickets = mockTickets.filter((t) => t.orderId === sampleOrder.id);
-                    setPurchaseState({
-                      status: 'success',
-                      order: sampleOrder,
-                      tickets: sampleTickets,
-                    });
-                  }, 1000);
-                }}
-                className="min-h-[48px] px-6 py-3 rounded-xl bg-brand-primary text-brand-surface font-bold text-sm hover:bg-brand-primary-hover transition-colors"
-              >
-                Simulate Payment Complete →
-              </button>
+              {IS_DEV && (
+                <button
+                  type="button"
+                  id="redirect-simulated-success-btn"
+                  onClick={() => {
+                    setPurchaseState({ status: 'confirming' });
+                    setTimeout(simulatePaymentSuccess, 1000);
+                  }}
+                  className="min-h-[48px] px-6 py-3 rounded-xl bg-brand-primary text-brand-surface font-bold text-sm hover:bg-brand-primary-hover transition-colors"
+                >
+                  Simulate Payment Complete → (dev)
+                </button>
+              )}
               <WhatsAppSupportButton label="Payment assistance on WhatsApp" />
             </div>
           </div>
@@ -179,23 +208,17 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
               <p>Your tickets are being finalized and registered.</p>
             </div>
 
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const sampleOrder = mockOrders[0];
-                  const sampleTickets = mockTickets.filter((t) => t.orderId === sampleOrder.id);
-                  setPurchaseState({
-                    status: 'success',
-                    order: sampleOrder,
-                    tickets: sampleTickets,
-                  });
-                }}
-                className="min-h-[48px] px-6 py-3 rounded-xl bg-brand-accent text-brand-surface font-bold text-sm hover:opacity-90 transition-opacity"
-              >
-                Proceed to Issued Tickets →
-              </button>
-            </div>
+            {IS_DEV && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={simulatePaymentSuccess}
+                  className="min-h-[48px] px-6 py-3 rounded-xl bg-brand-accent text-brand-surface font-bold text-sm hover:opacity-90 transition-opacity"
+                >
+                  Proceed to Issued Tickets → (dev)
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -244,7 +267,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
               </Link>
 
               <WhatsAppSupportButton
-                orderReference={purchaseState.order.reference}
+                orderRef={purchaseState.order.reference}
                 label="Help with this order on WhatsApp"
               />
             </div>
@@ -419,7 +442,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
 
             <CheckoutForm
               onSubmit={handleFormSubmit}
-              isLoading={purchaseState.status === 'validating'}
+              purchaseState={purchaseState}
             />
           </div>
         )}
