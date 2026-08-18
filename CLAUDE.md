@@ -13,20 +13,27 @@ Next.js, then database, Paystack integration, auth, offline sync, and deployment
 ## The actual product
 This is not a payments site — payments are the easy part. **It is a door-control
 tool.** On event night, two staff stand at a hall entrance with bad lighting and
-no usable network, facing a queue of students, some of whom are presenting
+no usable network, facing a queue of attendees, some of whom are presenting
 WhatsApp screenshots of other people's QR codes.
 
 Two audiences, two jobs:
-1. **Students** — buy on a mid-tier Android phone on mobile data, from a link
-   forwarded on WhatsApp. Must work on a slow connection and a small screen.
+1. **Buyers** — anyone. The event is hosted by the Faculty of Engineering, but
+   attendees are not all engineering students, not all UNILAG students, and not
+   necessarily students at all. Collect nothing that assumes otherwise. They buy
+   on a mid-tier Android phone on mobile data, from a link forwarded on
+   WhatsApp. Must work on a slow connection and a small screen.
 2. **Door staff** — scan, standing, one-handed, in a hurry, offline.
    **`/scan` is the highest-stakes surface in the app.** If it is slow, wrong,
    or ambiguous, the event fails in public. Budget accordingly.
 
 The two defences against screenshot-sharing are non-negotiable: codes are
 **single-use, first scan wins**, and the scan result always displays the
-**holder's name and matric number** so staff can challenge identity. A green
-tick alone is worthless.
+**holder's name and phone number** so staff can challenge identity ("what's
+your number?"). A green tick alone is worthless. `Ticket.holderPhone` is
+denormalised off the order for exactly this reason — the scanner caches Ticket
+rows in IndexedDB and never sees an Order, so the identity check has to travel
+with the ticket or `/scan` goes blind offline. It is deliberately not editable
+by the holder.
 
 ## Stack
 - Next.js 15 (App Router), TypeScript — migrated from the Vite SPA AI Studio emitted
@@ -46,7 +53,11 @@ tick alone is worthless.
   date, and asset path. **Never hardcode these into a component.** This file is
   what makes the build reusable for the next faculty's event.
 - `/lib/data-access.ts` — the only seam between UI and database. Replace the
-  bodies with real queries; do not change the signatures.
+  bodies with real queries; do not change the signatures. (Changed once, on
+  purpose, when matric number was removed from the model: `initiatePurchase`
+  lost `buyerMatricNumber`, `renameTicketHolder` dropped its third argument,
+  and `issueComplimentaryTicket` takes `holderPhone`. No migration was owed —
+  no schema had been pushed yet.)
 
 ## Conventions
 - `// TODO(handoff):` marks every spot where real logic belongs. Grep for them.
@@ -68,12 +79,12 @@ tick alone is worthless.
   hall has no usable network.
 - **Performance:** public page LCP under 2.5s on Slow 4G with 4x CPU throttle.
   Scan-to-result under 300ms with a warm cache.
-- **Privacy:** the buyer list contains names, phone numbers, and matric numbers
-  of ~400 identifiable students. It must be impossible to read any of it with
-  the public anon key. RLS on every table, verified by an actual attack script.
-  Before the sales link is distributed, append `&read_only=true` to the Supabase
-  MCP URL in `.mcp.json`. From that point the buyer list is real student PII and
-  no agent gets write access to it outside a reviewed migration.
+- **Privacy:** the buyer list contains the names, email addresses and phone
+  numbers of ~400 identifiable people. It must be impossible to read any of it
+  with the public anon key. RLS on every table, verified by an actual attack
+  script. Before the sales link is distributed, append `&read_only=true` to the
+  Supabase MCP URL in `.mcp.json`. From that point the buyer list is real PII
+  and no agent gets write access to it outside a reviewed migration.
 - **Link previews:** the URL is distributed on WhatsApp. OG tags must be in the
   server-rendered HTML — WhatsApp's crawler does not execute JavaScript.
 - **Accessibility:** 4.5:1 minimum contrast. Scanner states must be
@@ -107,8 +118,15 @@ migration is complete: `npm run build` and `npm run lint` both pass clean, OG
 tags are server-rendered, fonts are self-hosted via next/font, and the theme
 is driven from `config/event.config.ts`.
 
+The student assumption is gone. Checkout collects name, email, phone and
+quantity — nothing else. Matric number and department were removed from the
+contract, the form, the scanner, the admin table, the CSV export and the
+ticket pass; phone number took over as the door's identity check. The
+"What To Expect" marketing grid was deleted from the landing page along with
+`event.includes` — this is a ticketing tool, not an event website.
+
 All data is still mock, routed through `lib/data-access.ts`. No database, no
-auth, no payments, no sync. 24 `TODO(handoff)` markers are the work queue —
+auth, no payments, no sync. 25 `TODO(handoff)` markers are the work queue —
 `grep -rn "TODO(handoff)"`.
 
 Known gaps worth naming:

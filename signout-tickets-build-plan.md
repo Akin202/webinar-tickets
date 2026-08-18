@@ -20,7 +20,7 @@ That is the screen that justifies the entire build. Everything else — the land
 
 **Three consequences that shape the architecture:**
 
-1. **QR codes must be single-use and identity-bound.** The scan result screen must show the buyer's **full name and matric number**, big, so the bouncer can say "what's your matric number?" A green tick alone is worthless against screenshot sharing.
+1. **QR codes must be single-use and identity-bound.** The scan result screen must show the buyer's **full name and phone number**, big, so the bouncer can say "what's the phone number on this ticket?" A green tick alone is worthless against screenshot sharing.
 2. **The scanner has to work with no network.** Not "should ideally." The hall interior will kill data. This means the full valid-ticket list caches to the device *before* doors open, scans validate locally, and check-ins queue for sync.
 3. **The distribution channel is WhatsApp, not email.** Nigerian students will not check email at the door. The ticket has to be a shareable link that renders a proper preview, plus a downloadable PNG they can save to their gallery. Email is the backup, not the primary.
 
@@ -31,6 +31,10 @@ That is the screen that justifies the entire build. Everything else — the land
 ## 1. Two things that can kill this — handle on day one
 
 ### The ₦2M Starter Business ceiling
+
+> **RESOLVED for this instance (2026-08-18):** the account is live, activated and
+> uncapped, so nothing below blocks this event. Compliance is OFF the critical
+> path. Kept because it still applies to the next faculty reusing this build.
 
 If your Paystack account is a **Starter Business** (unregistered — no CAC), it has a **₦2,000,000 lifetime collections limit**, and payments get **disabled** when you hit it. At 400 tickets you cross that at a ₦5,000 ticket price. At ₦10,000 you'd hit the wall at ticket 200 and the checkout would simply stop working mid-sale.
 
@@ -137,10 +141,10 @@ export interface Order {
   buyerName: string;
   buyerEmail: string;
   buyerPhone: string;            // normalised to +234XXXXXXXXXX
-  buyerMatricNumber: string | null;
   quantity: number;
   unitPriceKobo: number;         // ALL money in kobo. Never floats.
-  feeKobo: number;               // Paystack fee, if passed to buyer
+  serviceChargeKobo: number;     // retained by FlagIQ. NOT a tax — see event.config.ts
+  feeKobo: number;               // Paystack's gateway fee, if passed to buyer
   totalKobo: number;             // authoritative, computed server-side
   status: OrderStatus;
   paystackChannel: string | null;   // "card" | "bank_transfer" | "ussd" | "mobile_money" ...
@@ -154,7 +158,11 @@ export interface Ticket {
   orderId: string;
   code: string;                  // human-readable, e.g. "SGN-7K2Q-9XM4". Goes in the QR.
   holderName: string;            // defaults to buyer, editable before the event
-  holderMatricNumber: string | null;
+  /** The door's identity check. Denormalised from the order deliberately:
+   *  the scanner caches Ticket rows in IndexedDB and never sees an Order,
+   *  so this has to live here or /scan goes blind offline. Not holder-
+   *  editable — a renameable identity check is not an identity check. */
+  holderPhone: string | null;
   status: TicketStatus;
   issuedAt: string;
   checkedInAt: string | null;
@@ -242,6 +250,22 @@ export function paystackFeeKobo(amountKobo: number): number {
   return Math.min(percentage + flat, 200_000);     // capped at ₦2,000
 }
 
+/** Paystack charges its percentage on the TOTAL collected, including any fee
+ *  added on top. So subtotal + paystackFeeKobo(subtotal) UNDER-recovers: the
+ *  organiser ends up ₦2.23 short per ₦3,000 ticket (₦669 across 300). This
+ *  inverse finds the smallest total that nets the subtotal after the fee. */
+export function grossUpForPaystackFee(subtotalKobo: number): number;
+
+/** The SINGLE definition of what an order costs. Checkout UI, public price
+ *  tag, fixtures and server all call this — never recompute by hand, and
+ *  never accept a total from the client. */
+export function computeOrderTotals(input: {
+  quantity: number;
+  unitPriceKobo: number;
+  serviceChargeRate: number;
+  passFeeToBuyer: boolean;
+}): OrderTotals;   // { baseKobo, serviceChargeKobo, subtotalKobo, gatewayFeeKobo, totalKobo }
+
 export function normaliseNgPhone(input: string): string {
   const digits = input.replace(/\D/g, "");
   if (digits.startsWith("234")) return `+${digits}`;
@@ -281,13 +305,26 @@ export const eventConfig = {
   },
 
   ticketing: {
-    priceKobo: 0,              // TODO
+    priceKobo: 0,              // TODO — what the organiser KEEPS per ticket
     currency: "NGN" as const,
     capacity: 0,               // TODO: 90% of real hall capacity
     maxPerOrder: 5,
-    salesCloseAt: "TODO: ISO 8601",
     passFeeToBuyer: false,     // true => Paystack fee added on top at checkout
     lowStockThreshold: 30,     // show "only N left" below this
+
+    // Platform fee ON TOP of priceKobo. A SERVICE CHARGE, NOT VAT — it is
+    // retained, not remitted. Never label it VAT and never name a column
+    // vat_kobo unless you are actually VAT-registered and remitting.
+    serviceChargeRate: 0,      // TODO e.g. 0.075
+    serviceChargeLabel: "Service charge",
+
+    // PRIMARY sales gate, controlled from /admin. Sales stay open until the
+    // organiser closes them or capacity is reached. No date-based auto-close.
+    salesOpen: true,
+
+    // BACKSTOP ONLY, never the primary gate — stops someone buying a ticket
+    // for a party that already finished.
+    salesHardStopAt: "TODO: ISO 8601",
   },
 
   brand: {
@@ -318,7 +355,6 @@ export const eventConfig = {
   featureFlags: {
     allowNameChange: true,       // holder can rename their ticket before the event
     showLiveSalesCounter: true,  // "312 going" on the public page — social proof
-    requireMatricNumber: true,
     offlineScannerEnabled: true,
   },
 } as const;
@@ -347,7 +383,6 @@ export async function initiatePurchase(input: {
   buyerName: string;
   buyerEmail: string;
   buyerPhone: string;
-  buyerMatricNumber: string | null;
   quantity: number;
 }): Promise<{ authorizationUrl: string; reference: string }>;
 
@@ -360,8 +395,10 @@ export async function getOrderByReference(reference: string): Promise<{
   order: Order; tickets: Ticket[];
 } | null>;
 
+// holderPhone is deliberately NOT a parameter: it is the door's identity check,
+// so the holder must not be able to rewrite it.
 export async function renameTicketHolder(
-  ticketId: string, holderName: string, holderMatricNumber: string | null
+  ticketId: string, holderName: string
 ): Promise<void>;
 
 // ---- Door / scanner ----
@@ -382,7 +419,7 @@ export async function listTickets(opts?: {
 }): Promise<Ticket[]>;
 export async function voidTicket(ticketId: string, reason: string): Promise<void>;
 export async function issueComplimentaryTicket(input: {
-  holderName: string; holderMatricNumber: string | null;
+  holderName: string; holderPhone: string | null;
 }): Promise<Ticket>;
 export async function exportOrdersCsv(): Promise<string>;
 export async function getCurrentStaffUser(): Promise<StaffUser | null>;
@@ -452,8 +489,8 @@ Configure the Vite path alias "@" to point at ./src so "@/types/ticketing" and
 
 Then create src/lib/mock-data.ts with realistic Nigerian sample data: 12 orders in
 mixed states (paid, pending, failed), ~20 tickets across them, Nigerian names,
-+234 phone numbers, UNILAG-style matric numbers (e.g. 190403063), a SalesSummary
-with capacity 400 / sold 287, and 6 CheckIn rows.
++234 phone numbers, a SalesSummary
+with capacity 300 / sold 214, and 6 CheckIn rows.
 
 These types are a CONTRACT. A backend will be built to match them exactly. Do
 not add, rename, or remove fields.
@@ -537,9 +574,9 @@ The purchase flow and the ticket that comes out of it. NO real submission.
 
 === 1. CHECKOUT PAGE (src/pages/CheckoutPage.tsx, route "/checkout") ===
 Form fields: full name, email, phone (Nigerian format, use normaliseNgPhone from
-the types file on blur), matric number (required only when
-featureFlags.requireMatricNumber), quantity via QuantityStepper (1 to
-ticketing.maxPerOrder).
+the types file on blur), quantity via QuantityStepper (1 to
+ticketing.maxPerOrder). The phone is the door's identity check at the event, not
+just a contact field — validate it properly and normalise before submit.
 
 Live order summary alongside: unit price, quantity, Paystack fee broken out when
 passFeeToBuyer is true, total. Use paystackFeeKobo from the types file — do not
@@ -584,7 +621,7 @@ Per ticket in the order, render a <TicketCard>:
 - The QR code (qrcode.react), encoding ticket.code. Minimum 200x200px, generous
   white quiet zone — it has to scan off a dim phone screen.
 - The ticket code in large monospace under the QR, e.g. SGN-7K2Q-9XM4
-- Holder name and matric number, prominent
+- Holder name and phone number, prominent
 - Event name, date, doors open, venue
 - A clear "one entry only — this code works once" line
 - Visual treatment differs sharply by status: valid / checked_in / void
@@ -593,7 +630,8 @@ Below the tickets:
 - "Save ticket as image" button — // TODO(handoff): implement PNG export
 - "Add to calendar" button — // TODO(handoff)
 - "Rename this ticket" — only when featureFlags.allowNameChange; opens a dialog
-  with name + matric fields; onSave is a prop callback with a TODO(handoff)
+  with a name field ONLY — holderPhone is the door's identity check and must
+  not be holder-editable; onSave is a prop callback with a TODO(handoff)
 - WhatsApp support button
 
 Design this page to be legible as a screenshot with no browser chrome, because
@@ -648,12 +686,12 @@ Assume the user is already authenticated — build no auth.
 - Sales-by-channel breakdown (card, bank transfer, USSD, mobile money) as a
   simple bar list. No chart library.
 - Orders table: reference, buyer name, phone, quantity, total, status, paid at.
-  Sortable, searchable by name / phone / matric / reference, filterable by
+  Sortable, searchable by name / phone / reference, filterable by
   status, paginated at 50.
 - Row expands to show that order's tickets with their individual statuses.
 - Per-row actions: view tickets, resend ticket (stub), void ticket (confirm
   dialog, reason required).
-- "Issue complimentary ticket" — a dialog collecting name and matric.
+- "Issue complimentary ticket" — a dialog collecting name and phone.
 - "Export CSV" button.
 - Empty, loading (skeleton rows), and error states for the table.
 
@@ -678,9 +716,9 @@ Layout:
 The result overlay is the whole product. It must be readable at arm's length:
 
 - admitted — full-screen GREEN. Enormous "ADMITTED". Below it, in the largest
-  text on the screen, the HOLDER NAME and MATRIC NUMBER. Then the ticket code
+  text on the screen, the HOLDER NAME and PHONE NUMBER. Then the ticket code
   small. One "Next scan" button.
-- already_used — full-screen RED. "ALREADY SCANNED". Holder name and matric.
+- already_used — full-screen RED. "ALREADY SCANNED". Holder name and phone.
   Then, prominently: the time it was first scanned and which staff member
   scanned it. This is the screenshot-sharing case and the staff member needs the
   evidence to argue with a student about it.
@@ -784,7 +822,7 @@ Two audiences, two jobs:
 
 The two defences against screenshot-sharing are non-negotiable: codes are
 **single-use, first scan wins**, and the scan result always displays the
-**holder's name and matric number** so staff can challenge identity. A green
+**holder's name and phone number** so staff can challenge identity. A green
 tick alone is worthless.
 
 ## Stack
@@ -825,8 +863,8 @@ tick alone is worthless.
   hall has no usable network.
 - **Performance:** public page LCP under 2.5s on Slow 4G with 4x CPU throttle.
   Scan-to-result under 300ms with a warm cache.
-- **Privacy:** the buyer list contains names, phone numbers, and matric numbers
-  of ~400 identifiable students. It must be impossible to read any of it with
+- **Privacy:** the buyer list contains names, phone numbers and email addresses
+  of ~300 identifiable students. It must be impossible to read any of it with
   the public anon key. RLS on every table, verified by an actual attack script.
 - **Link previews:** the URL is distributed on WhatsApp. OG tags must be in the
   server-rendered HTML — WhatsApp's crawler does not execute JavaScript.
@@ -912,12 +950,13 @@ Now clean what's there, before adding anything.
 Supabase migrations, matching /types/ticketing.ts exactly.
 
 orders — id uuid pk, reference text UNIQUE NOT NULL, buyer_name, buyer_email,
-buyer_phone, buyer_matric_number, quantity int CHECK (quantity BETWEEN 1 AND 10),
-unit_price_kobo int, fee_kobo int, total_kobo int, status order_status enum,
+buyer_phone, quantity int CHECK (quantity BETWEEN 1 AND 5),
+unit_price_kobo int, service_charge_kobo int NOT NULL, fee_kobo int,
+total_kobo int, status order_status enum,
 paystack_channel text, raw_webhook jsonb, created_at, paid_at.
 
 tickets — id uuid pk, order_id fk -> orders ON DELETE RESTRICT, code text UNIQUE
-NOT NULL, holder_name, holder_matric_number, status ticket_status enum,
+NOT NULL, holder_name, holder_phone, status ticket_status enum,
 issued_at, checked_in_at, checked_in_by, checked_in_device.
 
 check_ins — id uuid pk, ticket_id fk nullable, scanned_code text, result
@@ -926,8 +965,17 @@ This table is an append-only audit log — no updates, no deletes.
 
 staff_users — id uuid pk (references auth.users), name, role enum('admin','door').
 
-event_settings — a single row holding capacity and sales_close_at, so capacity
-is enforced in the database and not only in a config file.
+event_settings — a single row, so these are enforced in the database and not
+only in a config file:
+  sales_open       boolean NOT NULL DEFAULT true  <- PRIMARY gate, admin-controlled
+  capacity         integer NOT NULL              <- second gate
+  sales_hard_stop  timestamptz                   <- BACKSTOP only, never primary
+Gate order at checkout: sales_open -> hard stop -> capacity. Client-side
+versions of these are advisory ONLY; the authoritative check must run inside
+the same transaction that reserves capacity, or two concurrent buyers race
+past the last ticket. Flipping sales_open is admin-role only and every flip
+writes an audit row — closing sales stops all revenue, so "who closed it and
+when" will be asked.
 
 Indexes: tickets(code), orders(reference), orders(status), check_ins(ticket_id),
 check_ins(scanned_at).
@@ -936,8 +984,8 @@ Ticket codes: format SGN-XXXX-XXXX using an unambiguous alphabet
 (no 0/O/1/I/L). Generated server-side. They must NOT be sequential or guessable
 — someone will try incrementing one.
 
-SECURITY POLICIES — the buyer list is ~400 identifiable students' names, phone
-numbers and matric numbers, so this matters more than the usual:
+SECURITY POLICIES — the buyer list is ~300 identifiable students' names, phone
+numbers and email addresses, so this matters more than the usual:
 - RLS ON for every table.
 - anon: NO read access to orders, tickets, check_ins, or staff_users. None.
 - anon: may read ONLY the aggregate sales counter, via a SECURITY DEFINER
@@ -945,9 +993,11 @@ numbers and matric numbers, so this matters more than the usual:
 - A buyer reaching /ticket/[reference] is served by a server component using the
   service role key, gated on the reference itself. The reference must be
   unguessable.
-- authenticated role 'door': may read tickets (code, holder_name,
-  holder_matric_number, status only) and insert into check_ins. No access to
-  orders, no access to buyer contact details.
+- authenticated role 'door': may read tickets (code, holder_name, holder_phone,
+  status only) and insert into check_ins. holder_phone is the door's identity
+  check so it must be readable, but the door role gets NO access to orders —
+  buyer_email and the order's own contact details never reach a door phone.
+  Prove this in the attack script for the door role, not just for anon.
 - authenticated role 'admin': full read; writes only through defined functions.
 
 After writing the policies, write a script that attempts, using ONLY the public
@@ -957,10 +1007,14 @@ ticket codes. Confirm all three fail. Show me the output.
 === STEP 3: PAYSTACK ===
 - POST /api/checkout — validates input server-side with the SAME zod schema the
   client uses; extract it to a shared module so there is exactly one definition.
-- Compute total_kobo SERVER-SIDE from event_settings and the shared
-  paystackFeeKobo helper. Never trust a number sent by the client.
+- Compute total_kobo SERVER-SIDE via computeOrderTotals from the types file.
+  Never trust a number sent by the client, and never recompute the arithmetic
+  by hand — that function is the single definition.
 - Check remaining capacity inside a transaction. Reject when sold out. Enforce
-  sales_close_at server-side too.
+  sales_open and sales_hard_stop server-side too.
+- When verifying the webhook amount, compare against computeOrderTotals(...)
+  .totalKobo rather than recomputing, or the check rejects legitimate payments
+  by a few kobo (see grossUpForPaystackFee).
 - Create the order as 'pending', then call Paystack Initialize Transaction with
   that reference, and return the authorization_url.
 - Rate-limit this endpoint per IP and per phone number.
@@ -1022,8 +1076,10 @@ This session: make the door work, and close the loop with the buyer.
 - Camera via BarcodeDetector where available, @zxing/browser fallback for iOS
   Safari. Handle permission-denied with a clear recovery path.
 - getCheckInManifest() returns the minimal manifest — code, holder_name,
-  holder_matric_number, status — and nothing else. Door staff must not be able
-  to pull buyer phone numbers onto a personal phone.
+  holder_phone, status — and nothing else. holder_phone is needed at the door
+  and is denormalised onto tickets for exactly that reason; the orders table
+  stays unreachable, so no buyer email or order history lands on a personal
+  phone.
 - Cache the manifest in IndexedDB on load. Show the "safe to go offline"
   confirmation only after the write actually completes.
 - ONLINE scan: hit checkInTicket(). The server is authoritative. First scan
@@ -1073,7 +1129,7 @@ view prominent.
 
 === DONE WHEN ===
 I can: log in as door staff on a second phone, load the manifest, put the phone
-in AIRPLANE MODE, scan a ticket, see ADMITTED with the holder's name and matric
+in AIRPLANE MODE, scan a ticket, see ADMITTED with the holder's name and phone
 number, scan the same ticket again and see ALREADY SCANNED, turn data back on,
 watch the queue flush to zero, and see both events in the admin check-in log.
 ```
