@@ -24,7 +24,7 @@ interface ScannerDB extends DBSchema {
   };
 }
 
-const DB_NAME = 'unilag_scanner_manifest_db';
+const DB_NAME = 'signout_scanner_manifest_db';
 const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<ScannerDB>> | null = null;

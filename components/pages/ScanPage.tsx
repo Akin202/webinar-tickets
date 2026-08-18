@@ -37,7 +37,7 @@ import {
 } from '@/lib/offline-db';
 import { useDevState } from '@/components/dev/DevStateProvider';
 import { fireScanFeedback } from '@/lib/scanner-feedback';
-import { CheckInResult } from '@/types/ticketing';
+import { CheckInResult, formatPhoneForDisplay } from '@/types/ticketing';
 import { eventConfig } from '@/config/event.config';
 
 
@@ -418,7 +418,7 @@ export const ScanPage: React.FC = () => {
               </div>
 
               <p className="text-xs text-slate-400 text-center font-medium">
-                Point camera at student's QR code on phone screen or printed screenshot
+                Point camera at the attendee&apos;s QR code on a phone screen or printout
               </p>
             </div>
           ) : (
@@ -427,7 +427,7 @@ export const ScanPage: React.FC = () => {
               <div className="text-center space-y-1">
                 <h2 className="text-lg font-black text-white">Manual Pass Lookup</h2>
                 <p className="text-xs text-slate-400">
-                  Type ticket security code or matric number
+                  Type the ticket security code
                 </p>
               </div>
 
@@ -579,7 +579,9 @@ export const ScanPage: React.FC = () => {
                   {currentResult.ticket.holderName}
                 </h2>
                 <div className="text-2xl sm:text-3xl font-mono font-black text-emerald-100">
-                  {currentResult.ticket.holderMatricNumber || 'GUEST ADMISSION'}
+                  {currentResult.ticket.holderPhone
+                    ? formatPhoneForDisplay(currentResult.ticket.holderPhone)
+                    : 'NO PHONE ON FILE'}
                 </div>
                 <div className="pt-2 font-mono text-xs opacity-80">
                   Security Code: {currentResult.ticket.code}
@@ -599,7 +601,9 @@ export const ScanPage: React.FC = () => {
                     {currentResult.ticket.holderName}
                   </h2>
                   <p className="text-lg font-mono font-bold text-red-100">
-                    {currentResult.ticket.holderMatricNumber || 'GUEST PASS'}
+                    {currentResult.ticket.holderPhone
+                      ? formatPhoneForDisplay(currentResult.ticket.holderPhone)
+                      : 'NO PHONE ON FILE'}
                   </p>
                 </div>
 

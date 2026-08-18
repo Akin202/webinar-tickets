@@ -14,7 +14,6 @@ import {
   Edit3,
   Copy,
   Check,
-  GraduationCap,
   Sparkles,
 } from 'lucide-react';
 import { Ticket, TicketStatus } from '@/types/ticketing';
@@ -59,7 +58,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
     e.preventDefault();
     if (tempName.trim()) {
       try {
-        await renameTicketHolder(ticket.id, tempName.trim(), ticket.holderMatricNumber);
+        await renameTicketHolder(ticket.id, tempName.trim());
         if (onUpdateAttendeeName) {
           onUpdateAttendeeName(ticket.id, tempName.trim());
         }
@@ -244,14 +243,6 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               {ticket.holderName}
             </p>
 
-            <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
-              {ticket.holderMatricNumber && (
-                <div className="flex items-center gap-1.5 text-brand-muted">
-                  <GraduationCap className="w-3.5 h-3.5 text-brand-primary flex-shrink-0" />
-                  <span className="font-mono">{ticket.holderMatricNumber}</span>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Event Schedule & Location */}
@@ -305,7 +296,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             {/* TODO(handoff): this does NOT save anything. It shows a
                 "screenshot this" notice. Implement real client-side PNG
                 export of the ticket card (Session 2) — this is the primary
-                delivery path in practice: students save the pass to their
+                delivery path in practice: attendees save the pass to their
                 gallery and forward it on WhatsApp. Must work on Android
                 Chrome, and the downloaded file must actually scan. */}
             <button

@@ -138,7 +138,7 @@ export const ScanLoginPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="text-center text-[11px] text-gray-400">
-        UNILAG Engineering '26 Gate Protocol • Offline Authorized
+        {eventConfig.event.name} • Gate Protocol • Offline Authorized
       </footer>
     </div>
   );
