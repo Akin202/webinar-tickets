@@ -11,9 +11,13 @@ coverage/
 !.env.example
 .vercel
 
-# Local agent tooling — appeared mid-session, not part of the app.
-# Remove these lines if you want them version-controlled deliberately.
+# Locally-installed agent skills — vendored markdown, reinstallable via
+# `npx skills add`. Not app code.
 .agents/
 .claude/
-.mcp.json
 skills-lock.json
+
+# NOTE: .mcp.json is deliberately NOT ignored. It is Claude Code's
+# project-scope MCP config (equivalent to `claude mcp add --scope project`),
+# so the Supabase connection travels with the repo. It holds no secrets —
+# the project ref is already public via NEXT_PUBLIC_SUPABASE_URL.
