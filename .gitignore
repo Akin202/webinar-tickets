@@ -10,3 +10,10 @@ coverage/
 .env*
 !.env.example
 .vercel
+
+# Local agent tooling — appeared mid-session, not part of the app.
+# Remove these lines if you want them version-controlled deliberately.
+.agents/
+.claude/
+.mcp.json
+skills-lock.json
