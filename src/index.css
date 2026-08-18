@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+:root {
+  --brand-primary: #e2ff00; /* Electric Acid Neon Yellow from flyer */
+  --brand-primary-hover: #c9e600;
+  --brand-accent: #e2ff00;
+  --brand-surface: #060709; /* Deep Obsidian / Nightclub Black */
+  --brand-surface-card: #0e1117;
+  --brand-surface-card-hover: #161b22;
+  --brand-surface-subtle: #1a202c;
+  --brand-border: #21262d;
+  --brand-border-focus: #e2ff00;
+  --brand-text: #f8fafc;
+  --brand-text-muted: #94a3b8;
+  --brand-text-dim: #64748b;
+  --brand-urgent: #ff3344;
+  --brand-urgent-bg: #450a0a;
+  --brand-urgent-border: #7f1d1d;
+  --brand-success: #22c55e;
+  --brand-success-bg: #052e16;
+  --brand-success-border: #15803d;
+  --brand-warning: #e2ff00;
+  --brand-warning-bg: #2d3300;
+  --brand-warning-border: #5e6b00;
+  --font-heading: 'Anton', system-ui, -apple-system, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+@theme {
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-hover: var(--brand-primary-hover);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-card: var(--brand-surface-card);
+  --color-brand-card-hover: var(--brand-surface-card-hover);
+  --color-brand-subtle: var(--brand-surface-subtle);
+  --color-brand-border: var(--brand-border);
+  --color-brand-border-focus: var(--brand-border-focus);
+  --color-brand-text: var(--brand-text);
+  --color-brand-muted: var(--brand-text-muted);
+  --color-brand-dim: var(--brand-text-dim);
+  --color-brand-urgent: var(--brand-urgent);
+  --color-brand-urgent-bg: var(--brand-urgent-bg);
+  --color-brand-urgent-border: var(--brand-urgent-border);
+  --color-brand-success: var(--brand-success);
+  --color-brand-success-bg: var(--brand-success-bg);
+  --color-brand-success-border: var(--brand-success-border);
+  --color-brand-warning: var(--brand-warning);
+  --color-brand-warning-bg: var(--brand-warning-bg);
+  --color-brand-warning-border: var(--brand-warning-border);
+  --font-sans: var(--font-body);
+  --font-heading: var(--font-heading);
+}
+
+.font-display {
+  font-family: 'Anton', Impact, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.font-mono-code {
+  font-family: 'Space Grotesk', monospace;
+}
+
+.acid-glow {
+  box-shadow: 0 0 25px -5px rgba(226, 255, 0, 0.4);
+}
+
+.acid-glow-sm {
+  box-shadow: 0 0 12px -2px rgba(226, 255, 0, 0.3);
+}
+
+.acid-border {
+  border-color: #e2ff00;
+}
+
+.text-acid {
+  color: #e2ff00;
+}
+
+.bg-acid {
+  background-color: #e2ff00;
+}
+
+body {
+  background-color: var(--brand-surface);
+  color: var(--brand-text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, a, input, select {
+  touch-action: manipulation;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
