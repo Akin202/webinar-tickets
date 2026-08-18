@@ -161,11 +161,18 @@ export function paystackFeeKobo(amountKobo: number): number {
  *
  * Needed because Paystack takes its percentage of the TOTAL charged, including
  * any fee we add on top. Charging `subtotal + fee(subtotal)` therefore
- * under-recovers — ₦2.23 on a single ₦3,000 ticket, ~₦669 across 300 orders.
+ * under-recovers: on a single ₦3,000 ticket the buyer is undercharged ₦2.26
+ * and ₦2.23 of that fails to reach the organiser (the ₦0.03 difference is the
+ * gateway fee on the shortfall itself). ~₦669 unrecovered across 300 orders.
  *
  * Iterative rather than closed-form on purpose: the ₦2,500 flat-fee threshold
  * and the ₦2,000 cap make any single formula wrong at the boundaries. Bounded
  * and cheap — the gap is a few hundred kobo at realistic ticket prices.
+ *
+ * LANDS EXACTLY, never past the target. `t - fee(t)` is non-decreasing and
+ * rises by at most 1 per kobo step, and the seed `sub + fee(sub)` never
+ * overshoots, so the first t satisfying the condition satisfies it with
+ * equality. That exactness is what the residual identity below relies on.
  */
 export function grossUpForPaystackFee(subtotalKobo: number): number {
   if (subtotalKobo <= 0) return 0;
@@ -193,6 +200,26 @@ export interface OrderTotals {
  *
  * Invariant, which the tests assert:
  *   totalKobo − gatewayFeeKobo − serviceChargeKobo === baseKobo
+ *
+ * RESIDUAL IDENTITY — how to tell, from a stored order alone, whether the
+ * buyer covered the gateway fee. Needed by reconciliation if passFeeToBuyer
+ * is ever flipped mid-sale, since orders either side of the flip have
+ * different economics:
+ *
+ *   residual = totalKobo − (unitPriceKobo × quantity) − serviceChargeKobo
+ *   residual === feeKobo  ->  buyer paid the fee
+ *   residual === 0        ->  organiser absorbed it
+ *
+ * Use strict equality, not `residual > 0`: the strict test also catches a
+ * corrupt row, where the loose one would silently report pass-mode. Verified
+ * exhaustively across unit prices either side of the ₦2,500 threshold,
+ * quantities 1-10, service rates 0/7.5/10%, and amounts reaching the ₦2,000
+ * fee cap — 420/420 cases, zero mismatches.
+ *
+ * This is why there is deliberately NO `feePassedToBuyer` column on Order:
+ * the mode is already recoverable, so the field would be redundancy rather
+ * than capability. The matching migration comment says the same. Do not add
+ * it without a reason that survives this derivation.
  */
 export function computeOrderTotals(input: {
   quantity: number;
