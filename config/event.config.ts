@@ -19,13 +19,33 @@ export const eventConfig = {
   },
 
   ticketing: {
-    priceKobo: 300000,              // ₦3,000
+    priceKobo: 300000,              // ₦3,000 — what the organiser keeps per ticket
     currency: "NGN" as const,
     capacity: 300,                  // 90% of real hall capacity
     maxPerOrder: 5,
-    salesCloseAt: "2026-08-25T23:00:00+01:00",
-    passFeeToBuyer: false,          // true => Paystack fee added on top at checkout
     lowStockThreshold: 30,          // show "only N left" below this
+
+    // true => the buyer covers Paystack's gateway fee, added on top at
+    // checkout. false meant the organiser silently absorbed ~₦145/ticket.
+    passFeeToBuyer: true,
+
+    // FlagIQ's cut for building and running the platform, charged on top of
+    // priceKobo. This is a PLATFORM FEE, not a tax: it is retained, not
+    // remitted to FIRS. Do not relabel it "VAT" unless FlagIQ is actually
+    // VAT-registered and remitting — that would misdescribe retained revenue
+    // as tax on ~300 student receipts.
+    serviceChargeRate: 0.075,
+    serviceChargeLabel: "Service charge",
+
+    // PRIMARY sales gate, controlled from /admin. Sales stay open until the
+    // organiser closes them or capacity is reached — there is no date-based
+    // auto-close.
+    salesOpen: true,
+
+    // BACKSTOP ONLY, not the primary gate. Without it, someone who finds the
+    // link a week later can still pay for an event that already happened,
+    // which is a refund and a reputation problem rather than a sale.
+    salesHardStopAt: "2026-08-26T04:00:00+01:00",
   },
 
   brand: {
@@ -71,12 +91,3 @@ export type EventConfig = typeof eventConfig;
 export const doorsOpenIso =
   `${eventConfig.event.date}T${eventConfig.event.doorsOpen}:00${eventConfig.event.utcOffset}`;
 
-/** Human-readable sales-close time for UI copy. The raw ISO string was being
- *  rendered straight at the buyer on the sales-closed screen. */
-export const salesCloseLabel = new Date(
-  eventConfig.ticketing.salesCloseAt
-).toLocaleString("en-NG", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "Africa/Lagos",
-});

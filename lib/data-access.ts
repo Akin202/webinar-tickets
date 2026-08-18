@@ -6,6 +6,7 @@ import type {
   SalesSummary,
   StaffUser,
 } from '@/types/ticketing';
+import { computeOrderTotals } from '@/types/ticketing';
 import { eventConfig } from '@/config/event.config';
 import {
   mockSalesSummary as initialSalesSummary,
@@ -28,6 +29,15 @@ let currentTickets: Ticket[] = [...initialTickets];
 let currentCheckIns: CheckIn[] = [...initialCheckIns];
 let currentStaffUser: StaffUser | null = { ...mockStaffUser };
 
+// Mirrors the single-row `event_settings.sales_open` the schema will own.
+// In-memory here so the admin toggle is demonstrable before the DB exists.
+let salesOpen: boolean = eventConfig.ticketing.salesOpen;
+
+/** Backstop only — see event.config.ts. Never the primary gate. */
+function pastHardStop(): boolean {
+  return Date.now() > new Date(eventConfig.ticketing.salesHardStopAt).getTime();
+}
+
 const delay = (ms = 180) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // TODO(handoff): Replace with a SECURITY DEFINER aggregate function. anon
@@ -37,10 +47,12 @@ export async function getSalesSummary(): Promise<SalesSummary> {
   const sold = currentTickets.filter((t) => t.status !== 'void').length;
   const checkedIn = currentTickets.filter((t) => t.status === 'checked_in').length;
   const capacity = eventConfig.ticketing.capacity;
-  const grossKobo = currentOrders
-    .filter((o) => o.status === 'paid')
-    .reduce((sum, o) => sum + o.totalKobo, 0);
-  const netKobo = Math.round(grossKobo * 0.985);
+  const paidOrders = currentOrders.filter((o) => o.status === 'paid');
+  const grossKobo = paidOrders.reduce((sum, o) => sum + o.totalKobo, 0);
+  const gatewayFeesKobo = paidOrders.reduce((sum, o) => sum + o.feeKobo, 0);
+  const serviceChargeKobo = paidOrders.reduce((sum, o) => sum + o.serviceChargeKobo, 0);
+  // What the organiser actually keeps, not an estimate.
+  const netKobo = grossKobo - gatewayFeesKobo - serviceChargeKobo;
   const pending = currentOrders.filter((o) => o.status === 'pending').length;
 
   return {
@@ -49,10 +61,12 @@ export async function getSalesSummary(): Promise<SalesSummary> {
     ticketsRemaining: Math.max(0, capacity - sold),
     ticketsCheckedIn: checkedIn,
     grossKobo,
+    gatewayFeesKobo,
+    serviceChargeKobo,
     netKobo,
     ordersPending: pending,
     isSoldOut: sold >= capacity,
-    salesClosed: false,
+    salesClosed: !salesOpen || pastHardStop(),
     byChannel: {
       card: currentOrders.filter((o) => o.paystackChannel === 'card').length,
       bank_transfer: currentOrders.filter((o) => o.paystackChannel === 'bank_transfer').length,
@@ -60,6 +74,14 @@ export async function getSalesSummary(): Promise<SalesSummary> {
     },
     lastUpdatedAt: new Date().toISOString(),
   };
+}
+
+// TODO(handoff): persist to the single-row `event_settings.sales_open`.
+//   Admin role only, and every flip should be written to an audit log —
+//   closing sales stops all revenue, so "who closed it and when" matters.
+export async function setSalesOpen(open: boolean): Promise<void> {
+  await delay(150);
+  salesOpen = open;
 }
 
 // TODO(handoff): Replace with POST /api/checkout. Compute total_kobo
@@ -70,14 +92,29 @@ export async function initiatePurchase(input: {
   buyerName: string;
   buyerEmail: string;
   buyerPhone: string;
-  buyerMatricNumber: string | null;
   quantity: number;
 }): Promise<{ authorizationUrl: string; reference: string }> {
   await delay(200);
+
+  // Gate order matches what the server must enforce in Session 1: the admin
+  // switch, then the backstop, then capacity. All three are advisory here —
+  // a client-side check stops an honest mistake, not an attacker.
+  if (!salesOpen) throw new Error('Ticket sales are currently closed.');
+  if (pastHardStop()) throw new Error('Ticket sales have ended.');
+  const soldCount = currentTickets.filter((t) => t.status !== 'void').length;
+  if (soldCount + input.quantity > eventConfig.ticketing.capacity) {
+    throw new Error('Not enough tickets remaining.');
+  }
+
   const randRef = `ENG26-TX-${Math.floor(100000 + Math.random() * 900000)}`;
   const orderId = `ord_live_${Date.now()}`;
   const unitPriceKobo = eventConfig.ticketing.priceKobo;
-  const totalKobo = unitPriceKobo * input.quantity;
+  const totals = computeOrderTotals({
+    quantity: input.quantity,
+    unitPriceKobo,
+    serviceChargeRate: eventConfig.ticketing.serviceChargeRate,
+    passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
+  });
 
   const newOrder: Order = {
     id: orderId,
@@ -85,11 +122,11 @@ export async function initiatePurchase(input: {
     buyerName: input.buyerName,
     buyerEmail: input.buyerEmail,
     buyerPhone: input.buyerPhone,
-    buyerMatricNumber: input.buyerMatricNumber,
     quantity: input.quantity,
     unitPriceKobo,
-    feeKobo: 0,
-    totalKobo,
+    serviceChargeKobo: totals.serviceChargeKobo,
+    feeKobo: totals.gatewayFeeKobo,
+    totalKobo: totals.totalKobo,
     status: 'paid',
     paystackChannel: 'card',
     createdAt: new Date().toISOString(),
@@ -105,7 +142,7 @@ export async function initiatePurchase(input: {
       orderId,
       code,
       holderName: input.buyerName,
-      holderMatricNumber: input.buyerMatricNumber,
+      holderPhone: input.buyerPhone,
       status: 'valid',
       issuedAt: new Date().toISOString(),
       checkedInAt: null,
@@ -138,7 +175,7 @@ export async function confirmPurchase(
 }
 
 // TODO(handoff): Server-side lookup. Door role may read code, holder_name,
-//   holder_matric_number and status ONLY.
+//   holder_phone and status ONLY.
 export async function getTicketByCode(code: string): Promise<Ticket | null> {
   await delay(150);
   const clean = code.trim().toUpperCase();
@@ -163,21 +200,22 @@ export async function getOrderByReference(reference: string): Promise<{
 
 // TODO(handoff): Gate on featureFlags.allowNameChange, close at
 //   sales_close_at, rate-limit, and write every rename to an audit log.
+// holderPhone is deliberately not a parameter: it is the door's identity
+// check, so the holder must not be able to rewrite it.
 export async function renameTicketHolder(
   ticketId: string,
-  holderName: string,
-  holderMatricNumber: string | null
+  holderName: string
 ): Promise<void> {
   await delay(200);
   const ticket = currentTickets.find((t) => t.id === ticketId);
   if (!ticket) throw new Error('Ticket not found');
   ticket.holderName = holderName.trim();
-  ticket.holderMatricNumber = holderMatricNumber?.trim() || null;
 }
 
 // ---- Door / scanner ----
 // TODO(handoff): Return the MINIMAL manifest only - code, holder_name,
-//   holder_matric_number, status. Buyer phone and email must never reach a
+//   holder_phone, status. holder_phone is the door's identity check so it
+//   has to ship; buyer email and every money column must never reach a
 //   door phone.
 export async function getCheckInManifest(): Promise<Ticket[]> {
   await delay(200);
@@ -325,8 +363,7 @@ export async function listOrders(opts?: {
       (o) =>
         o.reference.toLowerCase().includes(q) ||
         o.buyerName.toLowerCase().includes(q) ||
-        o.buyerPhone.includes(q) ||
-        (o.buyerMatricNumber && o.buyerMatricNumber.toLowerCase().includes(q))
+        o.buyerPhone.includes(q)
     );
   }
 
@@ -358,7 +395,7 @@ export async function listTickets(opts?: {
       (t) =>
         t.code.toLowerCase().includes(q) ||
         t.holderName.toLowerCase().includes(q) ||
-        (t.holderMatricNumber && t.holderMatricNumber.toLowerCase().includes(q))
+        (t.holderPhone !== null && t.holderPhone.includes(q))
     );
   }
 
@@ -379,7 +416,7 @@ export async function voidTicket(ticketId: string, reason: string): Promise<void
 //   ticket.
 export async function issueComplimentaryTicket(input: {
   holderName: string;
-  holderMatricNumber: string | null;
+  holderPhone: string | null;
 }): Promise<Ticket> {
   await delay(200);
   const randNum = Math.floor(100000 + Math.random() * 900000);
@@ -391,7 +428,7 @@ export async function issueComplimentaryTicket(input: {
     orderId,
     code,
     holderName: input.holderName,
-    holderMatricNumber: input.holderMatricNumber,
+    holderPhone: input.holderPhone,
     status: 'valid',
     issuedAt: new Date().toISOString(),
     checkedInAt: null,
@@ -403,11 +440,13 @@ export async function issueComplimentaryTicket(input: {
     id: orderId,
     reference: `ENG26-VIP-${randNum}`,
     buyerName: input.holderName,
-    buyerEmail: 'vip@unilageng.ng',
-    buyerPhone: '+2348000000000',
-    buyerMatricNumber: input.holderMatricNumber,
+    buyerEmail: 'comp@example.com',
+    buyerPhone: input.holderPhone || '+2348000000000',
     quantity: 1,
+    // Complimentary: no money changes hands, so no gateway fee and no
+    // service charge. It still counts against capacity.
     unitPriceKobo: 0,
+    serviceChargeKobo: 0,
     feeKobo: 0,
     totalKobo: 0,
     status: 'paid',
@@ -422,17 +461,16 @@ export async function issueComplimentaryTicket(input: {
   return newTicket;
 }
 
-// TODO(handoff): Admin only. This is ~400 students' names, phone numbers and
-//   matric numbers - log every export.
+// TODO(handoff): Admin only. This is ~400 identifiable people's names, email
+//   addresses and phone numbers - log every export.
 export async function exportOrdersCsv(): Promise<string> {
   await delay(150);
-  const headers = ['Order Reference', 'Buyer Name', 'Email', 'Phone', 'Matric Number', 'Quantity', 'Total NGN', 'Status', 'Date'];
+  const headers = ['Order Reference', 'Buyer Name', 'Email', 'Phone', 'Quantity', 'Total NGN', 'Status', 'Date'];
   const rows = currentOrders.map((o) => [
     o.reference,
     `"${o.buyerName}"`,
     o.buyerEmail,
     o.buyerPhone,
-    o.buyerMatricNumber || 'N/A',
     o.quantity,
     o.totalKobo / 100,
     o.status,

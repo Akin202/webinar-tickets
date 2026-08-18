@@ -323,12 +323,7 @@ export const EventPage: React.FC = () => {
           </h2>
 
           <div className="mb-4">
-            <PriceTag
-              priceKobo={eventConfig.ticketing.priceKobo}
-              feeKobo={0}
-              passFeeToBuyer={eventConfig.ticketing.passFeeToBuyer}
-              size="lg"
-            />
+            <PriceTag size="lg" />
           </div>
 
           <p className="text-sm font-semibold text-rose-400 mb-8">

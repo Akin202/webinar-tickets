@@ -18,6 +18,8 @@ import {
   AlertCircle,
   FileSpreadsheet,
   ArrowUpDown,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import {
   getSalesSummary,
@@ -26,6 +28,7 @@ import {
   voidTicket,
   issueComplimentaryTicket,
   exportOrdersCsv,
+  setSalesOpen,
 } from '@/lib/data-access';
 import {
   Order,
@@ -33,6 +36,8 @@ import {
   Ticket,
   SalesSummary,
   koboToNaira,
+  normaliseNgPhone,
+  formatPhoneForDisplay,
 } from '@/types/ticketing';
 import { eventConfig } from '@/config/event.config';
 
@@ -63,8 +68,10 @@ export const AdminPage: React.FC = () => {
   // Modal Dialogs
   const [isCompModalOpen, setIsCompModalOpen] = useState<boolean>(false);
   const [compName, setCompName] = useState<string>('');
-  const [compMatric, setCompMatric] = useState<string>('');
+  const [compPhone, setCompPhone] = useState<string>('');
 
+  const [isCloseSalesModalOpen, setIsCloseSalesModalOpen] = useState<boolean>(false);
+  const [salesToggleBusy, setSalesToggleBusy] = useState<boolean>(false);
   const [voidModalTicket, setVoidModalTicket] = useState<{ id: string; code: string } | null>(null);
   const [voidReason, setVoidReason] = useState<string>('');
 
@@ -131,6 +138,21 @@ export const AdminPage: React.FC = () => {
   };
 
   // Void ticket handler
+  // Closing sales stops ALL revenue, so it is confirmed; re-opening is not.
+  const handleSetSalesOpen = async (open: boolean) => {
+    setSalesToggleBusy(true);
+    try {
+      await setSalesOpen(open);
+      triggerNotice(open ? 'Ticket sales re-opened.' : 'Ticket sales closed.');
+      setIsCloseSalesModalOpen(false);
+      await loadData();
+    } catch {
+      triggerNotice('Failed to change sales status.');
+    } finally {
+      setSalesToggleBusy(false);
+    }
+  };
+
   const handleConfirmVoid = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!voidModalTicket || !voidReason.trim()) return;
@@ -152,12 +174,12 @@ export const AdminPage: React.FC = () => {
     try {
       const ticket = await issueComplimentaryTicket({
         holderName: compName,
-        holderMatricNumber: compMatric || null,
+        holderPhone: compPhone.trim() ? normaliseNgPhone(compPhone) : null,
       });
       triggerNotice(`VIP Pass ${ticket.code} issued to ${ticket.holderName}`);
       setIsCompModalOpen(false);
       setCompName('');
-      setCompMatric('');
+      setCompPhone('');
       loadData();
     } catch {
       triggerNotice('Failed to issue complimentary ticket.');
@@ -172,7 +194,7 @@ export const AdminPage: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `unilag_eng26_orders_${Date.now()}.csv`);
+      link.setAttribute('download', `signout_orders_${Date.now()}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -214,7 +236,7 @@ export const AdminPage: React.FC = () => {
             </Link>
             <div>
               <h1 className="text-base font-bold text-gray-900 leading-none">
-                UNILAG ENG '26 Ticketing Admin
+                Ticketing Admin
               </h1>
               <p className="text-[11px] text-gray-500 mt-0.5">
                 {eventConfig.event.name} • Gate & Orders Control Panel
@@ -314,7 +336,60 @@ export const AdminPage: React.FC = () => {
             <div className="text-xl font-bold font-mono text-gray-900 mt-1">
               {summary ? koboToNaira(summary.netKobo) : '—'}
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">After processor fees</p>
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              After processor fees &amp; {eventConfig.ticketing.serviceChargeLabel.toLowerCase()}
+            </p>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+              {eventConfig.ticketing.serviceChargeLabel}
+            </span>
+            <div className="text-xl font-bold font-mono text-gray-900 mt-1">
+              {summary ? koboToNaira(summary.serviceChargeKobo) : '—'}
+            </div>
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              Collected for FlagIQ &middot; gateway {summary ? koboToNaira(summary.gatewayFeesKobo) : '—'}
+            </p>
+          </div>
+
+          <div
+            className={`p-4 rounded-lg border ${
+              summary?.salesClosed
+                ? 'bg-red-50 border-red-300'
+                : 'bg-white border-gray-200'
+            }`}
+          >
+            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+              Ticket Sales
+            </span>
+            <div
+              className={`text-xl font-bold font-mono mt-1 ${
+                summary?.salesClosed ? 'text-red-700' : 'text-green-700'
+              }`}
+            >
+              {summary ? (summary.salesClosed ? 'CLOSED' : 'OPEN') : '—'}
+            </div>
+            <button
+              type="button"
+              disabled={!summary || salesToggleBusy}
+              onClick={() =>
+                summary?.salesClosed ? handleSetSalesOpen(true) : setIsCloseSalesModalOpen(true)
+              }
+              className="mt-2 min-h-[36px] w-full px-3 py-1.5 rounded-md border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-1.5"
+            >
+              {summary?.salesClosed ? (
+                <>
+                  <Unlock className="w-3.5 h-3.5" />
+                  <span>Re-open sales</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Close sales</span>
+                </>
+              )}
+            </button>
           </div>
         </section>
 
@@ -419,7 +494,7 @@ export const AdminPage: React.FC = () => {
                     setSearch(e.target.value);
                     setPage(1);
                   }}
-                  placeholder="Search name, phone, matric, ref..."
+                  placeholder="Search name, phone, ref..."
                   className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-500"
                 />
               </div>
@@ -679,7 +754,7 @@ export const AdminPage: React.FC = () => {
                                           <div>
                                             <p className="font-bold text-gray-900">{ticket.holderName}</p>
                                             <p className="font-mono text-[11px] text-gray-500">
-                                              {ticket.code} • {ticket.holderMatricNumber || 'GUEST'}
+                                              {ticket.code} • {ticket.holderPhone ? formatPhoneForDisplay(ticket.holderPhone) : 'NO PHONE'}
                                             </p>
                                           </div>
                                         </div>
@@ -798,13 +873,13 @@ export const AdminPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-gray-700 mb-1">
-                  Matric / Faculty ID (Optional)
+                  Phone (Optional — shown at the door)
                 </label>
                 <input
-                  type="text"
-                  value={compMatric}
-                  onChange={(e) => setCompMatric(e.target.value)}
-                  placeholder="e.g. VIP-FACULTY-01"
+                  type="tel"
+                  value={compPhone}
+                  onChange={(e) => setCompPhone(e.target.value)}
+                  placeholder="e.g. 08023456789"
                   className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 font-mono"
                 />
               </div>
@@ -832,6 +907,36 @@ export const AdminPage: React.FC = () => {
       {/* ========================================================
           MODAL: Void Ticket Confirmation
       ======================================================== */}
+      {isCloseSalesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white border border-gray-200 shadow-xl p-5">
+            <h2 className="text-base font-bold text-gray-900">Close ticket sales?</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              The checkout page will stop accepting purchases immediately and show
+              buyers a &ldquo;sales closed&rdquo; message. Nobody can buy a ticket until you
+              re-open it. You can re-open at any time.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsCloseSalesModalOpen(false)}
+                className="min-h-[38px] px-4 py-2 rounded-md border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={salesToggleBusy}
+                onClick={() => handleSetSalesOpen(false)}
+                className="min-h-[38px] px-4 py-2 rounded-md bg-red-600 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {salesToggleBusy ? 'Closing…' : 'Close sales'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {voidModalTicket && (
         <div
           role="dialog"

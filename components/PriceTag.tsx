@@ -1,23 +1,30 @@
 import React from 'react';
-import { koboToNaira } from '@/types/ticketing';
+import { koboToNaira, computeOrderTotals } from '@/types/ticketing';
+import { eventConfig } from '@/config/event.config';
 
 interface PriceTagProps {
-  priceKobo: number;
-  feeKobo?: number;
-  passFeeToBuyer?: boolean;
+  /** Quantity to price. Defaults to a single ticket. */
+  quantity?: number;
   size?: 'sm' | 'md' | 'lg';
 }
 
-export const PriceTag: React.FC<PriceTagProps> = ({
-  priceKobo,
-  feeKobo = 0,
-  passFeeToBuyer = false,
-  size = 'md',
-}) => {
-  const formattedBase = koboToNaira(priceKobo);
-  const formattedFee = feeKobo > 0 ? koboToNaira(feeKobo) : null;
-  const totalKobo = passFeeToBuyer ? priceKobo + feeKobo : priceKobo;
-  const formattedTotal = koboToNaira(totalKobo);
+/**
+ * Displays the headline ticket price and, when the buyer covers them, the
+ * charges added on top. Derives everything from computeOrderTotals so the
+ * public page can never disagree with the checkout summary or the server.
+ */
+export const PriceTag: React.FC<PriceTagProps> = ({ quantity = 1, size = 'md' }) => {
+  const totals = computeOrderTotals({
+    quantity,
+    unitPriceKobo: eventConfig.ticketing.priceKobo,
+    serviceChargeRate: eventConfig.ticketing.serviceChargeRate,
+    passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
+  });
+
+  const extrasKobo = totals.totalKobo - totals.baseKobo;
+  const formattedBase = koboToNaira(totals.unitPriceKobo);
+  const formattedTotal = koboToNaira(totals.totalKobo);
+  const hasExtras = extrasKobo > 0;
 
   if (size === 'lg') {
     return (
@@ -28,9 +35,11 @@ export const PriceTag: React.FC<PriceTagProps> = ({
           </span>
           <span className="text-sm font-semibold text-brand-muted uppercase">/ ticket</span>
         </div>
-        {passFeeToBuyer && formattedFee && (
-          <div className="flex items-center gap-1.5 text-xs sm:text-sm text-brand-muted">
-            <span>+ {formattedFee} processing fee</span>
+        {hasExtras && (
+          <div className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm text-brand-muted">
+            <span>
+              + {eventConfig.ticketing.serviceChargeLabel.toLowerCase()} &amp; payment fee
+            </span>
             <span className="text-brand-dim font-mono">({formattedTotal} total)</span>
           </div>
         )}
@@ -40,10 +49,13 @@ export const PriceTag: React.FC<PriceTagProps> = ({
 
   if (size === 'sm') {
     return (
-      <div id="price-tag-small" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-text">
+      <div
+        id="price-tag-small"
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-text"
+      >
         <span className="font-mono font-bold text-brand-primary">{formattedBase}</span>
-        {passFeeToBuyer && formattedFee && (
-          <span className="text-xs text-brand-muted font-normal">+ {formattedFee} fee</span>
+        {hasExtras && (
+          <span className="text-xs text-brand-muted font-normal">+ fees</span>
         )}
       </div>
     );
@@ -57,9 +69,9 @@ export const PriceTag: React.FC<PriceTagProps> = ({
         </span>
         <span className="text-xs text-brand-muted font-medium uppercase">per pass</span>
       </div>
-      {passFeeToBuyer && formattedFee && (
+      {hasExtras && (
         <span className="text-xs text-brand-muted">
-          + {formattedFee} gateway fee at checkout
+          + {eventConfig.ticketing.serviceChargeLabel.toLowerCase()} &amp; payment fee at checkout
         </span>
       )}
     </div>

@@ -11,7 +11,7 @@ import {
   PurchaseState,
   koboToNaira,
   normaliseNgPhone,
-  paystackFeeKobo,
+  computeOrderTotals,
 } from '@/types/ticketing';
 import { QuantityStepper } from '@/components/QuantityStepper';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -33,10 +33,6 @@ const checkoutSchema = z.object({
       const norm = normaliseNgPhone(val);
       return norm.startsWith('+234') && norm.length >= 13;
     }, 'Must be a valid Nigerian number (e.g. 08023456789 or +234...)'),
-  matricNumber: eventConfig.featureFlags.requireMatricNumber
-    ? z.string().min(5, 'Matric / Student ID number is required (e.g. 190403063)')
-    : z.string().optional(),
-  department: z.string().optional(),
   quantity: z
     .number()
     .min(1, 'Quantity must be at least 1')
@@ -67,19 +63,20 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       fullName: initialValues?.fullName || '',
       email: initialValues?.email || '',
       phone: initialValues?.phone ? normaliseNgPhone(initialValues.phone) : '',
-      matricNumber: initialValues?.matricNumber || '',
-      department: initialValues?.department || '',
       quantity: initialValues?.quantity || 1,
     },
   });
 
   const quantity = watch('quantity') || 1;
   const unitPriceKobo = eventConfig.ticketing.priceKobo;
-  const baseTotalKobo = unitPriceKobo * quantity;
-  const feeKobo = eventConfig.ticketing.passFeeToBuyer
-    ? paystackFeeKobo(baseTotalKobo)
-    : 0;
-  const grandTotalKobo = baseTotalKobo + feeKobo;
+  // Single source of truth for what an order costs — the server computes the
+  // authoritative total with this same function.
+  const totals = computeOrderTotals({
+    quantity,
+    unitPriceKobo,
+    serviceChargeRate: eventConfig.ticketing.serviceChargeRate,
+    passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
+  });
 
   const handlePhoneBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const raw = e.target.value;
@@ -94,8 +91,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       fullName: data.fullName,
       email: data.email,
       phone: normaliseNgPhone(data.phone),
-      matricNumber: data.matricNumber,
-      department: data.department,
       quantity: data.quantity,
     });
   };
@@ -155,7 +150,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                 id="email"
                 type="email"
                 disabled={isDisabled}
-                placeholder="e.g. student@live.unilag.edu.ng"
+                placeholder="e.g. you@gmail.com"
                 {...register('email')}
                 className={`w-full min-h-[48px] px-4 rounded-xl bg-brand-subtle border text-brand-text placeholder-brand-dim text-base focus:border-brand-primary transition-colors ${
                   errors.email ? 'border-brand-urgent' : 'border-brand-border'
@@ -199,62 +194,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
             {errors.phone && (
               <p className="text-xs text-brand-urgent font-medium mt-1">
                 {errors.phone.message}
-              </p>
-            )}
-          </div>
-
-          {/* Matric Number (Conditional) */}
-          {eventConfig.featureFlags.requireMatricNumber && (
-            <div>
-              <label
-                htmlFor="matricNumber"
-                className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-1.5"
-              >
-                UNILAG Matric / Student ID <span className="text-brand-urgent">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  id="matricNumber"
-                  type="text"
-                  disabled={isDisabled}
-                  placeholder="e.g. 190403063 (or GUEST if outside UNILAG)"
-                  {...register('matricNumber')}
-                  className={`w-full min-h-[48px] px-4 rounded-xl bg-brand-subtle border text-brand-text placeholder-brand-dim text-base font-mono focus:border-brand-primary transition-colors ${
-                    errors.matricNumber ? 'border-brand-urgent' : 'border-brand-border'
-                  } ${isDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
-                />
-              </div>
-              {errors.matricNumber && (
-                <p className="text-xs text-brand-urgent font-medium mt-1">
-                  {errors.matricNumber.message}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Department (Optional) */}
-          <div>
-            <label
-              htmlFor="department"
-              className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-1.5"
-            >
-              Department / Discipline <span className="text-brand-dim">(Optional)</span>
-            </label>
-            <div className="relative">
-              <input
-                id="department"
-                type="text"
-                disabled={isDisabled}
-                placeholder="e.g. Electrical & Electronics Engineering"
-                {...register('department')}
-                className={`w-full min-h-[48px] px-4 rounded-xl bg-brand-subtle border text-brand-text placeholder-brand-dim text-base focus:border-brand-primary transition-colors ${
-                  errors.department ? 'border-brand-urgent' : 'border-brand-border'
-                } ${isDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
-              />
-            </div>
-            {errors.department && (
-              <p className="text-xs text-brand-urgent font-medium mt-1">
-                {errors.department.message}
               </p>
             )}
           </div>
@@ -308,22 +247,31 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
 
             <div className="flex items-center justify-between text-brand-muted">
               <span>Subtotal ({quantity} {quantity === 1 ? 'ticket' : 'tickets'})</span>
-              <span className="font-mono text-brand-text">{koboToNaira(baseTotalKobo)}</span>
+              <span className="font-mono text-brand-text">{koboToNaira(totals.baseKobo)}</span>
             </div>
+
+            {totals.serviceChargeKobo > 0 && (
+              <div className="flex items-center justify-between text-brand-muted">
+                <span>{eventConfig.ticketing.serviceChargeLabel}</span>
+                <span className="font-mono text-brand-text">
+                  {koboToNaira(totals.serviceChargeKobo)}
+                </span>
+              </div>
+            )}
 
             {eventConfig.ticketing.passFeeToBuyer && (
               <div className="flex items-center justify-between text-brand-muted">
-                <span className="flex items-center gap-1">
-                  <span>Paystack Processing Fee</span>
+                <span>Payment processing fee</span>
+                <span className="font-mono text-brand-text">
+                  {koboToNaira(totals.gatewayFeeKobo)}
                 </span>
-                <span className="font-mono text-brand-text">{koboToNaira(feeKobo)}</span>
               </div>
             )}
 
             <div className="pt-3 border-t border-brand-border flex items-baseline justify-between">
               <span className="text-base font-bold text-brand-text">Total Payable</span>
               <span className="text-2xl sm:text-3xl font-extrabold font-mono text-brand-primary">
-                {koboToNaira(grandTotalKobo)}
+                {koboToNaira(totals.totalKobo)}
               </span>
             </div>
           </div>
@@ -354,7 +302,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
             ) : (
               <>
                 <Lock className="w-5 h-5" />
-                <span>Pay {koboToNaira(grandTotalKobo)}</span>
+                <span>Pay {koboToNaira(totals.totalKobo)}</span>
               </>
             )}
           </button>

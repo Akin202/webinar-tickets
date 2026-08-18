@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -11,7 +11,7 @@ import {
   Ticket as TicketIcon,
   CheckCircle2,
 } from 'lucide-react';
-import { eventConfig, salesCloseLabel } from '@/config/event.config';
+import { eventConfig } from '@/config/event.config';
 import { CheckoutValues, PurchaseState, Order, Ticket } from '@/types/ticketing';
 import { CheckoutForm } from '@/components/CheckoutForm';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
@@ -21,6 +21,7 @@ import {
   confirmPurchase,
   listOrders,
   getOrderByReference,
+  getSalesSummary,
 } from '@/lib/data-access';
 import { IS_DEV } from '@/lib/dev-mode';
 import { useDevState } from '@/components/dev/DevStateProvider';
@@ -37,6 +38,37 @@ export const CheckoutPage: React.FC = () => {
   // Reference of the in-flight purchase, so the dev simulate buttons can
   // confirm the real order rather than reaching for a mock fixture.
   const [activeReference, setActiveReference] = useState<string | null>(null);
+  // Suppresses a flash of the purchase form before availability is known. A
+  // buyer starting to type into a form that then vanishes is worse than a
+  // brief spinner. Becomes a server-side check in Session 1, at which point
+  // this gate can go.
+  const [availabilityChecked, setAvailabilityChecked] = useState<boolean>(false);
+
+  // Whether the form can be shown at all. Without this the sales_closed and
+  // sold_out screens existed but nothing ever reached them — the admin toggle
+  // would have been invisible to buyers.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const summary = await getSalesSummary();
+        if (cancelled) return;
+        if (summary.salesClosed) {
+          setInternalState({ status: 'sales_closed' });
+        } else if (summary.isSoldOut) {
+          setInternalState({ status: 'sold_out' });
+        }
+      } catch {
+        // Leave the form up. A failed availability check must not block a
+        // sale — the server re-checks authoritatively at submit time.
+      } finally {
+        if (!cancelled) setAvailabilityChecked(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Active state priority: dev switcher forced state > internal state
   const purchaseState = forcedState || internalState;
@@ -359,7 +391,8 @@ export const CheckoutPage: React.FC = () => {
                 Ticket Sales Are Now Closed
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
-                Online ticket sales for {eventConfig.event.name} officially ended on {salesCloseLabel}.
+                Online ticket sales for {eventConfig.event.name} are closed. Passes may
+                still be available at the door &mdash; message the organisers to check.
               </p>
             </div>
 
@@ -423,7 +456,18 @@ export const CheckoutPage: React.FC = () => {
         {/* ========================================================
             DEFAULT STATE: IDLE & VALIDATING (The Checkout Form)
         ======================================================== */}
-        {(purchaseState.status === 'idle' || purchaseState.status === 'validating') && (
+        {!availabilityChecked && purchaseState.status === 'idle' && !forcedState && (
+          <div
+            id="checkout-availability-check"
+            className="max-w-xl mx-auto my-12 p-8 rounded-3xl bg-brand-card border border-brand-border text-center space-y-4"
+          >
+            <Loader2 className="w-8 h-8 mx-auto animate-spin text-brand-primary" />
+            <p className="text-sm text-brand-muted">Checking ticket availability&hellip;</p>
+          </div>
+        )}
+
+        {(availabilityChecked || forcedState) &&
+          (purchaseState.status === 'idle' || purchaseState.status === 'validating') && (
           <div>
             <div className="mb-8 text-center sm:text-left">
               <span className="text-xs font-bold uppercase tracking-widest text-brand-primary">
