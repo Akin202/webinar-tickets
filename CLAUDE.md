@@ -31,7 +31,9 @@ tick alone is worthless.
 ## Stack
 - Next.js 15 (App Router), TypeScript — migrated from the Vite SPA AI Studio emitted
 - Tailwind, hand-rolled components (no component library)
-- Supabase — Postgres, RLS, Realtime, Auth
+- Supabase — Postgres, RLS, Realtime, Auth. Project ref `adbzxxzyqeurjfrrenme`,
+  reachable from the agent over MCP (`.mcp.json`, features: docs, database,
+  debugging, development, functions).
 - Paystack — Initialize Transaction + `charge.success` webhook
 - Resend for email (backup delivery only — WhatsApp is the primary channel)
 - Vercel
@@ -69,6 +71,9 @@ tick alone is worthless.
 - **Privacy:** the buyer list contains names, phone numbers, and matric numbers
   of ~400 identifiable students. It must be impossible to read any of it with
   the public anon key. RLS on every table, verified by an actual attack script.
+  Before the sales link is distributed, append `&read_only=true` to the Supabase
+  MCP URL in `.mcp.json`. From that point the buyer list is real student PII and
+  no agent gets write access to it outside a reviewed migration.
 - **Link previews:** the URL is distributed on WhatsApp. OG tags must be in the
   server-rendered HTML — WhatsApp's crawler does not execute JavaScript.
 - **Accessibility:** 4.5:1 minimum contrast. Scanner states must be
@@ -83,8 +88,37 @@ npm run build          # must pass before any commit
 npx supabase db push
 ```
 
+## Layout
+```
+app/                 App Router routes. Thin server components that export
+                     `metadata` and render a client component from
+                     components/pages/.
+components/pages/    The page bodies ("use client").
+components/          Presentational components.
+components/dev/      DevStateProvider — dev-only forced-state context.
+lib/                 data-access (the seam), theme, offline-db, mock-data.
+config/ types/       The contracts.
+```
+
 ## Current state
-UI complete from Google AI Studio. Handoff audit done and the AI Studio
-scaffolding stripped (no Gemini, no Express, no stray backend). Vite → Next.js
-migration in progress. All data is mock, routed through `lib/data-access.ts`.
-No database, no auth, no payments, no sync. Every gap is marked `TODO(handoff)`.
+UI complete from Google AI Studio. Handoff audit done, AI Studio scaffolding
+stripped (no Gemini, no Express, no stray backend), and the Vite → Next.js 15
+migration is complete: `npm run build` and `npm run lint` both pass clean, OG
+tags are server-rendered, fonts are self-hosted via next/font, and the theme
+is driven from `config/event.config.ts`.
+
+All data is still mock, routed through `lib/data-access.ts`. No database, no
+auth, no payments, no sync. 24 `TODO(handoff)` markers are the work queue —
+`grep -rn "TODO(handoff)"`.
+
+Known gaps worth naming:
+- `/admin` and `/scan` have NO authentication. Any four digits at
+  `/scan/login` opens the scanner.
+- "Save Pass" on the ticket does not save anything; it shows a notice.
+- `lib/mock-data.ts` still ships in the client bundle because
+  `data-access.ts` imports it. It goes away in Session 1 Step 4.
+- `assets/og.jpg` and `assets/logo.svg` are referenced by config but do not
+  exist, so the WhatsApp preview has no image yet.
+- `/scan` still uses `animate-pulse` / `animate-bounce` / `animate-ping`,
+  which contradicts the "no animation on /scan" rule above. Left as-is
+  because it is a design decision, not a defect — decide and apply.

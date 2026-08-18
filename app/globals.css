@@ -1,0 +1,179 @@
+@import "tailwindcss";
+
+/* ============================================================
+   TOKENS
+
+   Three deliberately separate families:
+
+   1. --brand-*  The party. Base values are INJECTED from
+                 event.config.ts at runtime (see lib/theme.tsx); the
+                 values here are only a fallback for a JS-less render.
+                 The neutral scale is derived via color-mix so that
+                 changing `surface` in config keeps every card, border
+                 and hover state coherent.
+
+   2. --tool-*   /admin and /scan/login chrome. Instruments, not
+                 marketing. Light, dense, deliberately NOT the party
+                 design language. Never event-specific.
+
+   3. --scan-*   Door scanner result states. SAFETY COLOURS — fixed on
+                 purpose. Green must mean admitted at every event
+                 regardless of the brand palette. Do not wire these to
+                 config.
+   ============================================================ */
+
+:root {
+  /* --- brand base: overridden by the injected block from config --- */
+  --brand-primary: #e2ff00;
+  --brand-accent: #e2ff00;
+  --brand-surface: #060709;
+  --brand-text: #f8fafc;
+  --font-heading: var(--font-anton), system-ui, -apple-system, sans-serif;
+  --font-body: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+
+  /* --- brand derived: follow whatever the config sets above --- */
+  --brand-primary-hover: color-mix(in oklab, var(--brand-primary) 88%, black);
+  --brand-surface-raised: color-mix(in oklab, var(--brand-surface) 96%, white);
+  --brand-surface-card: color-mix(in oklab, var(--brand-surface) 92%, white);
+  --brand-surface-card-hover: color-mix(in oklab, var(--brand-surface) 86%, white);
+  --brand-surface-subtle: color-mix(in oklab, var(--brand-surface) 82%, white);
+  --brand-border: color-mix(in oklab, var(--brand-surface) 80%, white);
+  --brand-border-strong: color-mix(in oklab, var(--brand-surface) 72%, white);
+  --brand-border-focus: var(--brand-primary);
+  --brand-card-danger: color-mix(in oklab, var(--brand-surface) 88%, var(--brand-urgent));
+  --brand-text-muted: color-mix(in oklab, var(--brand-text) 62%, var(--brand-surface));
+  --brand-text-dim: color-mix(in oklab, var(--brand-text) 42%, var(--brand-surface));
+
+  /* --- brand status (public surfaces only) --- */
+  --brand-urgent: #ff3344;
+  --brand-urgent-bg: #450a0a;
+  --brand-urgent-border: #7f1d1d;
+  --brand-success: #22c55e;
+  --brand-success-bg: #052e16;
+  --brand-success-border: #15803d;
+  --brand-warning: var(--brand-primary);
+  --brand-warning-bg: color-mix(in oklab, var(--brand-primary) 18%, black);
+  --brand-warning-border: color-mix(in oklab, var(--brand-primary) 38%, black);
+
+  /* --- tool chrome: /admin, /scan/login --- */
+  --tool-surface: #f8f9fa;
+  --tool-surface-card: #ffffff;
+  --tool-ink: #1a1f2c;
+  --tool-ink-deep: #0f172a;
+  --tool-ink-muted: #1e293b;
+  --tool-border: #d8dee6;
+
+  /* --- scanner result states: FIXED SAFETY COLOURS --- */
+  --scan-admit: #047857;
+  --scan-already: #991b1b;
+  --scan-notfound: #7f1d1d;
+  --scan-void: #881337;
+  --scan-unpaid: #b45309;
+  --scan-hazard: #facc15;
+  --scan-hazard-ink: #000000;
+
+  /* --- scanner chrome (dark, glare-resistant) --- */
+  --scan-surface: #090b10;
+  --scan-surface-card: #12151e;
+  --scan-surface-raised: #151924;
+  --scan-border: #1c2230;
+  --scan-border-strong: #252d40;
+}
+
+@theme {
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-hover: var(--brand-primary-hover);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-raised: var(--brand-surface-raised);
+  --color-brand-card: var(--brand-surface-card);
+  --color-brand-card-hover: var(--brand-surface-card-hover);
+  --color-brand-card-danger: var(--brand-card-danger);
+  --color-brand-subtle: var(--brand-surface-subtle);
+  --color-brand-border: var(--brand-border);
+  --color-brand-border-strong: var(--brand-border-strong);
+  --color-brand-border-focus: var(--brand-border-focus);
+  --color-brand-text: var(--brand-text);
+  --color-brand-muted: var(--brand-text-muted);
+  --color-brand-dim: var(--brand-text-dim);
+  --color-brand-urgent: var(--brand-urgent);
+  --color-brand-urgent-bg: var(--brand-urgent-bg);
+  --color-brand-urgent-border: var(--brand-urgent-border);
+  --color-brand-success: var(--brand-success);
+  --color-brand-success-bg: var(--brand-success-bg);
+  --color-brand-success-border: var(--brand-success-border);
+  --color-brand-warning: var(--brand-warning);
+  --color-brand-warning-bg: var(--brand-warning-bg);
+  --color-brand-warning-border: var(--brand-warning-border);
+
+  --color-tool-surface: var(--tool-surface);
+  --color-tool-card: var(--tool-surface-card);
+  --color-tool-ink: var(--tool-ink);
+  --color-tool-ink-deep: var(--tool-ink-deep);
+  --color-tool-ink-muted: var(--tool-ink-muted);
+  --color-tool-border: var(--tool-border);
+
+  --color-scan-admit: var(--scan-admit);
+  --color-scan-already: var(--scan-already);
+  --color-scan-notfound: var(--scan-notfound);
+  --color-scan-void: var(--scan-void);
+  --color-scan-unpaid: var(--scan-unpaid);
+  --color-scan-hazard: var(--scan-hazard);
+  --color-scan-surface: var(--scan-surface);
+  --color-scan-card: var(--scan-surface-card);
+  --color-scan-raised: var(--scan-surface-raised);
+  --color-scan-border: var(--scan-border);
+  --color-scan-border-strong: var(--scan-border-strong);
+
+  --font-sans: var(--font-body);
+  --font-heading: var(--font-heading);
+}
+
+.font-display {
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+.font-mono-code {
+  font-family: var(--font-space-grotesk), ui-monospace, monospace;
+}
+
+.acid-glow {
+  box-shadow: 0 0 25px -5px color-mix(in oklab, var(--brand-primary) 40%, transparent);
+}
+
+.acid-glow-sm {
+  box-shadow: 0 0 12px -2px color-mix(in oklab, var(--brand-primary) 30%, transparent);
+}
+
+.acid-border {
+  border-color: var(--brand-primary);
+}
+
+.text-acid {
+  color: var(--brand-primary);
+}
+
+.bg-acid {
+  background-color: var(--brand-primary);
+}
+
+body {
+  background-color: var(--brand-surface);
+  color: var(--brand-text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, a, input, select {
+  touch-action: manipulation;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
