@@ -11,7 +11,7 @@ import {
   Ticket as TicketIcon,
   CheckCircle2,
 } from 'lucide-react';
-import { eventConfig } from '@/config/event.config';
+import { eventConfig, salesCloseLabel } from '@/config/event.config';
 import { CheckoutValues, PurchaseState, Order, Ticket } from '@/types/ticketing';
 import { CheckoutForm } from '@/components/CheckoutForm';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
@@ -55,7 +55,6 @@ export const CheckoutPage: React.FC = () => {
         buyerName: values.fullName,
         buyerEmail: values.email,
         buyerPhone: values.phone,
-        buyerMatricNumber: values.matricNumber || null,
         quantity: values.quantity,
       });
 
@@ -360,7 +359,7 @@ export const CheckoutPage: React.FC = () => {
                 Ticket Sales Are Now Closed
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
-                Online ticket sales for {eventConfig.event.name} officially ended on {eventConfig.ticketing.salesCloseAt}.
+                Online ticket sales for {eventConfig.event.name} officially ended on {salesCloseLabel}.
               </p>
             </div>
 

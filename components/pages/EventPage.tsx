@@ -9,7 +9,6 @@ import {
   MapPin,
   ShieldAlert,
   Shirt,
-  Sparkles,
   Ticket,
   ChevronDown,
   GlassWater,
@@ -22,7 +21,7 @@ import {
   CheckCircle,
   ExternalLink,
 } from 'lucide-react';
-import { eventConfig } from '@/config/event.config';
+import { eventConfig, doorsOpenIso } from '@/config/event.config';
 import { getSalesSummary } from '@/lib/data-access';
 import { SalesSummary, koboToNaira } from '@/types/ticketing';
 import { Countdown } from '@/components/Countdown';
@@ -48,7 +47,7 @@ const defaultFaqs = [
   },
   {
     question: "What are the door requirements & security checks?",
-    answer: "Every attendee must present their digital QR pass and a valid photo ID / Student ID. Age policy: " + eventConfig.event.policies.ageOrIdPolicy + ". Bags are subject to security search at the entrance."
+    answer: "Every attendee must present their digital QR pass and a valid photo ID. Age policy: " + eventConfig.event.policies.ageOrIdPolicy + ". Bags are subject to security search at the entrance."
   }
 ];
 
@@ -148,7 +147,7 @@ export const EventPage: React.FC = () => {
             {/* Poster Middle: Host & Dress Code */}
             <div className="py-6 sm:py-8 text-center max-w-2xl mx-auto space-y-4">
               <p className="text-base sm:text-xl text-slate-200 font-semibold leading-relaxed">
-                Hosted by {eventConfig.event.hostedBy}. The definitive sign-out celebration to wrap up an epic university journey.
+                Hosted by {eventConfig.event.hostedBy}. The definitive sign-out celebration — open to everyone who wants to be there.
               </p>
 
               {/* Dress Code & Vibe Badge */}
@@ -199,7 +198,7 @@ export const EventPage: React.FC = () => {
               <span className="text-xs uppercase tracking-widest text-slate-400 font-bold block mb-2">
                 Countdown to Doors Open ({eventConfig.event.doorsOpen})
               </span>
-              <Countdown targetIso={`${eventConfig.event.date}T11:30:00+01:00`} />
+              <Countdown targetIso={doorsOpenIso} />
             </div>
 
             {/* Primary Action Buttons */}
@@ -259,45 +258,7 @@ export const EventPage: React.FC = () => {
       </section>
 
       {/* ========================================================
-          4. WHAT'S INCLUDED / EXPERIENCE
-      ======================================================== */}
-      <section
-        id="what-to-expect-section"
-        className="w-full py-12 sm:py-16 px-4 sm:px-6 max-w-5xl mx-auto"
-      >
-        <SectionHeading
-          title={`What To Expect At ${eventConfig.event.venueName}`}
-          subtitle="Everything planned to make your final sign-out night unforgettable."
-          eyebrow="The Full Experience"
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {eventConfig.event.includes.map((itemTitle, index) => {
-            return (
-              <div
-                key={itemTitle}
-                id={`include-card-${index}`}
-                className={`p-6 rounded-2xl bg-brand-card border border-brand-border flex flex-col gap-3 relative overflow-hidden group ${
-                  prefersReducedMotion ? '' : 'transition-all duration-200 hover:border-brand-primary/50 hover:-translate-y-1'
-                }`}
-              >
-                <div className="w-12 h-12 rounded-xl bg-brand-card-hover border border-brand-border flex items-center justify-center text-brand-primary group-hover:bg-brand-primary group-hover:text-black transition-colors">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-bold text-white leading-snug">
-                  {itemTitle}
-                </h3>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  Included with every valid admission pass for the sign-out after party.
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ========================================================
-          5. EVENT DETAILS & ACCESS RULES
+          4. EVENT DETAILS & ACCESS RULES
       ======================================================== */}
       <section
         id="the-details-section"
@@ -337,14 +298,14 @@ export const EventPage: React.FC = () => {
               icon={ShieldAlert}
               label="Age & Identification Policy"
               value={eventConfig.event.policies.ageOrIdPolicy}
-              subValue="Strict security at the door. Valid photo or student ID required."
+              subValue="Strict security at the door. Valid photo ID required."
             />
           </div>
         </div>
       </section>
 
       {/* ========================================================
-          6. PRICING & IMMEDIATE CHECKOUT PASS CARD
+          5. PRICING & IMMEDIATE CHECKOUT PASS CARD
       ======================================================== */}
       <section
         id="pricing-cta-section"
@@ -392,7 +353,7 @@ export const EventPage: React.FC = () => {
       </section>
 
       {/* ========================================================
-          7. FAQ ACCORDION
+          6. FAQ ACCORDION
       ======================================================== */}
       <section
         id="faq-section"
@@ -461,7 +422,7 @@ export const EventPage: React.FC = () => {
       </section>
 
       {/* ========================================================
-          8. STICKY MOBILE BUY BAR
+          7. STICKY MOBILE BUY BAR
       ======================================================== */}
       <div className="fixed bottom-0 inset-x-0 z-40 sm:hidden bg-brand-surface/95 border-t border-brand-border p-3 backdrop-blur-lg flex items-center justify-between gap-3">
         <div className="flex flex-col">
@@ -478,7 +439,7 @@ export const EventPage: React.FC = () => {
       </div>
 
       {/* ========================================================
-          9. FOOTER
+          8. FOOTER
       ======================================================== */}
       <footer
         id="event-footer"
