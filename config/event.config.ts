@@ -63,6 +63,14 @@ export const eventConfig = {
     fontBody: "var(--font-jakarta), system-ui, sans-serif",
   },
 
+  staff: {
+    // The door terminal's Supabase Auth identity. The 6-digit gate PIN is
+    // this account's password — one shared terminal account, per-device
+    // attribution via the device id recorded on every check-in. Created by
+    // scripts/seed-staff.mjs.
+    scannerEmail: "scanner@lastdance.tikets.online",
+  },
+
   support: {
     whatsappNumber: "+2348039927805",
     whatsappMessage: "Hi, I need help with my sign-out ticket",
