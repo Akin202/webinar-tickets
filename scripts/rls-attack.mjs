@@ -99,9 +99,13 @@ console.log('\n2. anon reaching money through the counter');
 console.log('\n3. anon calling privileged functions');
 for (const fn of ['get_check_in_manifest', 'set_sales_open', 'record_check_in']) {
   const { status, json } = await req(`rpc/${fn}`, { method: 'POST', body: {} });
-  const rows = Array.isArray(json) ? json : null;
-  status === 200 && rows && rows.length
-    ? fail(`anon executed ${fn}() and got ${rows.length} row(s)`)
+  // Any 200 is a failure, even with zero rows. EXECUTE itself is revoked
+  // from anon, so the request must die at the grant (401/403/404), not get
+  // into the function body and rely on its internal role check. A 200 with
+  // an empty result is exactly what the pre-fix implicit PUBLIC grant
+  // produced — do not let that score as blocked again.
+  status === 200
+    ? fail(`anon executed ${fn}() (HTTP 200${Array.isArray(json) && json.length ? `, ${json.length} row(s)` : ', empty'}) — EXECUTE grant is open`)
     : pass(`anon blocked from ${fn}() (HTTP ${status})`);
 }
 
