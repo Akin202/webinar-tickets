@@ -21,7 +21,7 @@ import {
   confirmPurchase,
   listOrders,
   getOrderByReference,
-  getSalesSummary,
+  getPublicSalesCounter,
 } from '@/lib/data-access';
 import { IS_DEV } from '@/lib/dev-mode';
 import { useDevState } from '@/components/dev/DevStateProvider';
@@ -51,7 +51,7 @@ export const CheckoutPage: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        const summary = await getSalesSummary();
+        const summary = await getPublicSalesCounter();
         if (cancelled) return;
         if (summary.salesClosed) {
           setInternalState({ status: 'sales_closed' });

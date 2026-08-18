@@ -96,6 +96,27 @@ export interface SalesSummary {
   lastUpdatedAt: string;
 }
 
+/**
+ * The ONLY sales figures safe to expose to an unauthenticated visitor.
+ *
+ * Deliberately carries no money and no per-channel breakdown: the public
+ * event page and checkout are served with the anon key, which ships in the
+ * browser bundle, so anything reachable here is effectively published.
+ * SalesSummary — which holds gross, net, service charge and gateway fees —
+ * is admin-only and must never be fetched from an anon-reachable surface.
+ *
+ * Backed by a SECURITY DEFINER aggregate returning counts, never rows.
+ */
+export interface PublicSalesCounter {
+  capacity: number;
+  ticketsSold: number;
+  ticketsRemaining: number;
+  ticketsCheckedIn: number;
+  isSoldOut: boolean;
+  salesClosed: boolean;
+  lastUpdatedAt: string;
+}
+
 export interface StaffUser {
   id: string;
   name: string;

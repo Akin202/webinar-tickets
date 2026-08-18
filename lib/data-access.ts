@@ -4,6 +4,7 @@ import type {
   CheckIn,
   CheckInResult,
   SalesSummary,
+  PublicSalesCounter,
   StaffUser,
 } from '@/types/ticketing';
 import { computeOrderTotals } from '@/types/ticketing';
@@ -76,6 +77,30 @@ export async function getSalesSummary(): Promise<SalesSummary> {
   };
 }
 
+// TODO(handoff): back with a SECURITY DEFINER RPC granted to anon, returning
+//   COUNTS ONLY and never rows. This is the one sales figure an unauthenticated
+//   visitor may read. Do NOT let it grow money fields — getSalesSummary exists
+//   for that and is admin-only, served with the service role key.
+export async function getPublicSalesCounter(): Promise<PublicSalesCounter> {
+  await delay(150);
+  const sold = currentTickets.filter((t) => t.status !== 'void').length;
+  const checkedIn = currentTickets.filter((t) => t.status === 'checked_in').length;
+  const capacity = eventConfig.ticketing.capacity;
+
+  return {
+    capacity,
+    ticketsSold: sold,
+    ticketsRemaining: Math.max(0, capacity - sold),
+    ticketsCheckedIn: checkedIn,
+    isSoldOut: sold >= capacity,
+    salesClosed: !salesOpen || pastHardStop(),
+    lastUpdatedAt: new Date().toISOString(),
+  };
+}
+
+// TODO(handoff): ADMIN ONLY. Contains gross, net, service charge and gateway
+//   fees. Must be served server-side with the service role key and must never
+//   be reachable from /, /checkout or /scan — use getPublicSalesCounter there.
 // TODO(handoff): persist to the single-row `event_settings.sales_open`.
 //   Admin role only, and every flip should be written to an audit log —
 //   closing sales stops all revenue, so "who closed it and when" matters.

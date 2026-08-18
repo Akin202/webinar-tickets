@@ -22,8 +22,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { eventConfig, doorsOpenIso } from '@/config/event.config';
-import { getSalesSummary } from '@/lib/data-access';
-import { SalesSummary, koboToNaira } from '@/types/ticketing';
+import { getPublicSalesCounter } from '@/lib/data-access';
+import { PublicSalesCounter, koboToNaira } from '@/types/ticketing';
 import { Countdown } from '@/components/Countdown';
 import { CapacityMeter } from '@/components/CapacityMeter';
 import { PriceTag } from '@/components/PriceTag';
@@ -54,11 +54,11 @@ const defaultFaqs = [
 export const EventPage: React.FC = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
-  const [salesSummary, setSalesSummary] = useState<SalesSummary | null>(null);
+  const [salesSummary, setSalesSummary] = useState<PublicSalesCounter | null>(null);
   const prefersReducedMotion = useReducedMotion();
 
   React.useEffect(() => {
-    getSalesSummary().then(setSalesSummary);
+    getPublicSalesCounter().then(setSalesSummary);
   }, []);
 
   const toggleFaq = (index: number) => {
