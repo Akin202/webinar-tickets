@@ -96,19 +96,21 @@ export const CheckoutPage: React.FC = () => {
         authorizationUrl: res.authorizationUrl,
       });
 
-      const confirmed = await confirmPurchase(res.reference);
-      setTimeout(() => {
-        setPurchaseState({
-          status: 'success',
-          order: confirmed.order,
-          tickets: confirmed.tickets,
-        });
-      }, 1000);
+      // Hand off to Paystack's hosted checkout. Paystack redirects back to
+      // /ticket/[reference], where the server verifies payment — this client
+      // never decides payment status.
+      window.location.assign(res.authorizationUrl);
     } catch (err: any) {
-      setPurchaseState({
-        status: 'error',
-        message: err.message || 'Unable to process purchase. Please retry.',
-      });
+      if (err?.code === 'sold_out') {
+        setPurchaseState({ status: 'sold_out' });
+      } else if (err?.code === 'sales_closed') {
+        setPurchaseState({ status: 'sales_closed' });
+      } else {
+        setPurchaseState({
+          status: 'error',
+          message: err.message || 'Unable to process purchase. Please retry.',
+        });
+      }
     }
   };
 

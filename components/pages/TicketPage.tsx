@@ -8,6 +8,7 @@ import {
   getOrderByReference,
   listOrders,
 } from '@/lib/data-access';
+import { IS_DEV } from '@/lib/dev-mode';
 import { Order, Ticket, TicketStatus } from '@/types/ticketing';
 import { TicketCard } from '@/components/TicketCard';
 import { useDevState } from '@/components/dev/DevStateProvider';
@@ -33,7 +34,10 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
         if (reference) {
           result = await getOrderByReference(reference);
         }
-        if (!result) {
+        // DEV ONLY: with no reference, preview the most recent order.
+        // listOrders is admin-only in production — an anonymous visitor
+        // without a reference gets not-found, never someone else's ticket.
+        if (!result && IS_DEV) {
           const { orders } = await listOrders({ limit: 1 });
           if (orders[0]) {
             result = await getOrderByReference(orders[0].reference);

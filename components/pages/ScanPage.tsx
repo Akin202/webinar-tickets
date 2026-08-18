@@ -23,7 +23,7 @@ import {
 import {
   getCheckInManifest,
   checkInTicket,
-  getSalesSummary,
+  getPublicSalesCounter,
   syncQueuedCheckIns,
 } from '@/lib/data-access';
 import {
@@ -98,9 +98,11 @@ export const ScanPage: React.FC = () => {
     let isMounted = true;
     async function initOfflineDB() {
       try {
-        const [manifest, summary, cachedQueue] = await Promise.all([
+        // Counts only. getSalesSummary is admin-only and carries revenue —
+        // a door phone must never fetch it.
+        const [manifest, counter, cachedQueue] = await Promise.all([
           getCheckInManifest(),
-          getSalesSummary(),
+          getPublicSalesCounter(),
           getQueuedCheckIns(),
         ]);
 
@@ -108,8 +110,8 @@ export const ScanPage: React.FC = () => {
           const cachedTotal = await cacheManifestInIDB(manifest);
           setCachedCount(cachedTotal);
           setQueuedCount(cachedQueue.length);
-          setAdmittedCount(summary.ticketsCheckedIn);
-          setTotalCapacity(summary.capacity);
+          setAdmittedCount(counter.ticketsCheckedIn);
+          setTotalCapacity(counter.capacity);
           setManifestDownloadedNotice(true);
           setTimeout(() => {
             if (isMounted) setManifestDownloadedNotice(false);
