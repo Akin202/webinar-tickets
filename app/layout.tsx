@@ -51,16 +51,15 @@ export const metadata: Metadata = {
     description: eventConfig.seo.description,
     url: siteUrl,
     locale: 'en_NG',
-    // TODO(handoff): assets/og.jpg does not exist yet. WhatsApp silently
-    // drops previews over ~300KB, so the real file must be 1200x630 and
-    // under that budget. Verify by sending the link to yourself.
-    images: [{ url: eventConfig.brand.ogImageUrl, width: 1200, height: 630 }],
+    // The image itself comes from app/opengraph-image.tsx, which Next
+    // appends to this object automatically with an absolute, hashed URL.
+    // Listing it here as well would emit a second og:image tag and let a
+    // crawler pick the wrong one.
   },
   twitter: {
     card: 'summary_large_image',
     title: eventConfig.seo.title,
     description: eventConfig.seo.description,
-    images: [eventConfig.brand.ogImageUrl],
   },
 };
 
