@@ -70,18 +70,32 @@ export const eventConfig = {
     // this account's password — one shared terminal account, per-device
     // attribution via the device id recorded on every check-in. Created by
     // scripts/seed-staff.mjs.
-    scannerEmail: "scanner@lastdance.tikets.online",
+    //
+    // This never receives mail — it is a login, not a mailbox — so it is fine
+    // that the host it names carries no MX. Must be final BEFORE seed-staff.mjs
+    // runs: changing it afterwards orphans the door account and locks the door
+    // terminal out on the night.
+    scannerEmail: "scanner@lastdance.tickitid.online",
   },
 
   support: {
     whatsappNumber: "+2348039927805",
     whatsappMessage: "Hi, I need help with my sign-out ticket",
-    email: "support@lastdance.tikets.online",
+    // Deliberately on the APEX, not on lastdance.*. The sales host is a CNAME
+    // to Vercel, and RFC 1034 forbids any other record coexisting with a CNAME
+    // — so lastdance.tickitid.online can never hold MX and mail to it would
+    // bounce. The apex holds no CNAME, so Namecheap's free email forwarding
+    // can point this at a real inbox. Resend is send-only and gives no mailbox.
+    email: "support@tickitid.online",
     organiserName: "After party Committee",
   },
 
   seo: {
-    siteUrl: "https://lastdance.tikets.online",
+    // Also the fallback when NEXT_PUBLIC_SITE_URL is unset — see app/layout.tsx,
+    // app/api/checkout/route.ts and lib/email.ts. That makes this value safety
+    // critical, not cosmetic: it decides where Paystack sends buyers back to.
+    // It must always name a host we control.
+    siteUrl: "https://lastdance.tickitid.online",
     title: "Engineering Sign-Out After-Party — Last Dance",
     description: "Official ticketing for the Engineering Sign-Out After-Party 'Last Dance' at BFF Lagos. August 25, 2026.",
   },

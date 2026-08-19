@@ -47,7 +47,7 @@ describe('extractTicketCode', () => {
   });
 
   it('pulls the code out of a full ticket URL', () => {
-    expect(extractTicketCode('https://lastdance.tikets.online/ticket/SGN-2345-6789')).toBe(
+    expect(extractTicketCode('https://lastdance.tickitid.online/ticket/SGN-2345-6789')).toBe(
       'SGN-2345-6789'
     );
   });
