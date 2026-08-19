@@ -43,6 +43,7 @@ import {
   getDeviceId,
 } from '@/lib/offline-db';
 import { useDevState } from '@/components/dev/DevStateProvider';
+import { useOfflineShell } from '@/hooks/useOfflineShell';
 import { fireScanFeedback, getFeedbackCapabilities } from '@/lib/scanner-feedback';
 import { CheckInResult, formatPhoneForDisplay, StaffUser } from '@/types/ticketing';
 import { getCurrentStaffUser } from '@/lib/data-access';
@@ -146,6 +147,10 @@ export const ScanPage: React.FC = () => {
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
+  // Registers the service worker and reports whether a cold reload with no
+  // network would still render this page. Two different questions from
+  // `isOnline`, and staff need the answer to this one BEFORE they lose signal.
+  const offlineShell = useOfflineShell();
   const [cachedCount, setCachedCount] = useState<number>(0);
   const [queuedCount, setQueuedCount] = useState<number>(0);
   const [manifestNotice, setManifestNotice] = useState<string | null>(null);
@@ -613,6 +618,40 @@ export const ScanPage: React.FC = () => {
           {/* Cached Manifest Badge */}
           <span className="hidden sm:inline text-slate-400 font-mono">
             {cachedCount} passes cached
+          </span>
+
+          {/* Offline shell readiness — the answer to "can I take this phone
+              off the network yet?". The green Online dot above says nothing
+              about surviving a reload, and that is the failure that costs a
+              door phone for the whole night. Icon and wording both change,
+              never colour alone. */}
+          <span
+            role="status"
+            title={
+              offlineShell.status === 'ready'
+                ? 'A reload with no network will still open the scanner.'
+                : offlineShell.status === 'unsupported'
+                  ? 'This browser has no service worker. Do not reload or close this tab.'
+                  : `Storing the scanner for offline use (${offlineShell.cached}/${offlineShell.total}). Stay online until this reads Offline ready.`
+            }
+            className={`flex items-center gap-1.5 font-bold ${
+              offlineShell.status === 'ready' ? 'text-emerald-400' : 'text-amber-400'
+            }`}
+          >
+            {offlineShell.status === 'ready' ? (
+              <ShieldCheck className="w-3.5 h-3.5" />
+            ) : (
+              <ShieldAlert className="w-3.5 h-3.5" />
+            )}
+            <span>
+              {offlineShell.status === 'ready'
+                ? 'Offline ready'
+                : offlineShell.status === 'unsupported'
+                  ? 'No offline shell'
+                  : offlineShell.status === 'incomplete'
+                    ? 'Not offline-safe'
+                    : 'Preparing…'}
+            </span>
           </span>
 
           {/* Sensory Accessibility Indicator — claims only the channels this
