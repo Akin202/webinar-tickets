@@ -19,6 +19,9 @@ import { eventConfig } from '@/config/event.config';
  *
  *   INTEGRATION=1 DOOR_JWT=<token> npx vitest run tests/integration.test.ts
  *
+ * The capacity race additionally needs INTEGRATION_CAPACITY=1 — it is the one
+ * test that writes to the live event_settings row. See the flag below.
+ *
  * DOOR_JWT comes from signing in as the door account:
  *   curl -s -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \
  *     -H "apikey: $ANON_KEY" -H "Content-Type: application/json" \
@@ -26,6 +29,25 @@ import { eventConfig } from '@/config/event.config';
  */
 
 const ENABLED = process.env.INTEGRATION === '1';
+
+/**
+ * The capacity race gets its own flag on top of INTEGRATION=1.
+ *
+ * It is the only test here that WRITES TO THE LIVE event_settings ROW: it
+ * lowers capacity to `taken + 5` so fifty concurrent buyers have something to
+ * race for, and restores it afterwards. `afterAll` covers a failed assertion,
+ * but nothing covers the process dying between the two — a Ctrl-C, a CI
+ * timeout, an OOM — and what that leaves behind is a live event configured to
+ * sell five seats. Sales would then close, silently, at whatever number
+ * happened to be current when someone pressed Ctrl-C.
+ *
+ * So it is opt-in, and deliberately not part of `npm run test:integration`:
+ *
+ *   INTEGRATION=1 INTEGRATION_CAPACITY=1 npx vitest run tests/integration.test.ts
+ *
+ * Run it when the row lock changes. Do not run it during event week.
+ */
+const CAPACITY_ENABLED = ENABLED && process.env.INTEGRATION_CAPACITY === '1';
 
 function env(): Record<string, string> {
   try {
@@ -107,21 +129,48 @@ async function ticketCodeFor(reference: string): Promise<string | null> {
   return Array.isArray(rows) && rows[0]?.code ? rows[0].code : null;
 }
 
+/** PostgREST `in.(...)` list. References are alphanumeric plus dashes. */
+function inList(values: string[]): string {
+  return `in.(${values.map((v) => `"${v}"`).join(',')})`;
+}
+
 afterAll(async () => {
-  if (!ENABLED) return;
-  // Ordered by dependency: check-ins, then tickets, then the orders.
-  for (const reference of created) {
-    const res = await table(`orders?select=id&reference=eq.${reference}`);
-    const rows = await res.json().catch(() => null);
-    const orderId = Array.isArray(rows) ? rows[0]?.id : null;
-    if (!orderId) continue;
-    const t = await table(`tickets?select=id&order_id=eq.${orderId}`);
-    const ticketRows = (await t.json().catch(() => [])) as Array<{ id: string }>;
-    for (const ticket of ticketRows) {
-      await table(`check_ins?ticket_id=eq.${ticket.id}`, { method: 'DELETE' });
-    }
-    await table(`tickets?order_id=eq.${orderId}`, { method: 'DELETE' });
-    await table(`orders?id=eq.${orderId}`, { method: 'DELETE' });
+  if (!ENABLED || created.length === 0) return;
+
+  // Batched, not per-reference. The previous version issued up to four
+  // sequential requests for EACH created reference; the capacity race creates
+  // fifty, so cleanup needed ~200 round trips and ran past the 30s hook
+  // timeout. Vitest killed it partway through and the survivors — eighteen
+  // INTEG-RACE orders — sat in the live database until someone went looking.
+  // Five requests total cannot time out the same way.
+  const orderRes = await table(`orders?select=id&reference=${inList(created)}`);
+  const orderRows = (await orderRes.json().catch(() => [])) as Array<{ id: string }>;
+  const orderIds = orderRows.map((o) => o.id);
+  if (orderIds.length === 0) return;
+
+  const ticketRes = await table(`tickets?select=id&order_id=${inList(orderIds)}`);
+  const ticketRows = (await ticketRes.json().catch(() => [])) as Array<{ id: string }>;
+  const ticketIds = ticketRows.map((t) => t.id);
+
+  // Dependency order: check_ins reference tickets, tickets reference orders
+  // with ON DELETE RESTRICT.
+  if (ticketIds.length > 0) {
+    await table(`check_ins?ticket_id=${inList(ticketIds)}`, { method: 'DELETE' });
+    await table(`tickets?id=${inList(ticketIds)}`, { method: 'DELETE' });
+  }
+  await table(`orders?id=${inList(orderIds)}`, { method: 'DELETE' });
+
+  // Say so if it did not work. A silent cleanup failure is how test rows end
+  // up holding seats in a live event, and the whole point of the INTEG- prefix
+  // is that the leftovers are findable — but only if someone knows to look.
+  const leftover = await table(`orders?select=reference&reference=${inList(created)}`);
+  const remaining = (await leftover.json().catch(() => [])) as Array<{ reference: string }>;
+  if (remaining.length > 0) {
+    console.error(
+      `\n  ! CLEANUP INCOMPLETE — ${remaining.length} test order(s) still in the live database:\n` +
+        `    ${remaining.map((r) => r.reference).join(', ')}\n` +
+        `    Remove them with: node scripts/purge-test-data.mjs\n`
+    );
   }
 });
 
@@ -229,7 +278,7 @@ describe.skipIf(!ENABLED || !DOOR_JWT)('the door race', () => {
   });
 });
 
-describe.skipIf(!ENABLED)('the capacity race', () => {
+describe.skipIf(!CAPACITY_ENABLED)('the capacity race', () => {
   /**
    * The property the whole event rests on: overselling means personally
    * refunding people you know.
@@ -366,8 +415,17 @@ describe('integration coverage notice', () => {
           '    the webhook-replay, amount-mismatch and two-phone-race properties\n' +
           '    are unproven until they run against the live project.\n'
       );
-    } else if (!DOOR_JWT) {
-      console.warn('\n  ! Door-race suite SKIPPED — no DOOR_JWT. This is NOT a pass.\n');
+    } else {
+      if (!DOOR_JWT) {
+        console.warn('\n  ! Door-race suite SKIPPED — no DOOR_JWT. This is NOT a pass.\n');
+      }
+      if (!CAPACITY_ENABLED) {
+        console.warn(
+          '\n  ! Capacity-race suite SKIPPED — no INTEGRATION_CAPACITY=1. This is NOT a pass.\n' +
+            '    It writes to the live event_settings row, so it is opt-in. Run it when the\n' +
+            '    row lock changes; do not run it during event week.\n'
+        );
+      }
     }
     expect(true).toBe(true);
   });
