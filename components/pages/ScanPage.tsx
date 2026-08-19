@@ -786,7 +786,7 @@ export const ScanPage: React.FC = () => {
 
                 {cameraError && (
                   <div className="absolute inset-0 bg-slate-900/95 p-6 flex flex-col items-center justify-center text-center space-y-3">
-                    <Camera className="w-10 h-10 text-slate-500" />
+                    <Camera className="w-10 h-10 text-slate-400" />
                     <p className="text-sm font-semibold text-slate-300">{cameraError}</p>
                     <button
                       type="button"

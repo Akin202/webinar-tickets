@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { AlertTriangle, CheckCircle2, Flame, Users } from 'lucide-react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';

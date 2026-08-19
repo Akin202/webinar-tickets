@@ -16,8 +16,13 @@ import {
   Check,
   Sparkles,
 } from 'lucide-react';
-import { Ticket, TicketStatus } from '@/types/ticketing';
-import { eventConfig } from '@/config/event.config';
+import { Ticket, TicketStatus, formatPhoneForDisplay } from '@/types/ticketing';
+import {
+  eventConfig,
+  doorsOpenIso,
+  eventEndsIso,
+  toCalendarStamp,
+} from '@/config/event.config';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
 import { renameTicketHolder } from '@/lib/data-access';
 
@@ -45,8 +50,21 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [tempName, setTempName] = useState(ticket.holderName);
   const [saveImageNotice, setSaveImageNotice] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
 
   const activeStatus: TicketStatus = forcedStatus || ticket.status;
+
+  // Escape closes the rename dialog. Without it the only way out on a phone
+  // is the Cancel button, and a dialog that traps you is worse than no dialog.
+  React.useEffect(() => {
+    if (!isRenameOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsRenameOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isRenameOpen]);
 
   const handleCopyCode = () => {
     navigator.clipboard?.writeText(ticket.code);
@@ -56,17 +74,27 @@ export const TicketCard: React.FC<TicketCardProps> = ({
 
   const handleRenameSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (tempName.trim()) {
-      try {
-        await renameTicketHolder(ticket.id, tempName.trim());
-        if (onUpdateAttendeeName) {
-          onUpdateAttendeeName(ticket.id, tempName.trim());
-        }
-      } catch (err) {
-        console.error('Rename error:', err);
-      }
+    const next = tempName.trim();
+    if (!next) return;
+
+    // The old version closed the dialog whether or not the write landed, so
+    // a rejected rename — sales closed, doors already open, ticket already
+    // scanned — looked exactly like a successful one. The holder would then
+    // arrive at the gate under a name the door has never heard of.
+    setIsRenaming(true);
+    setRenameError(null);
+    try {
+      await renameTicketHolder(ticket.id, next);
+      onUpdateAttendeeName?.(ticket.id, next);
+      setIsRenameOpen(false);
+    } catch (err) {
+      console.error('Rename error:', err);
+      setRenameError(
+        err instanceof Error ? err.message : 'That name could not be saved. Try again.'
+      );
+    } finally {
+      setIsRenaming(false);
     }
-    setIsRenameOpen(false);
   };
 
   // Google Calendar Link generator
@@ -76,7 +104,11 @@ export const TicketCard: React.FC<TicketCardProps> = ({
       `${eventConfig.event.hostedBy}\nTicket Code: ${ticket.code}\nAttendee: ${ticket.holderName}\nVenue: ${eventConfig.event.venueName}, ${eventConfig.event.venueAddress}`
     );
     const location = encodeURIComponent(`${eventConfig.event.venueName}, ${eventConfig.event.venueAddress}`);
-    const dates = '20260825T223000Z/20260826T030000Z';
+    // Derived, not typed. These were two hardcoded UTC stamps that happened
+    // to be right for this event and would silently be wrong for the next
+    // one — the calendar entry is the one artefact a buyer keeps in their
+    // pocket for a week, so it cannot drift from the config.
+    const dates = `${toCalendarStamp(doorsOpenIso)}/${toCalendarStamp(eventEndsIso)}`;
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
   };
 
@@ -243,6 +275,24 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               {ticket.holderName}
             </p>
 
+            {/* The number door staff will ask for. It is shown here because
+                the holder has to know what they will be challenged on — the
+                gate reads this off the scan result and asks "what's your
+                number?" to defeat forwarded screenshots. Deliberately not
+                editable: a renameable identity check is not a check. */}
+            {ticket.holderPhone && (
+              <div className="pt-2 border-t border-brand-border/60">
+                <span className="text-[11px] font-bold uppercase text-brand-dim block">
+                  Phone on this pass
+                </span>
+                <p className="text-sm font-bold text-brand-text font-mono-code tracking-wide">
+                  {formatPhoneForDisplay(ticket.holderPhone)}
+                </p>
+                <p className="text-[11px] text-brand-dim mt-1 leading-snug">
+                  Door staff may ask you to say this number aloud.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Event Schedule & Location */}
@@ -278,7 +328,13 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <div className="leading-snug">
               <strong className="block text-brand-text">ONE ENTRY ONLY</strong>
-              <span>This QR code is uniquely encrypted and deactivates permanently upon first scan at the gate.</span>
+              {/* Was "uniquely encrypted", which is not true — the code is a
+                  random single-use token, not ciphertext. The accurate
+                  sentence is also the more useful warning. */}
+              <span>
+                This code works once. The first scan at the gate admits; every scan after
+                that is refused, including on a forwarded copy.
+              </span>
             </div>
           </div>
         </div>
@@ -369,6 +425,15 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                 />
               </div>
 
+              {renameError && (
+                <p
+                  role="alert"
+                  className="p-3 rounded-xl bg-brand-urgent-bg border border-brand-urgent-border text-brand-urgent text-xs font-semibold leading-snug"
+                >
+                  {renameError}
+                </p>
+              )}
+
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
@@ -379,9 +444,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="min-h-[44px] flex-1 px-4 py-2 rounded-xl bg-brand-primary text-brand-surface font-bold text-xs hover:bg-brand-primary-hover transition-colors"
+                  disabled={isRenaming || !tempName.trim()}
+                  className="min-h-[44px] flex-1 px-4 py-2 rounded-xl bg-brand-primary text-brand-surface font-bold text-xs hover:bg-brand-primary-hover transition-colors disabled:opacity-60"
                 >
-                  Save Changes
+                  {isRenaming ? 'Saving…' : 'Save Changes'}
                 </button>
               </div>
             </form>

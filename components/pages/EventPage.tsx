@@ -5,23 +5,16 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   Calendar,
-  Clock,
   MapPin,
   ShieldAlert,
   Shirt,
   Ticket,
   ChevronDown,
-  GlassWater,
-  Music,
-  Camera,
-  ShieldCheck,
-  Gift,
   ArrowRight,
   Share2,
   CheckCircle,
-  ExternalLink,
 } from 'lucide-react';
-import { eventConfig, doorsOpenIso } from '@/config/event.config';
+import { eventConfig, doorsOpenIso, eventDayStamp } from '@/config/event.config';
 import { getPublicSalesCounter } from '@/lib/data-access';
 import { PublicSalesCounter, koboToNaira } from '@/types/ticketing';
 import { Countdown } from '@/components/Countdown';
@@ -35,7 +28,10 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 const defaultFaqs = [
   {
     question: "How do I get my ticket after paying?",
-    answer: "Your unique QR-coded digital pass is generated on-screen immediately after payment and sent to your email. You can save it, screenshot it, or add it to Google Wallet / Calendar."
+    // No email is sent yet and there is no Wallet pass — saying otherwise
+    // sends people looking through an inbox for something that will never
+    // arrive. Restore the email line when Resend is actually wired.
+    answer: "Your QR pass appears on screen the moment payment clears. Save it or screenshot it right away — and keep the ticket link, which opens the same pass any time from any device."
   },
   {
     question: "What is the dress code for Last Dance?",
@@ -43,7 +39,11 @@ const defaultFaqs = [
   },
   {
     question: "Can someone else use my ticket if I can't attend?",
-    answer: "Tickets are strictly non-refundable and non-transferable at the gate. If name changes are enabled before the event, the original purchaser may rename the ticket once from the ticket view."
+    // "once" was never enforced, and renaming genuinely does close at doors —
+    // the manifest is on the door phones by then and may be offline for the
+    // rest of the night, so a late change would leave the gate challenging a
+    // name the pass no longer shows.
+    answer: `Tickets are non-refundable and non-transferable at the gate. Before doors open at ${eventConfig.event.doorsOpen} you can change the name on a pass from the ticket page; after that the name is fixed. The phone number on the pass never changes — door staff use it to confirm the pass is yours.`
   },
   {
     question: "What are the door requirements & security checks?",
@@ -55,10 +55,25 @@ export const EventPage: React.FC = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [salesSummary, setSalesSummary] = useState<PublicSalesCounter | null>(null);
+  const [counterUnavailable, setCounterUnavailable] = useState<boolean>(false);
   const prefersReducedMotion = useReducedMotion();
 
   React.useEffect(() => {
-    getPublicSalesCounter().then(setSalesSummary);
+    let isMounted = true;
+    getPublicSalesCounter()
+      .then((summary) => {
+        if (isMounted) setSalesSummary(summary);
+      })
+      .catch(() => {
+        // The counter is social proof, not a blocker. If it cannot be read,
+        // the strip is removed rather than filled with a guess — an invented
+        // number on a page taking real money from people who know me is not
+        // a rounding error, it is a lie about how full the room is.
+        if (isMounted) setCounterUnavailable(true);
+      });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const toggleFaq = (index: number) => {
@@ -188,7 +203,7 @@ export const EventPage: React.FC = () => {
                   Event Date
                 </span>
                 <span className="text-4xl sm:text-6xl font-black text-brand-primary font-display tracking-tight leading-none">
-                  25/08
+                  {eventDayStamp}
                 </span>
               </div>
             </div>
@@ -242,20 +257,40 @@ export const EventPage: React.FC = () => {
       {/* ========================================================
           3. LIVE CAPACITY STRIP
       ======================================================== */}
-      <section
-        id="live-status-strip"
-        aria-label="Live ticket capacity status"
-        className="w-full bg-brand-raised border-b border-brand-border py-6 px-4 sm:px-6"
-      >
-        <div className="max-w-3xl mx-auto">
-          <CapacityMeter
-            sold={salesSummary?.ticketsSold ?? 214}
-            capacity={eventConfig.ticketing.capacity}
-            lowStockThreshold={eventConfig.ticketing.lowStockThreshold}
-            showCount={eventConfig.featureFlags.showLiveSalesCounter}
-          />
-        </div>
-      </section>
+      {!counterUnavailable && (
+        <section
+          id="live-status-strip"
+          aria-label="Live ticket capacity status"
+          className="w-full bg-brand-raised border-b border-brand-border py-6 px-4 sm:px-6"
+        >
+          <div className="max-w-3xl mx-auto">
+            {salesSummary ? (
+              <CapacityMeter
+                sold={salesSummary.ticketsSold}
+                capacity={salesSummary.capacity}
+                lowStockThreshold={eventConfig.ticketing.lowStockThreshold}
+                showCount={eventConfig.featureFlags.showLiveSalesCounter}
+              />
+            ) : (
+              /* Placeholder, not a number. The real count is one round trip
+                 away and the page must never show a figure it has not been
+                 told. */
+              <div
+                className="w-full p-4 rounded-xl bg-brand-card border border-brand-border"
+                aria-busy="true"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm sm:text-base font-semibold text-brand-muted">
+                    Ticket Capacity
+                  </span>
+                  <span className="text-sm text-brand-muted">Checking availability…</span>
+                </div>
+                <div className="w-full h-3 rounded-full bg-brand-subtle" />
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ========================================================
           4. EVENT DETAILS & ACCESS RULES
@@ -449,7 +484,7 @@ export const EventPage: React.FC = () => {
             <p className="text-sm text-slate-400 mb-2">
               {eventConfig.event.tagline} • {eventConfig.event.hostedBy}
             </p>
-            <p className="text-xs text-slate-500 font-mono">
+            <p className="text-xs text-slate-400 font-mono">
               Contact: {eventConfig.support.email}
             </p>
           </div>
@@ -463,7 +498,7 @@ export const EventPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto pt-8 mt-8 border-t border-brand-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div className="max-w-5xl mx-auto pt-8 mt-8 border-t border-brand-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <p>© 2026 {eventConfig.event.name} • {eventConfig.event.hostedBy}. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link href="/admin" className="hover:text-white transition-colors">

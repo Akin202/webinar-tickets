@@ -34,7 +34,6 @@ export const CheckoutPage: React.FC = () => {
 
   // Internal state when not overridden by dev switcher
   const [internalState, setInternalState] = useState<PurchaseState>({ status: 'idle' });
-  const [waitlistJoined, setWaitlistJoined] = useState<boolean>(false);
   // Reference of the in-flight purchase, so the dev simulate buttons can
   // confirm the real order rather than reaching for a mock fixture.
   const [activeReference, setActiveReference] = useState<string | null>(null);
@@ -282,8 +281,13 @@ export const CheckoutPage: React.FC = () => {
               <p className="font-mono text-lg font-bold text-brand-primary">
                 {purchaseState.order.reference}
               </p>
+              {/* No email and no WhatsApp message is sent — the claim that
+                  used to sit here sent buyers hunting an inbox for something
+                  that would never arrive, on the one screen where they most
+                  need to trust the app. The reference below plus the pass
+                  itself are the whole delivery mechanism today. */}
               <p className="text-xs text-brand-dim mt-1">
-                A confirmation has been sent to your email and WhatsApp.
+                Save this reference. Your pass link works any time, on any device.
               </p>
             </div>
 
@@ -329,46 +333,24 @@ export const CheckoutPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Waitlist Signup */}
-            <div className="p-6 rounded-2xl bg-brand-subtle border border-brand-border text-left space-y-3">
+            {/* There was a "cancellation waitlist" form here. It stored
+                nothing, notified nobody and had no table behind it — it
+                collected a phone number and dropped it. Someone who missed
+                out would have walked away believing they were on a list.
+                The WhatsApp desk below is a channel that actually reaches a
+                human, so it is the only offer made. */}
+            <div className="p-6 rounded-2xl bg-brand-subtle border border-brand-border text-left space-y-2">
               <h3 className="text-sm font-bold uppercase tracking-wider text-brand-text">
-                Join the Official Cancellation Waitlist
+                If a spot opens up
               </h3>
-              <p className="text-xs text-brand-muted">
-                If additional venue capacity opens or reserved allocations expire, waitlist members are notified via WhatsApp.
+              <p className="text-xs text-brand-muted leading-relaxed">
+                There is no automatic waitlist. Message the organisers on WhatsApp and
+                they will tell you directly whether any passes have come back.
               </p>
-
-              {waitlistJoined ? (
-                <div className="p-3 rounded-xl bg-brand-success-bg border border-brand-success-border text-brand-success text-xs font-bold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>You are on the priority waitlist! We'll alert you if passes unlock.</span>
-                </div>
-              ) : (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setWaitlistJoined(true);
-                  }}
-                  className="flex flex-col sm:flex-row gap-2 pt-1"
-                >
-                  <input
-                    type="tel"
-                    required
-                    placeholder="WhatsApp Number (08012345678)"
-                    className="flex-1 min-h-[44px] px-3.5 rounded-xl bg-brand-card border border-brand-border text-brand-text text-sm focus:border-brand-primary"
-                  />
-                  <button
-                    type="submit"
-                    className="min-h-[44px] px-5 rounded-xl bg-brand-primary text-brand-surface font-bold text-xs uppercase hover:bg-brand-primary-hover transition-colors whitespace-nowrap"
-                  >
-                    Join Waitlist
-                  </button>
-                </form>
-              )}
             </div>
 
             <div className="pt-2">
-              <WhatsAppSupportButton label="Contact Organizers Desk on WhatsApp" />
+              <WhatsAppSupportButton label="Message the organisers on WhatsApp" />
             </div>
           </div>
         )}

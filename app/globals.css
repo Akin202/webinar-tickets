@@ -41,8 +41,15 @@
   --brand-border-strong: color-mix(in oklab, var(--brand-surface) 72%, white);
   --brand-border-focus: var(--brand-primary);
   --brand-card-danger: color-mix(in oklab, var(--brand-surface) 88%, var(--brand-urgent));
-  --brand-text-muted: color-mix(in oklab, var(--brand-text) 62%, var(--brand-surface));
-  --brand-text-dim: color-mix(in oklab, var(--brand-text) 42%, var(--brand-surface));
+  /* Both percentages are computed against the 4.5:1 floor, not chosen by eye.
+     The binding case is --brand-text-dim on --brand-surface-subtle, which is
+     the lightest background either token ever sits on (the ticket card's
+     attendee panel): at the previous 42% that pairing measured 2.27:1 — half
+     the required contrast, on the smallest type in the app. 62% brings it to
+     4.60:1. --brand-text-muted moves to 72% to keep a visible step between
+     the two levels now that dim has caught up to where muted used to be. */
+  --brand-text-muted: color-mix(in oklab, var(--brand-text) 72%, var(--brand-surface));
+  --brand-text-dim: color-mix(in oklab, var(--brand-text) 62%, var(--brand-surface));
 
   /* --- brand status (public surfaces only) --- */
   --brand-urgent: #ff3344;
@@ -183,4 +190,31 @@ button, a, input, select {
 *:focus-visible {
   outline: 2px solid var(--brand-primary);
   outline-offset: 2px;
+}
+
+/* ============================================================
+   REDUCED MOTION — global backstop
+
+   Individual components already consult useReducedMotion, but that
+   only covers motion someone remembered to gate. This catches the
+   rest: Tailwind's animate-* utilities, hover transitions, and
+   anything added later without the hook.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* One deliberate exception. A spinner is state, not decoration — frozen
+     on a single frame it reads as "this app has hung", and the buyer is
+     mid-payment when they see it. Slowed well down, not stopped. */
+  .animate-spin {
+    animation-duration: 1.8s !important;
+    animation-iteration-count: infinite !important;
+  }
 }

@@ -41,6 +41,81 @@ import {
 } from '@/types/ticketing';
 import { eventConfig } from '@/config/event.config';
 
+/**
+ * Paystack's `channel` values, spelled out. An unmapped key renders raw
+ * rather than being dropped — a channel we have not seen before is exactly
+ * the thing worth noticing in reconciliation.
+ */
+const CHANNEL_LABELS: Record<string, string> = {
+  card: 'Debit card',
+  bank: 'Bank account',
+  bank_transfer: 'Bank transfer',
+  ussd: 'USSD',
+  qr: 'QR',
+  mobile_money: 'Mobile money',
+  eft: 'EFT',
+  unknown: 'Not recorded',
+};
+
+/** The four columns the table can order by. */
+type SortableOrderKey = 'reference' | 'buyerName' | 'totalKobo' | 'createdAt';
+
+/** Keystrokes settle for this long before the buyer list is queried. */
+const SEARCH_DEBOUNCE_MS = 300;
+
+/**
+ * A sortable column heading.
+ *
+ * Was a bare `<th onClick>`: unreachable by keyboard, invisible to a screen
+ * reader, and with no indication of which column was active or in which
+ * direction. `aria-sort` on the cell plus a real button fixes all three.
+ */
+function SortHeader({
+  label,
+  columnKey,
+  activeKey,
+  direction,
+  defaultDirection = 'asc',
+  onSort,
+  className = '',
+}: {
+  label: string;
+  columnKey: SortableOrderKey;
+  activeKey: SortableOrderKey;
+  direction: 'asc' | 'desc';
+  defaultDirection?: 'asc' | 'desc';
+  onSort: (key: SortableOrderKey, direction: 'asc' | 'desc') => void;
+  className?: string;
+}) {
+  const isActive = activeKey === columnKey;
+  return (
+    <th
+      scope="col"
+      aria-sort={isActive ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={`py-0 px-0 ${className}`}
+    >
+      <button
+        type="button"
+        onClick={() =>
+          onSort(
+            columnKey,
+            isActive ? (direction === 'asc' ? 'desc' : 'asc') : defaultDirection
+          )
+        }
+        className="w-full h-full py-2.5 px-3 flex items-center gap-1 text-left uppercase tracking-wider font-semibold hover:bg-gray-200/60"
+      >
+        <span>{label}</span>
+        <ArrowUpDown className={`w-3 h-3 ${isActive ? 'text-gray-900' : 'text-gray-400'}`} />
+        {isActive && (
+          <span className="text-[9px] font-mono text-gray-600">
+            {direction === 'asc' ? 'ASC' : 'DESC'}
+          </span>
+        )}
+      </button>
+    </th>
+  );
+}
+
 export const AdminPage: React.FC = () => {
   // Stats & Dashboard state
   const [summary, setSummary] = useState<SalesSummary | null>(null);
@@ -50,9 +125,13 @@ export const AdminPage: React.FC = () => {
   const pageSize = 50;
 
   // Filters & Sorting
+  // Two search values on purpose: `searchInput` is what the admin is typing,
+  // `search` is what the server has been asked about. Bound together they
+  // fired a query per keystroke against the full buyer list.
+  const [searchInput, setSearchInput] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
-  const [sortBy, setSortBy] = useState<keyof Order>('createdAt');
+  const [sortBy, setSortBy] = useState<SortableOrderKey>('createdAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   // Loading & Error States
@@ -60,10 +139,10 @@ export const AdminPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  // Row Expansion State
+  // Row Expansion State. Tickets arrive with loadData, so expanding a row
+  // needs no fetch and therefore has no loading state of its own.
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [allTickets, setAllTickets] = useState<Ticket[]>([]);
-  const [loadingTickets, setLoadingTickets] = useState<boolean>(false);
 
   // Modal Dialogs
   const [isCompModalOpen, setIsCompModalOpen] = useState<boolean>(false);
@@ -75,8 +154,19 @@ export const AdminPage: React.FC = () => {
   const [voidModalTicket, setVoidModalTicket] = useState<{ id: string; code: string } | null>(null);
   const [voidReason, setVoidReason] = useState<string>('');
 
-  // Fetch summary and orders
-  const loadData = async () => {
+  /**
+   * Guards against out-of-order responses. Typing "ade" fires three queries;
+   * if the one for "ad" lands after the one for "ade", the table shows
+   * results for a string the admin is no longer looking at. Only the newest
+   * request is allowed to write state.
+   */
+  const requestSeqRef = React.useRef(0);
+
+  // Fetch summary and orders. Deliberately NOT keyed on sort — sorting is
+  // applied to the page already in hand (see visibleOrders), so it must not
+  // cost a round trip against the buyer list.
+  const loadData = React.useCallback(async () => {
+    const seq = ++requestSeqRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -90,42 +180,66 @@ export const AdminPage: React.FC = () => {
         }),
         listTickets(),
       ]);
+      if (seq !== requestSeqRef.current) return;
       setSummary(sumData);
       setOrders(ordersData.orders);
       setTotalCount(ordersData.total);
       setAllTickets(ticketsData);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load admin records.');
+    } catch (err: unknown) {
+      if (seq !== requestSeqRef.current) return;
+      setError(err instanceof Error ? err.message : 'Failed to load admin records.');
     } finally {
-      setLoading(false);
+      if (seq === requestSeqRef.current) setLoading(false);
     }
-  };
+  }, [search, statusFilter, page]);
 
   useEffect(() => {
-    loadData();
-  }, [search, statusFilter, page, sortBy, sortDir]);
+    void loadData();
+  }, [loadData]);
+
+  // Settle the keystrokes before querying. Every one of these requests reads
+  // ~400 people's names, emails and phone numbers, and the export route is
+  // not the only one worth being frugal with.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  /**
+   * The page in hand, ordered. Sorting a single page client-side is honest
+   * about what it does: the header reorders the 50 rows on screen, it does
+   * not re-rank the whole table. Server-side ordering would need a param
+   * `listOrders` does not have, and its signature is a frozen contract.
+   */
+  const visibleOrders = React.useMemo(() => {
+    const factor = sortDir === 'asc' ? 1 : -1;
+    return [...orders].sort((a, b) => {
+      const av = a[sortBy];
+      const bv = b[sortBy];
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * factor;
+      return String(av ?? '').localeCompare(String(bv ?? '')) * factor;
+    });
+  }, [orders, sortBy, sortDir]);
+
+  const handleSort = (key: SortableOrderKey, direction: 'asc' | 'desc') => {
+    setSortBy(key);
+    setSortDir(direction);
+  };
 
   const triggerNotice = (msg: string) => {
     setActionNotice(msg);
     setTimeout(() => setActionNotice(null), 4000);
   };
 
-  // Toggle Row Expansion
-  const handleToggleRow = async (orderId: string) => {
-    if (expandedOrderId === orderId) {
-      setExpandedOrderId(null);
-      return;
-    }
-    setExpandedOrderId(orderId);
-    setLoadingTickets(true);
-    try {
-      const t = await listTickets();
-      setAllTickets(t);
-    } catch {
-      // keep existing
-    } finally {
-      setLoadingTickets(false);
-    }
+  // Toggle Row Expansion. `allTickets` is already loaded by loadData, so
+  // expanding a row is pure UI — it used to re-download every ticket in the
+  // event on each click, which on event night is a full manifest fetch per
+  // curious tap.
+  const handleToggleRow = (orderId: string) => {
+    setExpandedOrderId((current) => (current === orderId ? null : orderId));
   };
 
   // TODO(handoff): this only shows a toast — no email is sent. Wire to
@@ -204,12 +318,19 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  const channelBreakdown = [
-    { name: 'Debit Card (Mastercard / Visa / Verve)', percent: 68 },
-    { name: 'Direct Bank Transfer (NIBSS)', percent: 24 },
-    { name: 'USSD (*737#, *894#, *966#)', percent: 6 },
-    { name: 'Barter / Mobile Money / OPay', percent: 2 },
-  ];
+  // Real counts from summary.byChannel. This block used to be four hardcoded
+  // percentages that added to 100 and described nothing — the genuine
+  // byChannel figures were fetched on the line above and thrown away, so the
+  // dashboard invented a payment mix for an event that had sold no tickets.
+  const channelTotal = Object.values(summary?.byChannel ?? {}).reduce((s, n) => s + n, 0);
+  const channelBreakdown = Object.entries(summary?.byChannel ?? {})
+    .map(([key, count]) => ({
+      key,
+      name: CHANNEL_LABELS[key] ?? key,
+      count,
+      percent: channelTotal > 0 ? Math.round((count / channelTotal) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -290,7 +411,11 @@ export const AdminPage: React.FC = () => {
               {summary ? summary.ticketsSold : '—'}
             </div>
             <p className="text-[11px] text-gray-500 mt-0.5">
-              {summary ? Math.round((summary.ticketsSold / summary.capacity) * 100) : 0}% of capacity
+              {/* capacity 0 is reachable — an admin can set it while closing
+                  sales — and 0/0 renders as "NaN% of capacity". */}
+              {summary && summary.capacity > 0
+                ? `${Math.round((summary.ticketsSold / summary.capacity) * 100)}% of capacity`
+                : '— of capacity'}
             </p>
           </div>
 
@@ -455,24 +580,33 @@ export const AdminPage: React.FC = () => {
             <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
               Sales by Payment Channel
             </h3>
-            <div className="space-y-2.5">
-              {channelBreakdown.map((item) => (
-                <div key={item.name} className="space-y-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-700 font-medium truncate">{item.name}</span>
-                    <span className="font-mono text-gray-900 font-bold ml-2">
-                      {item.percent}%
-                    </span>
+            {channelBreakdown.length === 0 ? (
+              <p className="text-[11px] text-gray-500">
+                No paid orders yet — nothing to break down.
+              </p>
+            ) : (
+              <div className="space-y-2.5">
+                {channelBreakdown.map((item) => (
+                  <div key={item.key} className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-gray-700 font-medium truncate">{item.name}</span>
+                      {/* Order count as well as share: at these volumes "100%"
+                          can mean a single order, and a percentage on its own
+                          would read as a trend. */}
+                      <span className="font-mono text-gray-900 font-bold ml-2 whitespace-nowrap">
+                        {item.count} · {item.percent}%
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-gray-100 rounded overflow-hidden">
+                      <div
+                        className="h-full bg-slate-700 rounded"
+                        style={{ width: `${item.percent}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full h-1.5 bg-gray-100 rounded overflow-hidden">
-                    <div
-                      className="h-full bg-slate-700 rounded"
-                      style={{ width: `${item.percent}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -489,12 +623,10 @@ export const AdminPage: React.FC = () => {
                 <input
                   type="text"
                   id="admin-search-input"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search name, phone, ref..."
+                  aria-label="Search orders by name, phone or reference"
                   className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-500"
                 />
               </div>
@@ -539,71 +671,43 @@ export const AdminPage: React.FC = () => {
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-gray-100 border-b border-gray-200 text-gray-600 font-semibold uppercase text-[10px] tracking-wider select-none">
                 <tr>
-                  <th className="py-2.5 px-3 w-8"></th>
-                  <th
-                    className="py-2.5 px-3 cursor-pointer hover:bg-gray-200/60"
-                    onClick={() => {
-                      if (sortBy === 'reference') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                      else {
-                        setSortBy('reference');
-                        setSortDir('asc');
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Reference</span>
-                      <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                    </div>
+                  <th scope="col" className="py-2.5 px-3 w-8">
+                    <span className="sr-only">Expand</span>
                   </th>
-                  <th
-                    className="py-2.5 px-3 cursor-pointer hover:bg-gray-200/60"
-                    onClick={() => {
-                      if (sortBy === 'buyerName') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                      else {
-                        setSortBy('buyerName');
-                        setSortDir('asc');
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Buyer Name</span>
-                      <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                    </div>
-                  </th>
-                  <th className="py-2.5 px-3">WhatsApp Phone</th>
-                  <th className="py-2.5 px-3 text-center">Tickets</th>
-                  <th
-                    className="py-2.5 px-3 cursor-pointer hover:bg-gray-200/60"
-                    onClick={() => {
-                      if (sortBy === 'totalKobo') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                      else {
-                        setSortBy('totalKobo');
-                        setSortDir('desc');
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Total (NGN)</span>
-                      <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                    </div>
-                  </th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th
-                    className="py-2.5 px-3 cursor-pointer hover:bg-gray-200/60"
-                    onClick={() => {
-                      if (sortBy === 'createdAt') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                      else {
-                        setSortBy('createdAt');
-                        setSortDir('desc');
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Date</span>
-                      <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                    </div>
-                  </th>
-                  <th className="py-2.5 px-3 text-right">Actions</th>
+                  <SortHeader
+                    label="Reference"
+                    columnKey="reference"
+                    activeKey={sortBy}
+                    direction={sortDir}
+                    onSort={handleSort}
+                  />
+                  <SortHeader
+                    label="Buyer Name"
+                    columnKey="buyerName"
+                    activeKey={sortBy}
+                    direction={sortDir}
+                    onSort={handleSort}
+                  />
+                  <th scope="col" className="py-2.5 px-3">WhatsApp Phone</th>
+                  <th scope="col" className="py-2.5 px-3 text-center">Tickets</th>
+                  <SortHeader
+                    label="Total (NGN)"
+                    columnKey="totalKobo"
+                    activeKey={sortBy}
+                    direction={sortDir}
+                    defaultDirection="desc"
+                    onSort={handleSort}
+                  />
+                  <th scope="col" className="py-2.5 px-3">Status</th>
+                  <SortHeader
+                    label="Date"
+                    columnKey="createdAt"
+                    activeKey={sortBy}
+                    direction={sortDir}
+                    defaultDirection="desc"
+                    onSort={handleSort}
+                  />
+                  <th scope="col" className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
 
@@ -640,7 +744,7 @@ export const AdminPage: React.FC = () => {
 
                 {!loading &&
                   !error &&
-                  orders.map((order) => {
+                  visibleOrders.map((order) => {
                     const isExpanded = expandedOrderId === order.id;
                     const orderTickets = allTickets.filter((t) => t.orderId === order.id);
                     return (
@@ -736,9 +840,7 @@ export const AdminPage: React.FC = () => {
                                   </span>
                                 </div>
 
-                                {loadingTickets ? (
-                                  <p className="text-xs text-gray-500 py-2">Loading ticket passes...</p>
-                                ) : orderTickets.length === 0 ? (
+                                {orderTickets.length === 0 ? (
                                   <p className="text-xs text-gray-500 py-2">No individual tickets found for this order.</p>
                                 ) : (
                                   <div className="divide-y divide-gray-100">

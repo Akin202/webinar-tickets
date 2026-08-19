@@ -53,9 +53,7 @@ export const eventConfig = {
     accent: "#00f0ff",
     ink: "#ffffff",
     surface: "#060709",
-    logoUrl: "/assets/logo.svg",
     heroImageUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1800&q=80",
-    ogImageUrl: "/assets/og.jpg",
     // next/font self-hosts these under generated family names, exposed as
     // CSS variables from app/layout.tsx. Referencing the raw family name
     // here would silently fall back to the system font.
@@ -87,7 +85,6 @@ export const eventConfig = {
   featureFlags: {
     allowNameChange: true,       // holder can rename their ticket before the event
     showLiveSalesCounter: true,  // "312 going" on the public page — social proof
-    offlineScannerEnabled: true,
   },
 } as const;
 
@@ -98,4 +95,40 @@ export type EventConfig = typeof eventConfig;
  *  hardcoded, which both bypassed the config and baked in an AM/PM bug. */
 export const doorsOpenIso =
   `${eventConfig.event.date}T${eventConfig.event.doorsOpen}:00${eventConfig.event.utcOffset}`;
+
+/** `2026-08-25` + 1 → `2026-08-26`. UTC arithmetic, so no DST or locale drift. */
+function addOneDay(isoDate: string): string {
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * When the event actually ends, as a real instant.
+ *
+ * Doors open at 23:30 and it ends at 04:00 — that 04:00 belongs to the day
+ * AFTER `event.date`. Pinning both to the same date produces an event that
+ * ends nineteen hours before it starts, which is what a hand-written calendar
+ * link would silently do.
+ */
+export const eventEndsIso = (() => {
+  const endsNextDay = eventConfig.event.endsAt < eventConfig.event.doorsOpen;
+  const day = endsNextDay ? addOneDay(eventConfig.event.date) : eventConfig.event.date;
+  return `${day}T${eventConfig.event.endsAt}:00${eventConfig.event.utcOffset}`;
+})();
+
+/**
+ * `25/08` — the big date stamp on the flyer. Derived rather than typed, so
+ * the poster cannot end up advertising a different day from the one the
+ * countdown, the ticket and the sales hard-stop all use.
+ */
+export const eventDayStamp = (() => {
+  const [, month, day] = eventConfig.event.date.split('-');
+  return `${day}/${month}`;
+})();
+
+/** `YYYYMMDDTHHMMSSZ` — the only timestamp format Google Calendar accepts. */
+export function toCalendarStamp(iso: string): string {
+  return new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+}
 
