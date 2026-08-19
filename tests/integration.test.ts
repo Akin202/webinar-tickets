@@ -211,7 +211,11 @@ describe.skipIf(!ENABLED || !DOOR_JWT)('the door race', () => {
       rpc('record_check_in', { p_code: code, p_device: 'door-b', p_scanned_at: scannedAt }, DOOR_JWT),
     ]);
 
-    const outcomes = [a.row?.outcome, b.row?.outcome].sort();
+    // record_check_in returns its verdict in `result`, NOT `outcome` — unlike
+    // create_pending_order and mark_order_paid, which is exactly why this was
+    // wrong. Reading the missing key gave undefined and the assertion compared
+    // [undefined, undefined], which never ran because the suite never ran.
+    const outcomes = [a.row?.result, b.row?.result].sort();
     expect(outcomes).toEqual(['admitted', 'already_used']);
   });
 
@@ -221,7 +225,7 @@ describe.skipIf(!ENABLED || !DOOR_JWT)('the door race', () => {
       { p_code: 'SGN-2345-6789', p_device: 'door-a', p_scanned_at: new Date().toISOString() },
       DOOR_JWT
     );
-    expect(result.row?.outcome).toBe('not_found');
+    expect(result.row?.result).toBe('not_found');
   });
 });
 
