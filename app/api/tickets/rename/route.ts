@@ -4,6 +4,7 @@ import { eventConfig, doorsOpenIso } from '@/config/event.config';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { rateLimit, clientIp } from '@/lib/api/rate-limit';
 import { assertSameOrigin } from '@/lib/api/origin';
+import { readCappedJson, cappedBodyError } from '@/lib/api/body-limit';
 
 const renameSchema = z.object({
   ticketId: z.string().uuid(),
@@ -41,9 +42,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Too many attempts.' }, { status: 429 });
   }
 
+  const body = await readCappedJson(req);
+  if (!body.ok) return cappedBodyError(body, 'Invalid request.');
+
   let parsed;
   try {
-    parsed = renameSchema.parse(await req.json());
+    parsed = renameSchema.parse(body.value);
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }

@@ -6,6 +6,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { paystackInitialize } from '@/lib/api/paystack';
 import { rateLimit, clientIp } from '@/lib/api/rate-limit';
 import { generateReference } from '@/lib/api/reference';
+import { readCappedJson, cappedBodyError } from '@/lib/api/body-limit';
 
 const checkoutSchema = z.object({
   buyerName: z.string().trim().min(2).max(120),
@@ -20,9 +21,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Too many attempts. Please wait a minute.' }, { status: 429 });
   }
 
+  const body = await readCappedJson(req);
+  if (!body.ok) return cappedBodyError(body, 'Invalid checkout details.');
+
   let parsed;
   try {
-    parsed = checkoutSchema.parse(await req.json());
+    parsed = checkoutSchema.parse(body.value);
   } catch {
     return NextResponse.json({ error: 'Invalid checkout details.' }, { status: 400 });
   }

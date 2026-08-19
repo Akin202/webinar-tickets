@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireStaffRequest } from '@/lib/api/staff-guard';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
+import { readCappedJson, cappedBodyError } from '@/lib/api/body-limit';
 
 const voidSchema = z.object({
   ticketId: z.string().uuid(),
@@ -13,9 +14,12 @@ export async function POST(req: Request) {
   const auth = await requireStaffRequest(req, 'admin', { mutating: true });
   if ('error' in auth) return auth.error;
 
+  const body = await readCappedJson(req);
+  if (!body.ok) return cappedBodyError(body, 'Invalid request.');
+
   let parsed;
   try {
-    parsed = voidSchema.parse(await req.json());
+    parsed = voidSchema.parse(body.value);
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }

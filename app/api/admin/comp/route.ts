@@ -5,6 +5,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { normaliseNgPhone } from '@/types/ticketing';
 import { ticketFromRow } from '@/lib/api/mappers';
 import { generateReference } from '@/lib/api/reference';
+import { readCappedJson, cappedBodyError } from '@/lib/api/body-limit';
 
 const compSchema = z.object({
   holderName: z.string().trim().min(2).max(120),
@@ -21,9 +22,12 @@ export async function POST(req: Request) {
   const auth = await requireStaffRequest(req, 'admin', { mutating: true });
   if ('error' in auth) return auth.error;
 
+  const body = await readCappedJson(req);
+  if (!body.ok) return cappedBodyError(body, 'Invalid request.');
+
   let parsed;
   try {
-    parsed = compSchema.parse(await req.json());
+    parsed = compSchema.parse(body.value);
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }

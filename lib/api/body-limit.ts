@@ -1,4 +1,5 @@
 import 'server-only';
+import { NextResponse } from 'next/server';
 
 /**
  * Caps on request bodies, enforced while reading rather than after.
@@ -91,4 +92,19 @@ export async function readCappedJson(
   } catch {
     return { ok: false, reason: 'invalid_json' };
   }
+}
+
+/**
+ * The 413/400 split for a failed capped read, so the five POST routes that
+ * share this pattern cannot drift on status codes. The invalid-JSON message
+ * stays per-route because it is user-facing copy.
+ */
+export function cappedBodyError(
+  read: { reason: 'too_large' | 'invalid_json' },
+  invalidMessage: string
+): NextResponse {
+  if (read.reason === 'too_large') {
+    return NextResponse.json({ error: 'Request too large.' }, { status: 413 });
+  }
+  return NextResponse.json({ error: invalidMessage }, { status: 400 });
 }
