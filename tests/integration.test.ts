@@ -1,5 +1,6 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { eventConfig } from '@/config/event.config';
 
 /**
  * Integration tests against the LIVE Supabase project.
@@ -221,6 +222,52 @@ describe.skipIf(!ENABLED || !DOOR_JWT)('the door race', () => {
       DOOR_JWT
     );
     expect(result.row?.outcome).toBe('not_found');
+  });
+});
+
+describe.skipIf(!ENABLED)('the config and the database agree', () => {
+  /**
+   * capacity and the sales hard stop are stored twice on purpose — the
+   * database enforces them so a client cannot ignore them, and the config
+   * file drives the UI copy. The initial-schema migration says "if you change
+   * one, change both in the same commit" and nothing has ever enforced that.
+   *
+   * A drift here is not cosmetic. Config higher than the database means the
+   * page advertises seats checkout will refuse; database higher than config
+   * means we oversell a hall that has a fire limit.
+   */
+  it('stores the same capacity the config advertises', async () => {
+    const res = await table('event_settings?select=capacity,sales_open,sales_hard_stop');
+    const [settings] = await res.json();
+
+    expect(settings.capacity).toBe(eventConfig.ticketing.capacity);
+  });
+
+  it('stores the same sales hard stop the config advertises', async () => {
+    const res = await table('event_settings?select=sales_hard_stop');
+    const [settings] = await res.json();
+
+    expect(new Date(settings.sales_hard_stop).toISOString()).toBe(
+      new Date(eventConfig.ticketing.salesHardStopAt).toISOString()
+    );
+  });
+
+  it('never advertises more seats than checkout will actually sell', async () => {
+    // get_public_counter and create_pending_order both gate on capacity, and
+    // used to count it differently: the counter ignored pending holds, so the
+    // page could offer a seat checkout would then refuse.
+    const counter = await rpc('get_public_counter', {});
+    const held = await table(
+      'orders?select=quantity&status=eq.pending&created_at=gte.' +
+        new Date(Date.now() - 30 * 60_000).toISOString()
+    );
+    const holds: { quantity: number }[] = await held.json();
+    const heldSeats = holds.reduce((sum, o) => sum + o.quantity, 0);
+
+    const minted = counter.row.tickets_sold;
+    expect(counter.row.tickets_remaining).toBe(
+      Math.max(0, counter.row.capacity - minted - heldSeats)
+    );
   });
 });
 
