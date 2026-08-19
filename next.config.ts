@@ -28,12 +28,14 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   images: {
-    remotePatterns: [
-      // TODO(handoff): the hero is currently a remote Unsplash URL, which
-      // puts an external host on the critical path for the LCP element.
-      // Session 3: self-host it as AVIF/WebP under 150KB.
-      { protocol: 'https', hostname: 'images.unsplash.com' },
-    ],
+    // No remote patterns, deliberately: every image this app renders is
+    // self-hosted under /public/assets. Re-adding a remote host puts a third
+    // party back on the LCP path and hands them a request log of everyone
+    // who opens the sales link.
+    remotePatterns: [],
+    // AVIF first — the hero sits behind a heavy overlay, so the extra
+    // compression costs nothing visible.
+    formats: ['image/avif', 'image/webp'],
   },
   async headers() {
     return [

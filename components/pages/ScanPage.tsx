@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 import Link from 'next/link';
-import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
+// Type-only: the decoder itself is imported on demand inside the camera
+// effect so it does not sit in the /scan entry chunk. See startCamera below.
+import type { IScannerControls } from '@zxing/browser';
 import {
   Camera,
   Keyboard,
@@ -151,6 +153,7 @@ export const ScanPage: React.FC = () => {
   // network would still render this page. Two different questions from
   // `isOnline`, and staff need the answer to this one BEFORE they lose signal.
   const offlineShell = useOfflineShell();
+  const recheckOfflineShell = offlineShell.recheck;
   const [cachedCount, setCachedCount] = useState<number>(0);
   const [queuedCount, setQueuedCount] = useState<number>(0);
   const [manifestNotice, setManifestNotice] = useState<string | null>(null);
@@ -498,7 +501,6 @@ export const ScanPage: React.FC = () => {
 
     let isScanning = true;
     let isDisposed = false;
-    const reader = new BrowserMultiFormatReader();
 
     const stopControls = () => {
       try {
@@ -513,6 +515,20 @@ export const ScanPage: React.FC = () => {
       try {
         setCameraError(null);
         if (!videoRef.current) return;
+
+        // Loaded on demand: the decoder is the single largest thing on this
+        // route, and the top bar, the manifest count and the manual-entry
+        // fallback are all usable without it. A door officer who needs to
+        // key a code in by hand should not wait on a camera library.
+        const { BrowserMultiFormatReader } = await import('@zxing/browser');
+        if (isDisposed) return;
+        const reader = new BrowserMultiFormatReader();
+
+        // The decoder now lives in its own chunk, which the offline shell
+        // could not have seen on its first sweep. Re-check so "Offline ready"
+        // never claims a phone is safe while the scanner's own code is
+        // missing from the cache.
+        recheckOfflineShell();
 
         const controls = await reader.decodeFromVideoDevice(
           undefined,
@@ -561,7 +577,7 @@ export const ScanPage: React.FC = () => {
         /* no stream attached */
       }
     };
-  }, [scannerMode, activeResult, scanFailure, forcedResult, handleScanSubmit]);
+  }, [scannerMode, activeResult, scanFailure, forcedResult, handleScanSubmit, recheckOfflineShell]);
 
   const handleNextScan = () => {
     setActiveResult(null);

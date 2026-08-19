@@ -53,7 +53,11 @@ export const eventConfig = {
     accent: "#00f0ff",
     ink: "#ffffff",
     surface: "#060709",
-    heroImageUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1800&q=80",
+    // Self-hosted. A remote host on the LCP path costs a DNS lookup, a TLS
+    // handshake and a connection to somebody else's CDN before the largest
+    // element can even start downloading — on Slow 4G that is most of the
+    // 2.5s budget. 1600w, 133KB; next/image serves AVIF/WebP variants from it.
+    heroImageUrl: "/assets/hero.jpg",
     // next/font self-hosts these under generated family names, exposed as
     // CSS variables from app/layout.tsx. Referencing the raw family name
     // here would silently fall back to the system font.

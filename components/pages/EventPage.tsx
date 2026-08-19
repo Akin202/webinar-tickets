@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Calendar,
   MapPin,
@@ -126,13 +127,25 @@ export const EventPage: React.FC = () => {
         id="event-hero"
         className="relative w-full overflow-hidden border-b border-brand-border bg-brand-raised pt-6 sm:pt-10 pb-12 sm:pb-16 px-4 sm:px-6"
       >
-        {/* Background Nightclub Atmosphere */}
+        {/* Background Nightclub Atmosphere.
+
+            next/image rather than a CSS background: a background-image is
+            invisible to the preload scanner, so the browser could not begin
+            fetching the largest element until the stylesheet had parsed.
+            `priority` emits a <link rel="preload"> in the server-rendered
+            head, which is the change that actually moves LCP — self-hosting
+            the file alone would not have.
+
+            alt="" on purpose: this is atmosphere behind a poster and carries
+            no information a screen reader needs. */}
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-          <div
-            className="w-full h-full bg-cover bg-center opacity-30 scale-105 filter contrast-125"
-            style={{
-              backgroundImage: `url('${eventConfig.brand.heroImageUrl}')`,
-            }}
+          <Image
+            src={eventConfig.brand.heroImageUrl}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center opacity-30 scale-105 contrast-125"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-brand-surface via-brand-surface/80 to-brand-surface/60" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,var(--brand-surface)_90%)]" />
