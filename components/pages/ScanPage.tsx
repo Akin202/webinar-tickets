@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 import Link from 'next/link';
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import {
   Camera,
   Keyboard,
@@ -11,9 +11,12 @@ import {
   AlertOctagon,
   XCircle,
   AlertTriangle,
+  Ban,
+  ServerCrash,
   Clock,
   UserCheck,
   RefreshCw,
+  DownloadCloud,
   ShieldCheck,
   LogOut,
   Volume2,
@@ -27,23 +30,108 @@ import {
   syncQueuedCheckIns,
 } from '@/lib/data-access';
 import {
-  cacheManifestInIDB,
+  mergeManifestIntoIDB,
   getCachedTicketsCount,
   findCachedTicket,
   updateCachedTicketStatus,
+  markCachedTicketCheckedInByCode,
   enqueueOfflineCheckIn,
   getQueuedCheckIns,
+  getQueuedCheckInsCount,
   removeQueuedCheckIns,
   extractTicketCode,
   getDeviceId,
 } from '@/lib/offline-db';
 import { useDevState } from '@/components/dev/DevStateProvider';
-import { fireScanFeedback } from '@/lib/scanner-feedback';
+import { fireScanFeedback, getFeedbackCapabilities } from '@/lib/scanner-feedback';
 import { CheckInResult, formatPhoneForDisplay, StaffUser } from '@/types/ticketing';
 import { getCurrentStaffUser } from '@/lib/data-access';
 import { eventConfig } from '@/config/event.config';
 
+/**
+ * How long the door will wait on the server before the local cache decides.
+ *
+ * `navigator.onLine` is true on captive or saturated venue Wi-Fi with no
+ * uplink, where a Supabase call can hang for tens of seconds. The scan-to-
+ * result budget is 300ms, so the network gets 250ms and no more.
+ */
+const SCAN_ONLINE_DEADLINE_MS = 250;
 
+/** What the operator is shown when a check-in could not be recorded at all. */
+interface ScanFailure {
+  code: string;
+  detail: string;
+}
+
+/** How long the per-code lock will wait on a mirror write before giving up. */
+const MIRROR_SETTLE_CAP_MS = 1500;
+
+interface DeadlineOutcome {
+  /** null = the request threw, or blew the deadline. Use the cache. */
+  result: CheckInResult | null;
+  /** Resolves once the local cache agrees with the server (or we stop waiting). */
+  mirrored: Promise<void>;
+}
+
+/**
+ * The online check-in, capped at SCAN_ONLINE_DEADLINE_MS.
+ *
+ * Returns result null when the request threw or ran out of time — the caller
+ * then falls through to the IndexedDB path. A late server reply is harmless:
+ * `record_check_in` is idempotent, so whichever path lands second is a no-op,
+ * and the mirror below still runs so the local manifest agrees with the server.
+ *
+ * The request is raced rather than aborted because `checkInTicket`'s signature
+ * is a frozen contract (`lib/data-access.ts`) and takes no AbortSignal.
+ */
+function checkInWithDeadline(
+  input: { code: string; staffId: string; deviceId: string; scannedAt: string },
+  mirrorAs: string
+): Promise<DeadlineOutcome> {
+  let markMirrored: () => void = () => {};
+  const mirrored = new Promise<void>((resolve) => {
+    markMirrored = resolve;
+    // A request that never settles must not hold this code's lock for the
+    // night. The door always gets its scanner back.
+    setTimeout(resolve, MIRROR_SETTLE_CAP_MS);
+  });
+
+  const request = checkInTicket(input).then(
+    (res) => {
+      // Runs whether or not this promise won the race, and deliberately does
+      // NOT block the verdict. Without it an online admission never reached
+      // IndexedDB, and the same QR admitted a second person the moment the
+      // phone dropped off the network.
+      void (async () => {
+        try {
+          if (res.kind === 'admitted') {
+            await markCachedTicketCheckedInByCode(input.code, input.scannedAt, mirrorAs);
+          } else if (res.kind === 'already_used') {
+            await markCachedTicketCheckedInByCode(
+              input.code,
+              res.firstScannedAt || input.scannedAt,
+              res.firstScannedBy || mirrorAs
+            );
+          }
+        } finally {
+          markMirrored();
+        }
+      })();
+      return res;
+    },
+    (err) => {
+      console.warn('Online check-in failed, falling back to cache:', err);
+      markMirrored();
+      return null;
+    }
+  );
+
+  const deadline = new Promise<null>((resolve) => {
+    setTimeout(() => resolve(null), SCAN_ONLINE_DEADLINE_MS);
+  });
+
+  return Promise.race([request, deadline]).then((result) => ({ result, mirrored }));
+}
 
 export const ScanPage: React.FC = () => {
   const { forcedScanResult: forcedResult, setForcedScanResult } = useDevState();
@@ -52,6 +140,7 @@ export const ScanPage: React.FC = () => {
   const [scannerMode, setScannerMode] = useState<'camera' | 'manual'>('camera');
   const [manualCode, setManualCode] = useState<string>('');
   const [activeResult, setActiveResult] = useState<CheckInResult | null>(null);
+  const [scanFailure, setScanFailure] = useState<ScanFailure | null>(null);
 
   // Connectivity & Offline Manifest States
   const [isOnline, setIsOnline] = useState<boolean>(
@@ -59,245 +148,71 @@ export const ScanPage: React.FC = () => {
   );
   const [cachedCount, setCachedCount] = useState<number>(0);
   const [queuedCount, setQueuedCount] = useState<number>(0);
-  const [manifestDownloadedNotice, setManifestDownloadedNotice] = useState<boolean>(false);
+  const [manifestNotice, setManifestNotice] = useState<string | null>(null);
+  const [manifestError, setManifestError] = useState<string | null>(null);
+  const [isRefreshingManifest, setIsRefreshingManifest] = useState<boolean>(false);
   // Starts at 0, not a mock figure — the real count arrives with the manifest.
   const [admittedCount, setAdmittedCount] = useState<number>(0);
   const [totalCapacity, setTotalCapacity] = useState<number>(eventConfig.ticketing.capacity);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [staffUser, setStaffUser] = useState<StaffUser | null>(null);
+  const [feedbackCaps, setFeedbackCaps] = useState<{ haptics: boolean; audio: boolean }>({
+    haptics: false,
+    audio: false,
+  });
 
   // Camera & Video Elements
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  const scannerControlsRef = useRef<IScannerControls | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   // Syncing state
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
-  // 1. Monitor online/offline state
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+  /* ----------------------------------------------------------------
+     Refs read at CALL time.
 
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+     The ZXing decode callback is created once when the camera starts and
+     then lives for the whole session. Anything it read from a render
+     closure — connectivity, who is signed in, the running count — froze at
+     camera start: a phone that went offline mid-queue kept trying the
+     network, and check-ins were attributed to nobody. Refs are the only
+     values these handlers may read.
+     ---------------------------------------------------------------- */
+  const isOnlineRef = useRef<boolean>(isOnline);
+  const staffUserRef = useRef<StaffUser | null>(null);
+  const admittedCountRef = useRef<number>(0);
+  const inFlightCodesRef = useRef<Set<string>>(new Set());
+  const isSyncingRef = useRef<boolean>(false);
+  const isRefreshingManifestRef = useRef<boolean>(false);
+
+  /** Single source of truth for the admitted counter — no render-closure drift. */
+  const bumpAdmitted = useCallback((): number => {
+    admittedCountRef.current += 1;
+    setAdmittedCount(admittedCountRef.current);
+    return admittedCountRef.current;
   }, []);
 
-  // 2. Warn operator if leaving with unsynced check-ins
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (queuedCount > 0) {
-        e.preventDefault();
-        e.returnValue = 'You have unsaved offline check-ins! Leaving now may cause data loss.';
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [queuedCount]);
+  /**
+   * Flushes the offline queue. Snapshot, send, then delete ONLY what this
+   * pass actually sent: a scan arriving mid-sync must survive, and
+   * record_check_in is idempotent so a duplicate replay returns already_used
+   * rather than double-admitting.
+   */
+  const runSync = useCallback(async (): Promise<void> => {
+    if (isSyncingRef.current || !isOnlineRef.current) return;
 
-  // Who is signed in at this terminal — recorded against every check-in.
-  useEffect(() => {
-    let isMounted = true;
-    getCurrentStaffUser()
-      .then((user) => {
-        if (isMounted) setStaffUser(user);
-      })
-      .catch(() => {
-        /* offline: check-ins still queue, staff id resolves on sync */
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  // 3. Initial manifest download & capacity loading
-  useEffect(() => {
-    let isMounted = true;
-    async function initOfflineDB() {
-      try {
-        // Counts only. getSalesSummary is admin-only and carries revenue —
-        // a door phone must never fetch it.
-        const [manifest, counter, cachedQueue] = await Promise.all([
-          getCheckInManifest(),
-          getPublicSalesCounter(),
-          getQueuedCheckIns(),
-        ]);
-
-        if (isMounted) {
-          const cachedTotal = await cacheManifestInIDB(manifest);
-          setCachedCount(cachedTotal);
-          setQueuedCount(cachedQueue.length);
-          setAdmittedCount(counter.ticketsCheckedIn);
-          setTotalCapacity(counter.capacity);
-          setManifestDownloadedNotice(true);
-          setTimeout(() => {
-            if (isMounted) setManifestDownloadedNotice(false);
-          }, 4500);
-        }
-      } catch (err) {
-        console.warn('Could not cache manifest:', err);
-        const existingCount = await getCachedTicketsCount();
-        if (isMounted) setCachedCount(existingCount);
-      }
-    }
-
-    initOfflineDB();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  // 4. ZXing Camera stream handling
-  useEffect(() => {
-    if (scannerMode !== 'camera' || activeResult !== null || forcedResult) {
+    const queue = await getQueuedCheckIns();
+    const snapshot = queue.filter((q) => typeof q.id === 'number');
+    if (snapshot.length === 0) {
+      setQueuedCount(0);
       return;
     }
 
-    let isScanning = true;
-    const reader = new BrowserMultiFormatReader();
-    codeReaderRef.current = reader;
-
-    async function startCamera() {
-      try {
-        setCameraError(null);
-        if (!videoRef.current) return;
-
-        await reader.decodeFromVideoDevice(
-          undefined,
-          videoRef.current,
-          (result) => {
-            if (!isScanning) return;
-            if (result) {
-              const scannedText = result.getText();
-              if (scannedText) {
-                isScanning = false;
-                handleScanSubmit(scannedText);
-              }
-            }
-          }
-        );
-      } catch (err: any) {
-        console.warn('Camera stream error:', err);
-        setCameraError('Camera access unavailable. Use manual code entry below.');
-      }
-    }
-
-    startCamera();
-
-    return () => {
-      isScanning = false;
-      try {
-        if (videoRef.current && videoRef.current.srcObject) {
-          const stream = videoRef.current.srcObject as MediaStream;
-          stream.getTracks().forEach((track) => track.stop());
-        }
-      } catch {}
-    };
-  }, [scannerMode, activeResult, forcedResult]);
-
-  // Handle Scan Verification (with offline-first fallback)
-  const handleScanSubmit = async (codeOrQr: string) => {
-    const raw = codeOrQr.trim();
-    if (!raw) return;
-
-    // Normalise first. A QR may carry a full ticket URL; a manual entry may
-    // be a partial. Anything without a well-formed code fails closed rather
-    // than fuzzy-matching its way onto someone else's ticket.
-    const clean = extractTicketCode(raw);
-    if (!clean) {
-      setActiveResult({ kind: 'not_found', scannedCode: raw });
-      return;
-    }
-
-    const nowIso = new Date().toISOString();
-    const deviceId = getDeviceId();
-
-    // A. If online, validate through data-access seam
-    if (isOnline) {
-      try {
-        const res = await checkInTicket({
-          code: clean,
-          staffId: staffUser?.id ?? '',
-          deviceId,
-          scannedAt: nowIso,
-        });
-        setActiveResult(res);
-        if (res.kind === 'admitted') {
-          setAdmittedCount((c) => c + 1);
-        }
-        return;
-      } catch {
-        // Fallback to offline check if network throws
-      }
-    }
-
-    // B. Offline Verification using IndexedDB cache
-    const cachedTicket = await findCachedTicket(clean);
-
-    if (!cachedTicket) {
-      setActiveResult({
-        kind: 'not_found',
-        scannedCode: clean,
-      });
-      return;
-    }
-
-    if (cachedTicket.status === 'void') {
-      setActiveResult({
-        kind: 'voided',
-        ticket: cachedTicket,
-      });
-      return;
-    }
-
-    if (cachedTicket.status === 'checked_in') {
-      setActiveResult({
-        kind: 'already_used',
-        ticket: cachedTicket,
-        firstScannedAt: cachedTicket.checkedInAt || nowIso,
-        firstScannedBy: cachedTicket.checkedInBy || 'Gate Staff (Local Cache)',
-      });
-      return;
-    }
-
-    // VALID OFFLINE ADMISSION
-    await updateCachedTicketStatus(
-      cachedTicket.id,
-      nowIso,
-      staffUser?.name ?? 'Gate Officer (Offline)'
-    );
-    const newQueueDepth = await enqueueOfflineCheckIn(
-      cachedTicket.code,
-      nowIso,
-      staffUser?.id ?? '',
-      deviceId
-    );
-
-    setQueuedCount(newQueueDepth);
-    setAdmittedCount((c) => c + 1);
-
-    setActiveResult({
-      kind: 'admitted',
-      ticket: { ...cachedTicket, status: 'checked_in', checkedInAt: nowIso },
-      admittedCount: admittedCount + 1,
-    });
-  };
-
-  // Trigger sync of queued check-ins
-  const handleSyncQueued = async () => {
-    if (queuedCount === 0 || isSyncing) return;
+    isSyncingRef.current = true;
     setIsSyncing(true);
     setSyncError(null);
     try {
-      // Snapshot the queue, then delete ONLY what this pass actually sent.
-      // A scan arriving mid-sync must survive; record_check_in is idempotent,
-      // so a duplicate replay returns already_used rather than double-admitting.
-      const queue = await getQueuedCheckIns();
-      const snapshot = queue.filter((q) => typeof q.id === 'number');
       await syncQueuedCheckIns(
         snapshot.map((q) => ({
           code: q.code,
@@ -312,12 +227,340 @@ export const ScanPage: React.FC = () => {
       console.warn('Sync failed:', err);
       setSyncError('Sync failed — check-ins are still saved on this phone. Retry when you have signal.');
     } finally {
+      isSyncingRef.current = false;
       setIsSyncing(false);
     }
-  };
+  }, []);
+
+  /**
+   * Re-downloads the manifest so late buyers stop scanning as not_found.
+   *
+   * Distinct from sync, which pushes. This merges rather than replaces: a
+   * clear-and-refill would resurrect passes this phone admitted while offline
+   * and hand the screenshot attack a second entry.
+   */
+  const refreshManifest = useCallback(async (): Promise<void> => {
+    if (isRefreshingManifestRef.current) return;
+    isRefreshingManifestRef.current = true;
+    setIsRefreshingManifest(true);
+    setManifestError(null);
+    try {
+      // Counts only. getSalesSummary is admin-only and carries revenue —
+      // a door phone must never fetch it.
+      const [manifest, counter] = await Promise.all([
+        getCheckInManifest(),
+        getPublicSalesCounter(),
+      ]);
+      const cachedTotal = await mergeManifestIntoIDB(manifest);
+      setCachedCount(cachedTotal);
+      setTotalCapacity(counter.capacity);
+      // The server also counts the other door's admissions; local offline
+      // admissions are not there yet. Neither may move the number backwards.
+      admittedCountRef.current = Math.max(admittedCountRef.current, counter.ticketsCheckedIn);
+      setAdmittedCount(admittedCountRef.current);
+      setManifestNotice(`Manifest updated — ${cachedTotal} passes cached. Safe to go offline.`);
+    } catch (err) {
+      console.warn('Could not refresh manifest:', err);
+      const existingCount = await getCachedTicketsCount();
+      setCachedCount(existingCount);
+      setManifestError(
+        existingCount > 0
+          ? 'Manifest not refreshed — still using the copy on this phone.'
+          : 'No manifest on this phone. Get signal and refresh before scanning.'
+      );
+    } finally {
+      isRefreshingManifestRef.current = false;
+      setIsRefreshingManifest(false);
+    }
+  }, []);
+
+  // 1. Monitor online/offline state. Coming back online auto-flushes the
+  //    queue — waiting for someone to notice a badge at a door does not happen.
+  useEffect(() => {
+    const handleOnline = () => {
+      isOnlineRef.current = true;
+      setIsOnline(true);
+      void runSync();
+    };
+    const handleOffline = () => {
+      isOnlineRef.current = false;
+      setIsOnline(false);
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [runSync]);
+
+  // 2. Warn operator if leaving with unsynced check-ins
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (queuedCount > 0) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved offline check-ins! Leaving now may cause data loss.';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [queuedCount]);
+
+  // 2b. Queue depth is authoritative in IndexedDB, not in React state. Re-read
+  //     it whenever the tab comes back — another tab, a reload, or a
+  //     backgrounded sync may have changed it under us.
+  useEffect(() => {
+    const refreshQueueDepth = () => {
+      if (document.visibilityState !== 'visible') return;
+      getQueuedCheckInsCount()
+        .then(setQueuedCount)
+        .catch(() => {
+          /* the badge is a display; the rows are still on disk */
+        });
+    };
+    refreshQueueDepth();
+    document.addEventListener('visibilitychange', refreshQueueDepth);
+    window.addEventListener('focus', refreshQueueDepth);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshQueueDepth);
+      window.removeEventListener('focus', refreshQueueDepth);
+    };
+  }, []);
+
+  // 2c. Only claim a non-visual feedback channel this device actually has.
+  useEffect(() => {
+    setFeedbackCaps(getFeedbackCapabilities());
+  }, []);
+
+  // Who is signed in at this terminal — recorded against every check-in.
+  useEffect(() => {
+    let isMounted = true;
+    getCurrentStaffUser()
+      .then((user) => {
+        staffUserRef.current = user;
+        if (isMounted) setStaffUser(user);
+      })
+      .catch(() => {
+        /* offline: check-ins still queue, staff id resolves on sync */
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // 3. Initial manifest download & capacity loading
+  useEffect(() => {
+    void refreshManifest();
+  }, [refreshManifest]);
+
+  // 3b. The "manifest ready" toast is informational — retire it on a timer.
+  useEffect(() => {
+    if (!manifestNotice) return;
+    const timer = setTimeout(() => setManifestNotice(null), 4500);
+    return () => clearTimeout(timer);
+  }, [manifestNotice]);
+
+  // Handle Scan Verification (with offline-first fallback)
+  const handleScanSubmit = useCallback(
+    async (codeOrQr: string): Promise<void> => {
+      const raw = codeOrQr.trim();
+      if (!raw) return;
+
+      // Normalise first. A QR may carry a full ticket URL; a manual entry may
+      // be a partial. Anything without a well-formed code fails closed rather
+      // than fuzzy-matching its way onto someone else's ticket.
+      const clean = extractTicketCode(raw);
+      if (!clean) {
+        setScanFailure(null);
+        setActiveResult({ kind: 'not_found', scannedCode: raw });
+        return;
+      }
+
+      // Per-code lock. Two decodes of the same QR milliseconds apart both
+      // passed the checked_in test before either had written, and both
+      // painted ADMITTED. Whoever holds the lock owns this code.
+      if (inFlightCodesRef.current.has(clean)) return;
+      inFlightCodesRef.current.add(clean);
+
+      try {
+        const nowIso = new Date().toISOString();
+        const deviceId = getDeviceId();
+        const staff = staffUserRef.current;
+        const staffLabel = staff?.name ?? 'Gate Officer';
+
+        // A. If online, the server decides — but only if it answers in time.
+        if (isOnlineRef.current) {
+          const { result: res, mirrored } = await checkInWithDeadline(
+            { code: clean, staffId: staff?.id ?? '', deviceId, scannedAt: nowIso },
+            staffLabel
+          );
+          if (res) {
+            setScanFailure(null);
+            setActiveResult(res);
+            if (res.kind === 'admitted') bumpAdmitted();
+            // The verdict is already on screen — this await is off the
+            // scan-to-result path. It exists so the per-code lock in the
+            // `finally` is not dropped until IndexedDB agrees with the server:
+            // release it earlier and a second decode of the same QR can beat
+            // the mirror write, which is the hole this whole dance closes.
+            // MIRROR_SETTLE_CAP_MS bounds it, so a dead write cannot hold the
+            // scanner hostage.
+            await mirrored;
+            return;
+          }
+          // Threw, or blew the deadline. Fall through to the cache.
+        }
+
+        // B. Offline verification using the IndexedDB cache
+        const cachedTicket = await findCachedTicket(clean);
+
+        if (!cachedTicket) {
+          setScanFailure(null);
+          setActiveResult({ kind: 'not_found', scannedCode: clean });
+          return;
+        }
+
+        if (cachedTicket.status === 'void') {
+          setScanFailure(null);
+          setActiveResult({ kind: 'voided', ticket: cachedTicket });
+          return;
+        }
+
+        if (cachedTicket.status === 'checked_in') {
+          setScanFailure(null);
+          setActiveResult({
+            kind: 'already_used',
+            ticket: cachedTicket,
+            firstScannedAt: cachedTicket.checkedInAt || nowIso,
+            firstScannedBy: cachedTicket.checkedInBy || 'Gate Staff (Local Cache)',
+          });
+          return;
+        }
+
+        // VALID OFFLINE ADMISSION.
+        //
+        // Queue row FIRST, cache second. The queue is the only record the
+        // server will ever hear about; marking the cache first and enqueuing
+        // after meant an IndexedDB failure produced a green ADMITTED for a
+        // guest nobody would ever be able to account for.
+        let newQueueDepth: number;
+        try {
+          newQueueDepth = await enqueueOfflineCheckIn(
+            cachedTicket.code,
+            nowIso,
+            staff?.id ?? '',
+            deviceId
+          );
+        } catch (err) {
+          console.error('Offline check-in could not be queued:', err);
+          setActiveResult(null);
+          setScanFailure({
+            code: cachedTicket.code,
+            detail: 'This phone could not save the check-in. Nothing was recorded.',
+          });
+          return;
+        }
+
+        await updateCachedTicketStatus(cachedTicket.id, nowIso, staffLabel);
+
+        setQueuedCount(newQueueDepth);
+        const shownCount = bumpAdmitted();
+
+        setScanFailure(null);
+        setActiveResult({
+          kind: 'admitted',
+          ticket: {
+            ...cachedTicket,
+            status: 'checked_in',
+            checkedInAt: nowIso,
+            checkedInBy: staffLabel,
+          },
+          admittedCount: shownCount,
+        });
+      } finally {
+        inFlightCodesRef.current.delete(clean);
+      }
+    },
+    [bumpAdmitted]
+  );
+
+  // 4. ZXing Camera stream handling
+  useEffect(() => {
+    if (scannerMode !== 'camera' || activeResult !== null || scanFailure !== null || forcedResult) {
+      return;
+    }
+
+    let isScanning = true;
+    let isDisposed = false;
+    const reader = new BrowserMultiFormatReader();
+
+    const stopControls = () => {
+      try {
+        scannerControlsRef.current?.stop();
+      } catch {
+        /* already torn down */
+      }
+      scannerControlsRef.current = null;
+    };
+
+    async function startCamera() {
+      try {
+        setCameraError(null);
+        if (!videoRef.current) return;
+
+        const controls = await reader.decodeFromVideoDevice(
+          undefined,
+          videoRef.current,
+          (result) => {
+            if (!isScanning || !result) return;
+            const scannedText = result.getText();
+            if (!scannedText) return;
+            isScanning = false;
+            stopControls();
+            void handleScanSubmit(scannedText);
+          }
+        );
+
+        // The camera can finish opening AFTER this effect was torn down, or
+        // after a code already decoded. Either way the stream it just started
+        // is nobody's now — stop it, or the camera stays lit all night.
+        if (isDisposed || !isScanning) {
+          try {
+            controls.stop();
+          } catch {
+            /* nothing to stop */
+          }
+          return;
+        }
+        scannerControlsRef.current = controls;
+      } catch (err) {
+        if (isDisposed) return;
+        console.warn('Camera stream error:', err);
+        setCameraError('Camera access unavailable. Use manual code entry below.');
+      }
+    }
+
+    void startCamera();
+
+    return () => {
+      isScanning = false;
+      isDisposed = true;
+      stopControls();
+      // Belt and braces: controls.stop() is the supported path, but a track
+      // attached to the element before controls resolved would survive it.
+      try {
+        const stream = videoRef.current?.srcObject as MediaStream | null;
+        stream?.getTracks().forEach((track) => track.stop());
+      } catch {
+        /* no stream attached */
+      }
+    };
+  }, [scannerMode, activeResult, scanFailure, forcedResult, handleScanSubmit]);
 
   const handleNextScan = () => {
     setActiveResult(null);
+    setScanFailure(null);
     setManualCode('');
     if (onClearForcedResult) {
       onClearForcedResult();
@@ -327,24 +570,23 @@ export const ScanPage: React.FC = () => {
   const handleManualFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (manualCode.trim()) {
-      handleScanSubmit(manualCode.trim());
+      void handleScanSubmit(manualCode.trim());
     }
   };
 
   // Result currently shown (forced by Dev Switcher OR real scan)
   const currentResult: CheckInResult | null = forcedResult || activeResult;
 
-  // Multi-sensory feedback trigger (Haptic vibration + Audio tone)
-  const [pulseFlash, setPulseFlash] = useState<boolean>(false);
+  // Multi-sensory feedback (haptic + audio). No visual flash: /scan animates
+  // nothing, and a full-screen strobe on every scan is a photosensitivity risk.
+  useEffect(() => {
+    if (currentResult) fireScanFeedback(currentResult.kind);
+  }, [currentResult]);
 
   useEffect(() => {
-    if (currentResult) {
-      fireScanFeedback(currentResult.kind);
-      setPulseFlash(true);
-      const timer = setTimeout(() => setPulseFlash(false), 600);
-      return () => clearTimeout(timer);
-    }
-  }, [currentResult]);
+    // A check-in that could not be recorded gets the heaviest pattern there is.
+    if (scanFailure) fireScanFeedback('already_used');
+  }, [scanFailure]);
 
   return (
     <div className="min-h-screen bg-scan-surface text-white flex flex-col font-sans select-none overflow-hidden">
@@ -373,12 +615,22 @@ export const ScanPage: React.FC = () => {
             {cachedCount} passes cached
           </span>
 
-          {/* Sensory Accessibility Indicator */}
-          <div className="hidden md:flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700">
-            <Vibrate className="w-3 h-3 text-emerald-400" />
-            <Volume2 className="w-3 h-3 text-emerald-400" />
-            <span>Haptics & Audio Active</span>
-          </div>
+          {/* Sensory Accessibility Indicator — claims only the channels this
+              device actually has. Promising a buzz that will never arrive is
+              worse than promising nothing on a screen read at arm's length. */}
+          {(feedbackCaps.haptics || feedbackCaps.audio) && (
+            <div className="hidden md:flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700">
+              {feedbackCaps.haptics && <Vibrate className="w-3 h-3 text-emerald-400" />}
+              {feedbackCaps.audio && <Volume2 className="w-3 h-3 text-emerald-400" />}
+              <span>
+                {feedbackCaps.haptics && feedbackCaps.audio
+                  ? 'Haptics & audio active'
+                  : feedbackCaps.haptics
+                    ? 'Haptics active'
+                    : 'Audio active'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Admitted Count vs Capacity */}
@@ -392,19 +644,36 @@ export const ScanPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Queued Check-ins Counter */}
+          {/* Queued Check-ins Counter — PUSHES this phone's offline scans up.
+              Fires automatically on reconnect; this is the manual retry. */}
           {queuedCount > 0 && (
             <button
               type="button"
-              onClick={handleSyncQueued}
+              onClick={() => void runSync()}
               disabled={isSyncing || !isOnline}
-              title="Click to synchronize queued check-ins"
-              className="bg-amber-950/80 border border-amber-600/60 text-amber-300 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-amber-900"
+              title="Upload queued check-ins to the server"
+              className="bg-amber-950/80 border border-amber-600/60 text-amber-300 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-amber-900 disabled:opacity-60"
             >
               <RefreshCw className="w-3 h-3" />
               <span>{isSyncing ? 'Syncing…' : `${queuedCount} Queued`}</span>
             </button>
           )}
+
+          {/* Manifest re-download — PULLS late buyers down. Without it anyone
+              who bought after this phone loaded scans as NOT A VALID TICKET. */}
+          <button
+            type="button"
+            id="scanner-refresh-manifest-btn"
+            onClick={() => void refreshManifest()}
+            disabled={isRefreshingManifest || !isOnline}
+            title="Re-download the ticket manifest (picks up late buyers)"
+            className="bg-slate-800 border border-slate-600 text-slate-200 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-slate-700 disabled:opacity-60"
+          >
+            <DownloadCloud className="w-3 h-3" />
+            <span className="hidden sm:inline">
+              {isRefreshingManifest ? 'Updating…' : 'Manifest'}
+            </span>
+          </button>
 
           {/* A failed sync must never be silent — queued scans are the only
               record that those guests were admitted. */}
@@ -430,17 +699,29 @@ export const ScanPage: React.FC = () => {
       </header>
 
       {/* Manifest Downloaded Confirmation Toast */}
-      {manifestDownloadedNotice && (
+      {manifestNotice && (
         <div className="bg-emerald-900/90 border-b border-emerald-500 text-white px-3 py-1.5 text-xs text-center font-bold flex items-center justify-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-300" />
-          <span>Ticket manifest downloaded ({cachedCount} passes) — Safe to go offline at gate!</span>
+          <span>{manifestNotice}</span>
+        </div>
+      )}
+
+      {/* A missing or stale manifest is the difference between a working door
+          and a locked one. It stays on screen until it is fixed. */}
+      {manifestError && (
+        <div
+          role="alert"
+          className="bg-amber-950 border-b-2 border-amber-500 text-amber-100 px-3 py-1.5 text-xs text-center font-bold flex items-center justify-center gap-2"
+        >
+          <ShieldAlert className="w-4 h-4 flex-shrink-0 text-amber-300" />
+          <span>{manifestError}</span>
         </div>
       )}
 
       {/* ========================================================
           2. SCANNER WORKSPACE (Camera or Manual Mode)
       ======================================================== */}
-      {!currentResult && (
+      {!currentResult && !scanFailure && (
         <main className="flex-1 flex flex-col justify-between p-4 max-w-lg mx-auto w-full">
           {scannerMode === 'camera' ? (
             <div className="flex-1 flex flex-col items-center justify-center space-y-4">
@@ -499,7 +780,7 @@ export const ScanPage: React.FC = () => {
                   id="scanner-manual-input"
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. SGN-7K2M-882194-A"
+                  placeholder="e.g. SGN-7K2Q-9XM4"
                   className="w-full min-h-[56px] px-4 rounded-xl bg-scan-raised border-2 border-slate-700 text-white font-mono text-center text-lg font-black tracking-wider focus:border-emerald-500 focus:outline-none uppercase"
                   autoFocus
                 />
@@ -551,7 +832,7 @@ export const ScanPage: React.FC = () => {
           role="alert"
           aria-live="assertive"
           onClick={handleNextScan}
-          className={`fixed inset-0 z-50 flex flex-col justify-between p-5 sm:p-8 cursor-pointer select-none text-white transition-all duration-200 ${
+          className={`fixed inset-0 z-50 flex flex-col justify-between p-5 sm:p-8 cursor-pointer select-none text-white ${
             currentResult.kind === 'admitted'
               ? 'bg-scan-admit ring-8 ring-emerald-300/50'
               : currentResult.kind === 'already_used'
@@ -559,12 +840,14 @@ export const ScanPage: React.FC = () => {
               : currentResult.kind === 'not_found'
               ? 'bg-scan-notfound ring-8 ring-rose-300/40'
               : currentResult.kind === 'voided'
-              ? 'bg-scan-void ring-8 ring-rose-400/50'
+              ? 'bg-scan-void ring-[12px] ring-white/80'
               : 'bg-scan-unpaid ring-8 ring-amber-300/50'
           }`}
         >
-          {pulseFlash && (
-            <div className="absolute inset-0 bg-white/25 pointer-events-none" />
+          {/* A revoked pass gets a solid white rule across the top. ALREADY
+              SCANNED gets diagonal hazard tape. Two shapes, no colour needed. */}
+          {currentResult.kind === 'voided' && (
+            <div className="w-full h-3 bg-white rounded-sm mb-2" />
           )}
 
           {currentResult.kind === 'already_used' && (
@@ -591,14 +874,19 @@ export const ScanPage: React.FC = () => {
                   <AlertOctagon className="w-9 h-9 text-red-900" />
                 </div>
               )}
+              {/* NOT FOUND: white CIRCLE, X glyph. */}
               {currentResult.kind === 'not_found' && (
-                <div className="w-14 h-14 rounded-full bg-white text-scan-already border-4 border-rose-300 flex items-center justify-center font-black shadow-lg">
+                <div className="w-14 h-14 rounded-full bg-white text-scan-notfound border-4 border-rose-300 flex items-center justify-center font-black shadow-lg">
                   <XCircle className="w-9 h-9" />
                 </div>
               )}
+              {/* VOIDED: black SQUARE, prohibition glyph. Deliberately the
+                  inverse of not_found in shape, fill and symbol — the two used
+                  to be the same white circle with the same X, which at arm's
+                  length in bad light was one state, not two. */}
               {currentResult.kind === 'voided' && (
-                <div className="w-14 h-14 rounded-full bg-white text-scan-void border-4 border-rose-300 flex items-center justify-center font-black shadow-lg">
-                  <XCircle className="w-9 h-9" />
+                <div className="w-14 h-14 rounded-lg bg-black text-white border-4 border-white flex items-center justify-center font-black shadow-lg">
+                  <Ban className="w-9 h-9" strokeWidth={3} />
                 </div>
               )}
               {currentResult.kind === 'unpaid' && (
@@ -712,17 +1000,26 @@ export const ScanPage: React.FC = () => {
               </div>
             )}
 
-            {/* 4. VOIDED */}
+            {/* 4. VOIDED — a real, named person whose pass was revoked. Solid
+                black slab, named holder, blunt instruction. NOT FOUND above is
+                a dashed evidence box around an unknown payload. */}
             {currentResult.kind === 'voided' && (
               <div className="space-y-3">
-                <span className="text-xs font-bold uppercase text-rose-200">
-                  Cancelled Pass
+                <span className="inline-flex items-center gap-1.5 bg-white text-black px-2.5 py-1 rounded-sm text-xs font-black uppercase tracking-widest">
+                  <Ban className="w-4 h-4" strokeWidth={3} />
+                  <span>Revoked by organiser</span>
                 </span>
                 <h2 className="text-2xl sm:text-4xl font-black uppercase">
                   {currentResult.ticket.holderName || 'Unknown Attendee'}
                 </h2>
-                <div className="bg-black/50 border border-white/40 p-3 rounded-xl text-xs font-mono">
-                  Status: Voided by organizer
+                <div className="bg-black border-l-8 border-white p-4 rounded-r-xl space-y-1">
+                  <p className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white">
+                    Do not admit
+                  </p>
+                  <p className="text-xs text-slate-200 font-semibold leading-snug">
+                    This pass was cancelled by an organiser. It is not a scanning
+                    error — send the holder to the organiser, not back into the queue.
+                  </p>
                 </div>
                 <div className="font-mono text-xs opacity-75">
                   Code: {currentResult.ticket.code}
@@ -768,6 +1065,70 @@ export const ScanPage: React.FC = () => {
               className="w-full min-h-[58px] bg-white text-black hover:bg-slate-100 font-black text-lg rounded-2xl shadow-2xl flex items-center justify-center gap-2"
             >
               <span>NEXT SCAN →</span>
+            </button>
+            <p className="text-[11px] text-center opacity-75 mt-2 font-medium">
+              (Tap anywhere on screen to clear)
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          4. DEVICE FAULT — the check-in was NOT recorded
+
+          Deliberately not one of the five CheckInResult kinds: those are all
+          verdicts about a ticket. This is the phone failing, and it must never
+          be mistaken for a verdict. Slate, not red or green, and its own glyph.
+      ======================================================== */}
+      {!currentResult && scanFailure && (
+        <div
+          id="scanner-fault-overlay"
+          role="alert"
+          aria-live="assertive"
+          onClick={handleNextScan}
+          className="fixed inset-0 z-50 flex flex-col justify-between p-5 sm:p-8 cursor-pointer select-none text-white bg-scan-fault ring-8 ring-white/60"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-lg bg-white text-scan-fault border-4 border-slate-300 flex items-center justify-center font-black shadow-lg">
+              <ServerCrash className="w-9 h-9" />
+            </div>
+            <div>
+              <span className="text-[11px] uppercase tracking-widest font-black opacity-90 px-2 py-0.5 rounded bg-black/40 border border-white/30">
+                ⚙ DEVICE FAULT
+              </span>
+              <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight leading-none mt-1">
+                NOT RECORDED
+              </h1>
+            </div>
+          </div>
+
+          <div className="my-auto py-4 space-y-4">
+            <p className="text-xl sm:text-2xl font-black uppercase tracking-tight">
+              Do not admit on this scan
+            </p>
+            <p className="text-base sm:text-lg font-bold text-slate-100">{scanFailure.detail}</p>
+            <div className="bg-black/60 border-2 border-white/70 p-4 rounded-xl space-y-1">
+              <span className="text-xs font-bold uppercase text-slate-200 block">
+                Ticket code
+              </span>
+              <p className="font-mono text-lg sm:text-xl font-black break-all select-all">
+                {scanFailure.code}
+              </p>
+            </div>
+            <p className="text-sm font-semibold text-slate-200 leading-snug">
+              Scan again. If it fails twice, write the code down by hand and use
+              the other door phone.
+            </p>
+          </div>
+
+          <div className="w-full max-w-sm mx-auto">
+            <button
+              type="button"
+              id="scanner-fault-clear-btn"
+              onClick={handleNextScan}
+              className="w-full min-h-[58px] bg-white text-black hover:bg-slate-100 font-black text-lg rounded-2xl shadow-2xl flex items-center justify-center gap-2"
+            >
+              <span>TRY AGAIN →</span>
             </button>
             <p className="text-[11px] text-center opacity-75 mt-2 font-medium">
               (Tap anywhere on screen to clear)

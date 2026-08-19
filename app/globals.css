@@ -67,10 +67,16 @@
   --scan-admit: #047857;
   --scan-already: #991b1b;
   --scan-notfound: #7f1d1d;
-  --scan-void: #881337;
+  /* Deliberately much darker than --scan-notfound. At arm's length, at 30%
+     brightness, #881337 and #7f1d1d were the same screen. Shape and glyph
+     carry the distinction; the panel value only has to stop fighting them. */
+  --scan-void: #3f0517;
   --scan-unpaid: #b45309;
   --scan-hazard: #facc15;
   --scan-hazard-ink: #000000;
+  /* Not a verdict about a ticket — the phone failed to record a check-in.
+     Off the red/amber/green axis on purpose so it can never read as one. */
+  --scan-fault: #1e293b;
 
   /* --- scanner chrome (dark, glare-resistant) --- */
   --scan-surface: #090b10;
@@ -118,6 +124,7 @@
   --color-scan-notfound: var(--scan-notfound);
   --color-scan-void: var(--scan-void);
   --color-scan-unpaid: var(--scan-unpaid);
+  --color-scan-fault: var(--scan-fault);
   --color-scan-hazard: var(--scan-hazard);
   --color-scan-surface: var(--scan-surface);
   --color-scan-card: var(--scan-surface-card);

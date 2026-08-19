@@ -49,6 +49,11 @@ function getDB(): Promise<IDBPDatabase<ScannerDB>> {
 
 /**
  * Stores full ticket manifest in IndexedDB.
+ *
+ * Destructive by design — this is the first-load path, where there is nothing
+ * local worth keeping. Once the door has started scanning, use
+ * `mergeManifestIntoIDB` instead: a clear() at that point would resurrect
+ * already-admitted passes and hand the screenshot attack a second entry.
  */
 export async function cacheManifestInIDB(tickets: Ticket[]): Promise<number> {
   try {
@@ -64,6 +69,55 @@ export async function cacheManifestInIDB(tickets: Ticket[]): Promise<number> {
     console.warn('IDB manifest cache error:', err);
     return 0;
   }
+}
+
+/**
+ * How strongly a status blocks entry. A re-download must never move a ticket
+ * DOWN this ladder: the server's view can be stale relative to a check-in that
+ * is still sitting in this phone's offline queue.
+ */
+const ENTRY_STRICTNESS: Record<Ticket['status'], number> = {
+  valid: 0,
+  checked_in: 1,
+  void: 2,
+};
+
+/**
+ * Re-downloads the manifest without losing local admissions.
+ *
+ * Picks up late buyers (who are simply absent from an older cache and would
+ * otherwise scan as not_found) while keeping the stricter of the two statuses
+ * for every ticket already known locally. Rows that vanished from the server
+ * manifest are kept, not deleted — a disappeared row must not become a free
+ * second entry mid-event.
+ */
+export async function mergeManifestIntoIDB(tickets: Ticket[]): Promise<number> {
+  const db = await getDB();
+  const tx = db.transaction('manifest', 'readwrite');
+  const store = tx.objectStore('manifest');
+
+  for (const incoming of tickets) {
+    const existing = await store.get(incoming.id);
+    if (!existing) {
+      await store.put(incoming);
+      continue;
+    }
+
+    const keepLocalStatus =
+      ENTRY_STRICTNESS[existing.status] >= ENTRY_STRICTNESS[incoming.status];
+
+    await store.put({
+      ...incoming,
+      status: keepLocalStatus ? existing.status : incoming.status,
+      // Local check-in evidence is what /scan shows the operator as proof.
+      checkedInAt: existing.checkedInAt ?? incoming.checkedInAt,
+      checkedInBy: existing.checkedInBy ?? incoming.checkedInBy,
+      checkedInDevice: existing.checkedInDevice ?? incoming.checkedInDevice,
+    });
+  }
+
+  await tx.done;
+  return await db.count('manifest');
 }
 
 /**
@@ -137,7 +191,51 @@ export async function updateCachedTicketStatus(
 }
 
 /**
+ * Marks a cached ticket checked_in by CODE rather than by row id.
+ *
+ * This is what closes the online→offline first-scan-wins hole. An online
+ * admission is decided by the server and never touches the id-keyed path, so
+ * without this the local manifest still said `valid` and the same QR admitted
+ * a second person the moment the phone lost signal. The scanner only ever
+ * holds the code, so the code is the key here.
+ *
+ * Silent on failure on purpose: the server already recorded the admission, so
+ * a cache write failure degrades to "the offline copy is stale", not to a lost
+ * admission. It is not the enqueue path.
+ */
+export async function markCachedTicketCheckedInByCode(
+  code: string,
+  timestamp: string,
+  checkedInBy: string
+): Promise<void> {
+  try {
+    const clean = extractTicketCode(code);
+    if (!clean) return;
+    const db = await getDB();
+    const tx = db.transaction('manifest', 'readwrite');
+    const store = tx.objectStore('manifest');
+    const existing = await store.index('by-code').get(clean);
+    if (existing && existing.status === 'valid') {
+      await store.put({
+        ...existing,
+        status: 'checked_in',
+        checkedInAt: timestamp,
+        checkedInBy,
+      });
+    }
+    await tx.done;
+  } catch (err) {
+    console.warn('IDB mirror error:', err);
+  }
+}
+
+/**
  * Enqueues a check-in record when offline.
+ *
+ * THROWS on failure, deliberately. This queue row is the only record that a
+ * paying guest was let in; swallowing the error returned 0 and let the caller
+ * paint a green ADMITTED over an admission the server will never hear about.
+ * The caller must show a failure state instead.
  */
 export async function enqueueOfflineCheckIn(
   code: string,
@@ -145,19 +243,14 @@ export async function enqueueOfflineCheckIn(
   staffId = 'door_lead',
   deviceId = 'device_01'
 ): Promise<number> {
-  try {
-    const db = await getDB();
-    await db.add('queuedCheckIns', {
-      code,
-      scannedAt,
-      staffId,
-      deviceId,
-    });
-    return await db.count('queuedCheckIns');
-  } catch (err) {
-    console.warn('IDB enqueue error:', err);
-    return 0;
-  }
+  const db = await getDB();
+  await db.add('queuedCheckIns', {
+    code,
+    scannedAt,
+    staffId,
+    deviceId,
+  });
+  return await db.count('queuedCheckIns');
 }
 
 /**

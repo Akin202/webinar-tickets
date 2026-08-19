@@ -136,3 +136,31 @@ export function fireScanFeedback(kind: CheckInResultKind): void {
   triggerHapticFeedback(kind);
   playAudioFeedback(kind);
 }
+
+/** What this specific device can actually do. */
+export interface FeedbackCapabilities {
+  haptics: boolean;
+  audio: boolean;
+}
+
+/**
+ * Probes for real hardware/API support.
+ *
+ * The scanner used to display "Haptics & Audio Active" unconditionally. On an
+ * iPhone (no `navigator.vibrate`) that told the operator a non-colour channel
+ * existed when it did not — so a colour-blind staffer trusted a buzz that was
+ * never going to come. Call this on the client only; it reads browser globals.
+ */
+export function getFeedbackCapabilities(): FeedbackCapabilities {
+  const haptics =
+    typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+
+  const audio =
+    typeof window !== 'undefined' &&
+    Boolean(
+      window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: unknown }).webkitAudioContext
+    );
+
+  return { haptics, audio };
+}
