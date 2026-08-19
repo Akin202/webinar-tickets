@@ -14,7 +14,6 @@ import {
   Edit3,
   Copy,
   Check,
-  Sparkles,
 } from 'lucide-react';
 import { Ticket, TicketStatus, formatPhoneForDisplay } from '@/types/ticketing';
 import {
@@ -25,6 +24,7 @@ import {
 } from '@/config/event.config';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
 import { renameTicketHolder } from '@/lib/data-access';
+import { exportTicketPass } from '@/lib/pass-export';
 
 /**
  * QR contrast is FUNCTIONAL, not decorative — do not wire these to the
@@ -49,9 +49,14 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   const [copied, setCopied] = useState(false);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [tempName, setTempName] = useState(ticket.holderName);
-  const [saveImageNotice, setSaveImageNotice] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
+
+  // Save Pass state. The notice reports what actually happened — the old
+  // version claimed a save had occurred when nothing had been written.
+  const qrContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const [isSavingPass, setIsSavingPass] = useState(false);
+  const [passNotice, setPassNotice] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null);
 
   const activeStatus: TicketStatus = forcedStatus || ticket.status;
 
@@ -97,6 +102,34 @@ export const TicketCard: React.FC<TicketCardProps> = ({
     }
   };
 
+  const handleSavePass = async () => {
+    setIsSavingPass(true);
+    setPassNotice(null);
+    const outcome = await exportTicketPass({
+      qrContainer: qrContainerRef.current,
+      code: ticket.code,
+      holderName: ticket.holderName,
+      holderPhone: ticket.holderPhone ?? null,
+    });
+    setIsSavingPass(false);
+
+    if (outcome.kind === 'shared') {
+      setPassNotice({ tone: 'ok', text: 'Pass sent. Keep a copy on this phone too.' });
+    } else if (outcome.kind === 'downloaded') {
+      setPassNotice({ tone: 'ok', text: `Saved as ${outcome.fileName} — check your Downloads or Photos.` });
+    } else if (outcome.kind === 'cancelled') {
+      setPassNotice(null);
+    } else {
+      // Falling back to "take a screenshot" is honest here: it is genuinely
+      // the next best thing, and it is only offered once saving has actually
+      // failed rather than being dressed up as the feature.
+      setPassNotice({
+        tone: 'bad',
+        text: `${outcome.reason} Screenshot this card instead — that still scans.`,
+      });
+    }
+  };
+
   // Google Calendar Link generator
   const getGoogleCalendarUrl = () => {
     const title = encodeURIComponent(`${eventConfig.event.name} - ${eventConfig.event.tagline}`);
@@ -114,11 +147,22 @@ export const TicketCard: React.FC<TicketCardProps> = ({
 
   return (
     <div className="w-full max-w-md mx-auto">
-      {/* Save Image Tooltip Notice */}
-      {saveImageNotice && (
-        <div className="mb-4 p-3 rounded-xl bg-brand-primary/10 border border-brand-primary text-brand-primary text-xs font-semibold text-center flex items-center justify-center gap-2">
-          <Sparkles className="w-4 h-4" />
-          <span>Screenshot saved tip: You can also take a screenshot of this card for fast offline gate scanning!</span>
+      {/* What the Save Pass button actually did. */}
+      {passNotice && (
+        <div
+          role="status"
+          className={`mb-4 p-3 rounded-xl border text-xs font-semibold text-center flex items-center justify-center gap-2 ${
+            passNotice.tone === 'ok'
+              ? 'bg-brand-success-bg border-brand-success-border text-brand-success'
+              : 'bg-brand-urgent-bg border-brand-urgent-border text-brand-urgent'
+          }`}
+        >
+          {passNotice.tone === 'ok' ? (
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+          ) : (
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          )}
+          <span>{passNotice.text}</span>
         </div>
       )}
 
@@ -186,12 +230,17 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         {/* Ticket Body: QR Code & Code Number */}
         <div className="p-6 text-center space-y-5">
           {/* QR Code Canvas Frame */}
-          <div className="relative inline-block p-4 rounded-2xl bg-white shadow-xl">
+          <div ref={qrContainerRef} className="relative inline-block p-4 rounded-2xl bg-white shadow-xl">
             <QRCodeSVG
               value={ticket.code}
               size={210}
               level="H"
-              includeMargin={false}
+              // The quiet zone has to live INSIDE the svg. The surrounding
+              // padding is a DOM box: it survives a screenshot but not the
+              // PNG export, which serialises the svg alone — and a QR with
+              // no margin is the classic "worked on my screen, failed at the
+              // door" bug. `includeMargin` is deprecated in qrcode.react v4.
+              marginSize={4}
               bgColor={QR_BG}
               fgColor={QR_FG}
               className={`transition-opacity duration-300 ${
@@ -349,22 +398,14 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         {/* Footer Actions */}
         <div className="p-6 pt-4 bg-brand-subtle/40 space-y-3">
           <div className="grid grid-cols-2 gap-2">
-            {/* TODO(handoff): this does NOT save anything. It shows a
-                "screenshot this" notice. Implement real client-side PNG
-                export of the ticket card (Session 2) — this is the primary
-                delivery path in practice: attendees save the pass to their
-                gallery and forward it on WhatsApp. Must work on Android
-                Chrome, and the downloaded file must actually scan. */}
             <button
               type="button"
-              onClick={() => {
-                setSaveImageNotice(true);
-                setTimeout(() => setSaveImageNotice(false), 4000);
-              }}
-              className="min-h-[44px] px-3 py-2 rounded-xl bg-brand-card hover:bg-brand-card-hover border border-brand-border text-brand-text text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+              onClick={() => void handleSavePass()}
+              disabled={isSavingPass}
+              className="min-h-[44px] px-3 py-2 rounded-xl bg-brand-card hover:bg-brand-card-hover border border-brand-border text-brand-text text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60"
             >
               <Download className="w-3.5 h-3.5 text-brand-primary" />
-              <span>Save Pass</span>
+              <span>{isSavingPass ? 'Saving…' : 'Save Pass'}</span>
             </button>
 
             {/* Add to Calendar */}
