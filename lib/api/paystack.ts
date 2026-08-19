@@ -81,3 +81,25 @@ export async function paystackVerify(reference: string): Promise<PaystackVerifyR
     raw: json.data,
   };
 }
+
+/**
+ * Cheapest authenticated call Paystack offers, used only by /api/health to
+ * answer "are our credentials live and is the API reachable". Returns a
+ * boolean rather than throwing — health checks report, they do not fail.
+ */
+export async function paystackReachable(timeoutMs = 4000): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${PAYSTACK_BASE}/balance`, {
+      headers: { Authorization: `Bearer ${secretKey()}` },
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
