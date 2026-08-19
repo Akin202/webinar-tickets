@@ -3,6 +3,7 @@ import { requireStaffRequest } from '@/lib/api/staff-guard';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { rateLimit, clientIp } from '@/lib/api/rate-limit';
 import { csvField } from '@/lib/api/csv';
+import { assertNotCrossSite } from '@/lib/api/origin';
 
 /**
  * ADMIN ONLY. ~400 identifiable people's names, emails and phone numbers in
@@ -10,6 +11,9 @@ import { csvField } from '@/lib/api/csv';
  */
 
 export async function GET(req: Request) {
+  const crossSite = assertNotCrossSite(req);
+  if (crossSite) return crossSite;
+
   const auth = await requireStaffRequest(req, 'admin');
   if ('error' in auth) return auth.error;
 
