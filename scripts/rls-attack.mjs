@@ -96,11 +96,49 @@ console.log('\n2. anon reaching money through the counter');
   }
 }
 
+/**
+ * Arguments that MATCH each function's real signature.
+ *
+ * This used to post `{}` to every function. PostgREST answers a call whose
+ * arguments match no overload with 404 — the same shape as "you may not call
+ * this" — so every one of these assertions passed on argument mismatch and
+ * would have kept passing with the EXECUTE grant wide open. The test proved
+ * nothing about permissions. Sending the real signature makes a 404 mean
+ * "denied" and a 200 mean "we have a problem".
+ *
+ * Each payload is chosen so that succeeding is as close to harmless as the
+ * call allows, because a success here means the grant is open and the call
+ * WILL have run:
+ *
+ *   set_sales_open      re-asserts the CURRENT state, so it is a no-op
+ *   record_check_in     a code that does not exist -> not_found, no admission
+ *   mark_order_paid     a reference that does not exist -> not_found, no mint
+ *   create_pending_order the one that cannot be made harmless — it would hold
+ *                       a seat. Marked RLSATTACK- so it is findable, and its
+ *                       existence is itself the alarm.
+ */
+const NO_SUCH_CODE = 'SGN-2345-6789';
+const NO_SUCH_REF = `RLSATTACK-${Date.now().toString(36).toUpperCase()}`;
+
+// Read the live gate first so the set_sales_open probe cannot change it.
+let salesCurrentlyOpen = true;
+{
+  const { json } = await req('rpc/get_public_counter', { method: 'POST', body: {} });
+  const row = Array.isArray(json) ? json[0] : json;
+  if (row && typeof row.sales_closed === 'boolean') salesCurrentlyOpen = !row.sales_closed;
+}
+
+const PRIVILEGED = [
+  ['get_check_in_manifest', {}],
+  ['set_sales_open', { p_open: salesCurrentlyOpen }],
+  ['record_check_in', { p_code: NO_SUCH_CODE, p_device: 'rls-attack', p_scanned_at: new Date().toISOString() }],
+];
+
 console.log('\n3. anon calling privileged functions');
-for (const fn of ['get_check_in_manifest', 'set_sales_open', 'record_check_in']) {
-  const { status, json } = await req(`rpc/${fn}`, { method: 'POST', body: {} });
+for (const [fn, body] of PRIVILEGED) {
+  const { status, json } = await req(`rpc/${fn}`, { method: 'POST', body });
   // Any 200 is a failure, even with zero rows. EXECUTE itself is revoked
-  // from anon, so the request must die at the grant (401/403/404), not get
+  // from anon, so the request must die at the grant (401/403), not get
   // into the function body and rely on its internal role check. A 200 with
   // an empty result is exactly what the pre-fix implicit PUBLIC grant
   // produced — do not let that score as blocked again.
@@ -116,8 +154,26 @@ console.log('\n3b. the money functions — service-role only');
 // mark_order_paid would mint itself free tickets, so this is checked for both
 // anon AND an authenticated staff session — a signed-in door steward is still a
 // browser, and "authenticated" is not "trusted".
-for (const fn of ['create_pending_order', 'mark_order_paid']) {
-  const { status } = await req(`rpc/${fn}`, { method: 'POST', body: {} });
+const MONEY = [
+  [
+    'create_pending_order',
+    {
+      p_reference: NO_SUCH_REF,
+      p_buyer_name: 'RLS Attack Probe',
+      p_buyer_email: 'rls-attack@invalid.local',
+      p_buyer_phone: '+2348000000000',
+      p_quantity: 1,
+      p_unit_price_kobo: 0,
+      p_service_charge_kobo: 0,
+      p_fee_kobo: 0,
+      p_total_kobo: 0,
+    },
+  ],
+  ['mark_order_paid', { p_reference: NO_SUCH_REF, p_amount_kobo: 0, p_channel: null, p_raw: {} }],
+];
+
+for (const [fn, body] of MONEY) {
+  const { status } = await req(`rpc/${fn}`, { method: 'POST', body });
   status === 200
     ? fail(`anon executed ${fn}() — the money path is reachable from a browser`)
     : pass(`anon blocked from ${fn}() (HTTP ${status})`);
@@ -126,11 +182,21 @@ for (const fn of ['create_pending_order', 'mark_order_paid']) {
     const { status: doorStatus } = await req(`rpc/${fn}`, {
       token: DOOR_JWT,
       method: 'POST',
-      body: {},
+      body,
     });
     doorStatus === 200
       ? fail(`DOOR ROLE executed ${fn}() — a staff session can mint or reserve tickets`)
       : pass(`door blocked from ${fn}() (HTTP ${doorStatus})`);
+  }
+}
+
+// If either call above got through, it left a row. Say where to look.
+{
+  const { json } = await req(`orders?select=reference&reference=eq.${NO_SUCH_REF}`, {
+    token: DOOR_JWT ?? ANON,
+  });
+  if (Array.isArray(json) && json.length) {
+    fail(`the probe order ${NO_SUCH_REF} EXISTS — it holds a seat. Delete it by hand.`);
   }
 }
 
@@ -151,7 +217,9 @@ console.log('\n5. door role — the leak that is not anon');
 if (!DOOR_JWT) {
   console.log('  \x1b[33m! SKIPPED\x1b[0m — no DOOR_JWT set. This is NOT a pass.');
   console.log('    A door steward reaching buyer_email is the leak anon tests cannot catch,');
-  console.log('    so run this section before go-live. Get a token with:');
+  console.log('    so run this section before go-live. The door account already exists');
+  console.log('    (config/event.config.ts -> staff.scannerEmail); its password is the gate');
+  console.log('    PIN you gave scripts/seed-staff.mjs. Get a token with:');
   console.log('      curl -s -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \\');
   console.log('        -H "apikey: $ANON_KEY" -H "Content-Type: application/json" \\');
   console.log('        -d \'{"email":"<door account>","password":"<gate PIN>"}\'');
