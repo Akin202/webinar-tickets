@@ -112,31 +112,64 @@ config/ types/       The contracts.
 ```
 
 ## Current state
-UI complete from Google AI Studio. Handoff audit done, AI Studio scaffolding
-stripped (no Gemini, no Express, no stray backend), and the Vite → Next.js 15
-migration is complete: `npm run build` and `npm run lint` both pass clean, OG
-tags are server-rendered, fonts are self-hosted via next/font, and the theme
-is driven from `config/event.config.ts`.
+UI complete. Vite → Next.js 15 migration done. `npm run build` and
+`npm run lint` pass clean.
 
-The student assumption is gone. Checkout collects name, email, phone and
-quantity — nothing else. Matric number and department were removed from the
-contract, the form, the scanner, the admin table, the CSV export and the
-ticket pass; phone number took over as the door's identity check. The
-"What To Expect" marketing grid was deleted from the landing page along with
-`event.includes` — this is a ticketing tool, not an event website.
+**The backend is live.** Supabase project `adbzxxzyqeurjfrrenme` has the
+schema applied (3 migrations in `supabase/migrations/`, versions match the
+remote history — `supabase db push` agrees with reality). Six tables, RLS
+enabled and forced, all grants revoked from anon/authenticated. The only
+anon-reachable surface is `get_public_counter()`, which returns counts and
+no money.
 
-All data is still mock, routed through `lib/data-access.ts`. No database, no
-auth, no payments, no sync. 25 `TODO(handoff)` markers are the work queue —
-`grep -rn "TODO(handoff)"`.
+Wired and verified against the live project:
+- **Checkout** — `POST /api/checkout`. Amount computed server-side from
+  config via `computeOrderTotals`; the client cannot send a price. Capacity
+  and the sales gate are checked atomically inside `create_pending_order`
+  (`FOR UPDATE` on the settings row). Rate-limited per IP and per phone.
+  A live call returned a real Paystack authorization URL.
+- **Payment** — `POST /api/webhooks/paystack` verifies the HMAC-SHA512
+  signature against the raw body before parsing, then settles through
+  `mark_order_paid`. That function is the single idempotent flip: verified
+  create → paid → replay=already_paid → wrong-amount=no-op →
+  unknown-ref=not_found, minting exactly the right number of tickets once.
+  `/api/orders/[reference]` lazily verifies with Paystack and settles
+  through the same function, so whichever path lands second is a no-op.
+- **Door** — `record_check_in` decides first-scan-wins with one conditional
+  UPDATE. Verified over real HTTP with a door JWT: admitted → already_used
+  (carrying who and when) → not_found, with `admitted_count` staying 1.
+- **Auth** — real. Six-digit gate PIN is the door terminal account's
+  password; `/admin/login` is email+password with an admin role check.
+  `middleware.ts` fronts both tools. Role is read from `staff_users`, never
+  from JWT metadata. Create accounts with `node scripts/seed-staff.mjs`.
+- **Admin API** — `/api/admin/*`, all behind `requireStaff`. CSV export
+  writes an audit row naming who pulled it.
 
-Known gaps worth naming:
-- `/admin` and `/scan` have NO authentication. Any four digits at
-  `/scan/login` opens the scanner.
-- "Save Pass" on the ticket does not save anything; it shows a notice.
-- `lib/mock-data.ts` still ships in the client bundle because
-  `data-access.ts` imports it. It goes away in Session 1 Step 4.
-- `assets/og.jpg` and `assets/logo.svg` are referenced by config but do not
-  exist, so the WhatsApp preview has no image yet.
-- `/scan` still uses `animate-pulse` / `animate-bounce` / `animate-ping`,
-  which contradicts the "no animation on /scan" rule above. Left as-is
-  because it is a design decision, not a defect — decide and apply.
+`node scripts/rls-attack.mjs` passes 16/16 against the live project,
+including section 5 (door-role leakage) with a real door JWT: a door
+account cannot read `orders` or `settings_audit` and cannot close sales,
+and the manifest carries exactly its five permitted columns.
+
+`lib/mock-data.ts` is gone — it was shipping 12 fake buyer records in the
+production client bundle.
+
+### What is left
+- **No test suite.** Everything above was verified by hand against the live
+  project. Nothing stops a regression.
+- **Not deployed.** No Vercel project, no env vars set there, no webhook URL
+  registered in the Paystack dashboard. Until that last step the webhook
+  cannot fire.
+- **No CSP.** Other security headers are set (see `next.config.ts`); a real
+  CSP needs per-request nonces stamped in middleware because Next inlines
+  hydration scripts. Deliberately not shipped as `unsafe-inline` theatre.
+- **"Save Pass" still saves nothing** — it shows a "screenshot this" notice.
+  This is the primary delivery path in practice, so it matters.
+- **No email.** Resend is unwired; the admin resend button only toasts.
+- **Offline not tested on real hardware.** The logic is fixed and the sync
+  path is idempotent, but the airplane-mode requirement is unproven on an
+  actual Android phone.
+- Hero image is still a remote Unsplash URL on the LCP path.
+- `.mcp.json` still needs `&read_only=true` appended before the sales link
+  is distributed — from that point the buyer list is real PII.
+
+3 `TODO(handoff)` markers remain — `grep -rn "TODO(handoff)"`.

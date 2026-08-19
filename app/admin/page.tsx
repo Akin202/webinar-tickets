@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// TODO(handoff): unauthenticated. Session 2 adds middleware in front of
-// /admin and /scan, redirecting to login.
+// Guarded by middleware.ts (session required) and by requireStaff on every
+// /api/admin/* route (admin role required).
 export default function Page() {
   return <AdminPage />;
 }

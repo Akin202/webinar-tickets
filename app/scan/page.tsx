@@ -6,7 +6,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// TODO(handoff): unauthenticated. Session 2 adds middleware.
+// Guarded by middleware.ts; the door RPCs additionally check the caller's
+// staff_users role inside the SECURITY DEFINER functions.
 export default function Page() {
   return <ScanPage />;
 }
