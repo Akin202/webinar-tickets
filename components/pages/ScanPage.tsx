@@ -33,11 +33,14 @@ import {
   updateCachedTicketStatus,
   enqueueOfflineCheckIn,
   getQueuedCheckIns,
-  clearQueuedCheckIns,
+  removeQueuedCheckIns,
+  extractTicketCode,
+  getDeviceId,
 } from '@/lib/offline-db';
 import { useDevState } from '@/components/dev/DevStateProvider';
 import { fireScanFeedback } from '@/lib/scanner-feedback';
-import { CheckInResult, formatPhoneForDisplay } from '@/types/ticketing';
+import { CheckInResult, formatPhoneForDisplay, StaffUser } from '@/types/ticketing';
+import { getCurrentStaffUser } from '@/lib/data-access';
 import { eventConfig } from '@/config/event.config';
 
 
@@ -57,8 +60,11 @@ export const ScanPage: React.FC = () => {
   const [cachedCount, setCachedCount] = useState<number>(0);
   const [queuedCount, setQueuedCount] = useState<number>(0);
   const [manifestDownloadedNotice, setManifestDownloadedNotice] = useState<boolean>(false);
-  const [admittedCount, setAdmittedCount] = useState<number>(142);
+  // Starts at 0, not a mock figure — the real count arrives with the manifest.
+  const [admittedCount, setAdmittedCount] = useState<number>(0);
   const [totalCapacity, setTotalCapacity] = useState<number>(eventConfig.ticketing.capacity);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [staffUser, setStaffUser] = useState<StaffUser | null>(null);
 
   // Camera & Video Elements
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -92,6 +98,21 @@ export const ScanPage: React.FC = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [queuedCount]);
+
+  // Who is signed in at this terminal — recorded against every check-in.
+  useEffect(() => {
+    let isMounted = true;
+    getCurrentStaffUser()
+      .then((user) => {
+        if (isMounted) setStaffUser(user);
+      })
+      .catch(() => {
+        /* offline: check-ins still queue, staff id resolves on sync */
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // 3. Initial manifest download & capacity loading
   useEffect(() => {
@@ -180,18 +201,28 @@ export const ScanPage: React.FC = () => {
 
   // Handle Scan Verification (with offline-first fallback)
   const handleScanSubmit = async (codeOrQr: string) => {
-    const clean = codeOrQr.trim();
-    if (!clean) return;
+    const raw = codeOrQr.trim();
+    if (!raw) return;
+
+    // Normalise first. A QR may carry a full ticket URL; a manual entry may
+    // be a partial. Anything without a well-formed code fails closed rather
+    // than fuzzy-matching its way onto someone else's ticket.
+    const clean = extractTicketCode(raw);
+    if (!clean) {
+      setActiveResult({ kind: 'not_found', scannedCode: raw });
+      return;
+    }
 
     const nowIso = new Date().toISOString();
+    const deviceId = getDeviceId();
 
     // A. If online, validate through data-access seam
     if (isOnline) {
       try {
         const res = await checkInTicket({
           code: clean,
-          staffId: 'staff_door_1',
-          deviceId: 'device_gate_a',
+          staffId: staffUser?.id ?? '',
+          deviceId,
           scannedAt: nowIso,
         });
         setActiveResult(res);
@@ -234,12 +265,16 @@ export const ScanPage: React.FC = () => {
     }
 
     // VALID OFFLINE ADMISSION
-    await updateCachedTicketStatus(cachedTicket.id, nowIso, 'Gate Officer (Offline)');
+    await updateCachedTicketStatus(
+      cachedTicket.id,
+      nowIso,
+      staffUser?.name ?? 'Gate Officer (Offline)'
+    );
     const newQueueDepth = await enqueueOfflineCheckIn(
       cachedTicket.code,
       nowIso,
-      'staff_door_1',
-      'device_gate_a'
+      staffUser?.id ?? '',
+      deviceId
     );
 
     setQueuedCount(newQueueDepth);
@@ -256,13 +291,26 @@ export const ScanPage: React.FC = () => {
   const handleSyncQueued = async () => {
     if (queuedCount === 0 || isSyncing) return;
     setIsSyncing(true);
+    setSyncError(null);
     try {
+      // Snapshot the queue, then delete ONLY what this pass actually sent.
+      // A scan arriving mid-sync must survive; record_check_in is idempotent,
+      // so a duplicate replay returns already_used rather than double-admitting.
       const queue = await getQueuedCheckIns();
-      await syncQueuedCheckIns(queue);
-      await clearQueuedCheckIns();
-      setQueuedCount(0);
+      const snapshot = queue.filter((q) => typeof q.id === 'number');
+      await syncQueuedCheckIns(
+        snapshot.map((q) => ({
+          code: q.code,
+          staffId: q.staffId,
+          deviceId: q.deviceId,
+          scannedAt: q.scannedAt,
+        }))
+      );
+      const remaining = await removeQueuedCheckIns(snapshot.map((q) => q.id as number));
+      setQueuedCount(remaining);
     } catch (err) {
       console.warn('Sync failed:', err);
+      setSyncError('Sync failed — check-ins are still saved on this phone. Retry when you have signal.');
     } finally {
       setIsSyncing(false);
     }
@@ -312,7 +360,7 @@ export const ScanPage: React.FC = () => {
           <div className="flex items-center gap-1.5 font-bold">
             <span
               className={`w-2.5 h-2.5 rounded-full ${
-                isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                isOnline ? 'bg-emerald-500' : 'bg-amber-500'
               }`}
             />
             <span className={isOnline ? 'text-emerald-400' : 'text-amber-400'}>
@@ -353,9 +401,21 @@ export const ScanPage: React.FC = () => {
               title="Click to synchronize queued check-ins"
               className="bg-amber-950/80 border border-amber-600/60 text-amber-300 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-amber-900"
             >
-              <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{queuedCount} Queued</span>
+              <RefreshCw className="w-3 h-3" />
+              <span>{isSyncing ? 'Syncing…' : `${queuedCount} Queued`}</span>
             </button>
+          )}
+
+          {/* A failed sync must never be silent — queued scans are the only
+              record that those guests were admitted. */}
+          {syncError && (
+            <span
+              role="alert"
+              className="bg-rose-950/80 border border-rose-500 text-rose-200 px-2 py-1 rounded text-xs font-bold flex items-center gap-1"
+            >
+              <ShieldAlert className="w-3 h-3 flex-shrink-0" />
+              <span>Sync failed</span>
+            </span>
           )}
 
           {/* Exit to Admin / Staff Login */}
@@ -504,7 +564,7 @@ export const ScanPage: React.FC = () => {
           }`}
         >
           {pulseFlash && (
-            <div className="absolute inset-0 bg-white/25 pointer-events-none animate-ping duration-300" />
+            <div className="absolute inset-0 bg-white/25 pointer-events-none" />
           )}
 
           {currentResult.kind === 'already_used' && (
@@ -522,12 +582,12 @@ export const ScanPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {currentResult.kind === 'admitted' && (
-                <div className="w-14 h-14 rounded-full bg-white text-scan-admit border-4 border-emerald-200 flex items-center justify-center font-black shadow-lg animate-pulse">
+                <div className="w-14 h-14 rounded-full bg-white text-scan-admit border-4 border-emerald-200 flex items-center justify-center font-black shadow-lg">
                   <CheckCircle2 className="w-9 h-9" />
                 </div>
               )}
               {currentResult.kind === 'already_used' && (
-                <div className="w-14 h-14 rounded-xl bg-yellow-300 text-black border-4 border-white flex items-center justify-center font-black shadow-lg animate-bounce">
+                <div className="w-14 h-14 rounded-xl bg-yellow-300 text-black border-4 border-white flex items-center justify-center font-black shadow-lg">
                   <AlertOctagon className="w-9 h-9 text-red-900" />
                 </div>
               )}
