@@ -2,6 +2,7 @@ import { NextResponse, after } from 'next/server';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { deliverTicketEmail } from '@/lib/email';
+import { logSettleOutcome } from '@/lib/api/settle-log';
 
 /**
  * THE authority on payment status. Nothing else marks an order paid — the
@@ -84,13 +85,7 @@ export async function POST(req: Request) {
     });
   }
 
-  if (row?.outcome === 'amount_mismatch') {
-    // Money arrived that does not match the order. Never mint on this —
-    // log loudly and resolve by hand against the Paystack dashboard.
-    console.error(`webhook: AMOUNT MISMATCH on ${reference}: paystack says ${amountKobo}`);
-  } else if (row?.outcome === 'not_found') {
-    console.error(`webhook: charge.success for unknown reference ${reference}`);
-  }
+  logSettleOutcome('webhook', reference, amountKobo, row?.outcome);
 
   return NextResponse.json({ received: true, outcome: row?.outcome ?? 'unknown' });
 }
