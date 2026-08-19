@@ -127,4 +127,30 @@ describe('paystack webhook signature gate', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ outcome: 'amount_mismatch' });
   });
+
+  it('rejects an oversized body without hashing it', async () => {
+    // The cap exists so a stranger with curl cannot make us compute an
+    // HMAC-SHA512 over megabytes. Correctly signing the payload proves the
+    // rejection happens on size alone, before the signature is ever checked.
+    const body = JSON.stringify({
+      event: 'charge.success',
+      data: { reference: 'LD26-ABCDEFG-HJKMNPQ', amount: 322_500, pad: 'x'.repeat(70_000) },
+    });
+    const res = await POST(request(body, sign(body)));
+    expect(res.status).toBe(413);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('rate-limits a flood from one address', async () => {
+    // 120/min per IP. Everything in this suite shares the 'unknown' key, so
+    // this drains the window deliberately and must run last.
+    const body = chargeSuccess();
+    const signature = sign(body);
+    let sawLimit = false;
+    for (let i = 0; i < 150; i += 1) {
+      const res = await POST(request(body, signature));
+      if (res.status === 429) { sawLimit = true; break; }
+    }
+    expect(sawLimit).toBe(true);
+  });
 });

@@ -3,6 +3,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { deliverTicketEmail } from '@/lib/email';
 import { logSettleOutcome } from '@/lib/api/settle-log';
+import { rateLimit, clientIp } from '@/lib/api/rate-limit';
+import { readCappedText, MAX_WEBHOOK_BODY_BYTES } from '@/lib/api/body-limit';
 
 /**
  * THE authority on payment status. Nothing else marks an order paid — the
@@ -24,7 +26,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'not configured' }, { status: 500 });
   }
 
-  const rawBody = await req.text();
+  // The only unauthenticated POST in the app. Both guards below run BEFORE
+  // the HMAC, so an attacker cannot make us hash an arbitrary payload at
+  // will. The ceiling is well above Paystack's real retry volume — a genuine
+  // burst of retries for distinct references will never approach it.
+  if (!rateLimit(`webhook:ip:${clientIp(req)}`, 120, 60_000)) {
+    return NextResponse.json({ error: 'too many requests' }, { status: 429 });
+  }
+
+  const read = await readCappedText(req, MAX_WEBHOOK_BODY_BYTES);
+  if (!read.ok) {
+    console.error('webhook: rejected an oversized body before hashing it');
+    return NextResponse.json({ error: 'body too large' }, { status: 413 });
+  }
+
+  const rawBody = read.text;
   const signature = req.headers.get('x-paystack-signature') ?? '';
   const expected = createHmac('sha512', secret).update(rawBody).digest('hex');
 
