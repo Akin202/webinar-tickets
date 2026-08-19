@@ -125,8 +125,14 @@ console.log('\n4. ticket code enumeration');
 console.log('\n5. door role — the leak that is not anon');
 if (!DOOR_JWT) {
   console.log('  \x1b[33m! SKIPPED\x1b[0m — no DOOR_JWT set. This is NOT a pass.');
-  console.log('    Auth does not exist yet. Re-run with DOOR_JWT=<door user jwt> once it does;');
-  console.log('    a door steward reaching buyer_email is the leak anon tests cannot catch.');
+  console.log('    A door steward reaching buyer_email is the leak anon tests cannot catch,');
+  console.log('    so run this section before go-live. Get a token with:');
+  console.log('      curl -s -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \\');
+  console.log('        -H "apikey: $ANON_KEY" -H "Content-Type: application/json" \\');
+  console.log('        -d \'{"email":"<door account>","password":"<gate PIN>"}\'');
+  console.log('    then re-run as: DOOR_JWT=<access_token> node scripts/rls-attack.mjs');
+  console.log('    Note: with no tickets issued, the five-column manifest assertion cannot');
+  console.log('    run — seed one paid order first or that check silently does nothing.');
 } else {
   await assertNoRows('orders', DOOR_JWT, 'door');
   await assertNoRows('settings_audit', DOOR_JWT, 'door');
