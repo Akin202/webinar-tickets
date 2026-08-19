@@ -154,6 +154,30 @@ and the manifest carries exactly its five permitted columns.
 production client bundle.
 
 ### What is left
+
+**Read `signout-tickets-finish-plan.md` first.** A full end-to-end audit on
+2026-08-19 produced it: nine work packages with disjoint file ownership, each
+executable without further context. It supersedes this list, which describes
+only the *known* gaps. The audit also found P0 correctness bugs that were not
+on any list:
+
+- **`/scan` cannot load in airplane mode.** No service worker; the IndexedDB
+  layer only helps if the tab is already open, and `middleware.ts` needs the
+  network to answer. A reload at the door locks that phone out for the night.
+- **First-scan-wins has a hole.** The online `admitted` branch never mirrors
+  into IndexedDB, so after losing signal the same QR admits a second person.
+- **The money path can oversell.** `create_pending_order` sweeps pending to
+  abandoned and releases capacity; `mark_order_paid` then mints for those
+  orders with no capacity re-check.
+- **Online scan has no timeout** — on captive Wi-Fi the door hangs for tens of
+  seconds against a 300ms budget.
+
+Plus an enumerable comp-ticket reference, CSV formula injection in the export,
+and several places where the UI asserts things that did not happen (a
+fabricated sold count, a fake waitlist, "confirmation sent to your email").
+
+The originally-known gaps, all still true:
+
 - **No test suite.** Everything above was verified by hand against the live
   project. Nothing stops a regression.
 - **Not deployed.** No Vercel project, no env vars set there, no webhook URL
@@ -171,5 +195,7 @@ production client bundle.
 - Hero image is still a remote Unsplash URL on the LCP path.
 - `.mcp.json` still needs `&read_only=true` appended before the sales link
   is distributed — from that point the buyer list is real PII.
+- **`staff_users` is empty on the live project.** Nobody can log in to `/scan`
+  or `/admin` until `node scripts/seed-staff.mjs` is run again.
 
 3 `TODO(handoff)` markers remain — `grep -rn "TODO(handoff)"`.
