@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireStaff } from '@/lib/api/staff-guard';
+import { requireStaffRequest } from '@/lib/api/staff-guard';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import type { SalesSummary } from '@/types/ticketing';
 
@@ -7,8 +7,8 @@ import type { SalesSummary } from '@/types/ticketing';
  * ADMIN ONLY. The one endpoint that carries money. Never reachable from an
  * anon surface — the public page uses the counts-only get_public_counter RPC.
  */
-export async function GET() {
-  const auth = await requireStaff('admin');
+export async function GET(req: Request) {
+  const auth = await requireStaffRequest(req, 'admin');
   if ('error' in auth) return auth.error;
 
   const supabase = getSupabaseAdminClient();

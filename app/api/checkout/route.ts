@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { computeOrderTotals, normaliseNgPhone } from '@/types/ticketing';
 import { eventConfig } from '@/config/event.config';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { paystackInitialize } from '@/lib/api/paystack';
 import { rateLimit, clientIp } from '@/lib/api/rate-limit';
+import { generateReference } from '@/lib/api/reference';
 
 const checkoutSchema = z.object({
   buyerName: z.string().trim().min(2).max(120),
@@ -13,19 +13,6 @@ const checkoutSchema = z.object({
   buyerPhone: z.string().trim().min(7).max(20),
   quantity: z.number().int().min(1).max(eventConfig.ticketing.maxPerOrder),
 });
-
-/**
- * Unguessable order reference. It doubles as the bearer token for
- * /ticket/[reference], so it needs real entropy, not a 6-digit counter.
- * Unambiguous alphabet, 14 chars ~ 69 bits.
- */
-function generateReference(): string {
-  const alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
-  const bytes = randomBytes(14);
-  let out = '';
-  for (let i = 0; i < 14; i++) out += alphabet[bytes[i] % 31];
-  return `LD26-${out.slice(0, 7)}-${out.slice(7)}`;
-}
 
 export async function POST(req: Request) {
   const ip = clientIp(req);

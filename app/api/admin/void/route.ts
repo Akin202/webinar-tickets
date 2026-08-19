@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireStaff } from '@/lib/api/staff-guard';
+import { requireStaffRequest } from '@/lib/api/staff-guard';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 
 const voidSchema = z.object({
@@ -10,7 +10,7 @@ const voidSchema = z.object({
 
 /** ADMIN ONLY. Void is a status flip plus an audit row — never a delete. */
 export async function POST(req: Request) {
-  const auth = await requireStaff('admin');
+  const auth = await requireStaffRequest(req, 'admin', { mutating: true });
   if ('error' in auth) return auth.error;
 
   let parsed;

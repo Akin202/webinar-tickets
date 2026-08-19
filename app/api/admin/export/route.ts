@@ -1,20 +1,27 @@
 import { NextResponse } from 'next/server';
-import { requireStaff } from '@/lib/api/staff-guard';
+import { requireStaffRequest } from '@/lib/api/staff-guard';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
+import { rateLimit, clientIp } from '@/lib/api/rate-limit';
+import { csvField } from '@/lib/api/csv';
 
 /**
  * ADMIN ONLY. ~400 identifiable people's names, emails and phone numbers in
  * one response — every export writes an audit row saying who pulled it.
  */
 
-function csvField(value: unknown): string {
-  const s = String(value ?? '');
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-export async function GET() {
-  const auth = await requireStaff('admin');
+export async function GET(req: Request) {
+  const auth = await requireStaffRequest(req, 'admin');
   if ('error' in auth) return auth.error;
+
+  // Tight, and deliberately tighter than the other admin routes: this single
+  // endpoint returns the entire buyer list. A leaked admin session should not
+  // be able to pull it in a loop.
+  if (!rateLimit(`admin:export:${auth.staff.id}`, 5, 60_000)) {
+    return NextResponse.json({ error: 'Too many exports. Wait a minute.' }, { status: 429 });
+  }
+  if (!rateLimit(`admin:export:ip:${clientIp(req)}`, 5, 60_000)) {
+    return NextResponse.json({ error: 'Too many exports. Wait a minute.' }, { status: 429 });
+  }
 
   const supabase = getSupabaseAdminClient();
   const { data, error } = await supabase

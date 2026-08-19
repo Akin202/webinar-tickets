@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { requireStaff } from '@/lib/api/staff-guard';
+import { requireStaffRequest } from '@/lib/api/staff-guard';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { orderFromRow } from '@/lib/api/mappers';
 
 /** ADMIN ONLY. Paginated buyer list — this is the PII surface. */
 export async function GET(req: Request) {
-  const auth = await requireStaff('admin');
+  const auth = await requireStaffRequest(req, 'admin');
   if ('error' in auth) return auth.error;
 
   const url = new URL(req.url);

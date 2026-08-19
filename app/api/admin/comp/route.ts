@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireStaff } from '@/lib/api/staff-guard';
+import { requireStaffRequest } from '@/lib/api/staff-guard';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { normaliseNgPhone } from '@/types/ticketing';
 import { ticketFromRow } from '@/lib/api/mappers';
+import { generateReference } from '@/lib/api/reference';
 
 const compSchema = z.object({
   holderName: z.string().trim().min(2).max(120),
@@ -17,7 +18,7 @@ const compSchema = z.object({
  * separable in reconciliation because every money column is zero.
  */
 export async function POST(req: Request) {
-  const auth = await requireStaff('admin');
+  const auth = await requireStaffRequest(req, 'admin', { mutating: true });
   if ('error' in auth) return auth.error;
 
   let parsed;
@@ -32,7 +33,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Enter a valid Nigerian phone number.' }, { status: 400 });
   }
 
-  const reference = `LD26-COMP-${Date.now().toString(36).toUpperCase()}`;
+  // Same unguessable generator as a real purchase. A comp reference is just as
+  // much a bearer token for /ticket/[reference] as a paid one, and the old
+  // millisecond-derived value was both enumerable and collision-prone.
+  // Complimentary orders stay identifiable by their all-zero money columns and
+  // the `complimentary` flag in raw_webhook, not by a guessable prefix.
+  const reference = generateReference();
   const supabase = getSupabaseAdminClient();
 
   const { data: created, error: createError } = await supabase.rpc('create_pending_order', {

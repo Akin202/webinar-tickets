@@ -109,6 +109,31 @@ for (const fn of ['get_check_in_manifest', 'set_sales_open', 'record_check_in'])
     : pass(`anon blocked from ${fn}() (HTTP ${status})`);
 }
 
+console.log('\n3b. the money functions — service-role only');
+// create_pending_order and mark_order_paid are the two writes that decide
+// capacity and mint tickets. Neither has any grant: they are called only by the
+// API routes with the service-role key. A browser that could reach
+// mark_order_paid would mint itself free tickets, so this is checked for both
+// anon AND an authenticated staff session — a signed-in door steward is still a
+// browser, and "authenticated" is not "trusted".
+for (const fn of ['create_pending_order', 'mark_order_paid']) {
+  const { status } = await req(`rpc/${fn}`, { method: 'POST', body: {} });
+  status === 200
+    ? fail(`anon executed ${fn}() — the money path is reachable from a browser`)
+    : pass(`anon blocked from ${fn}() (HTTP ${status})`);
+
+  if (DOOR_JWT) {
+    const { status: doorStatus } = await req(`rpc/${fn}`, {
+      token: DOOR_JWT,
+      method: 'POST',
+      body: {},
+    });
+    doorStatus === 200
+      ? fail(`DOOR ROLE executed ${fn}() — a staff session can mint or reserve tickets`)
+      : pass(`door blocked from ${fn}() (HTTP ${doorStatus})`);
+  }
+}
+
 console.log('\n4. ticket code enumeration');
 {
   const guesses = ['SGN-AAAA-AAAA', 'SGN-2222-2222', 'SGN-2345-6789'];
