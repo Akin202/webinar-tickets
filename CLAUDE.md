@@ -107,95 +107,84 @@ app/                 App Router routes. Thin server components that export
 components/pages/    The page bodies ("use client").
 components/          Presentational components.
 components/dev/      DevStateProvider — dev-only forced-state context.
-lib/                 data-access (the seam), theme, offline-db, mock-data.
+lib/                 data-access (the seam), theme, offline-db, email,
+                     pass-export, api/ (route helpers).
+hooks/               useReducedMotion, useOfflineShell.
+public/sw.js         The door scanner's offline shell.
+tests/               vitest. `npm test`; integration is env-gated.
 config/ types/       The contracts.
 ```
 
 ## Current state
-UI complete. Vite → Next.js 15 migration done. `npm run build` and
-`npm run lint` pass clean.
 
-**The backend is live.** Supabase project `adbzxxzyqeurjfrrenme` has the
-schema applied (3 migrations in `supabase/migrations/`, versions match the
-remote history — `supabase db push` agrees with reality). Six tables, RLS
-enabled and forced, all grants revoked from anon/authenticated. The only
-anon-reachable surface is `get_public_counter()`, which returns counts and
-no money.
+**Everything on the nine-package finish plan is built except deployment.**
+`npm run build`, `npm run lint` and `npm test` all pass clean. Zero
+`TODO(handoff)` markers remain.
+
+**The backend is live.** Supabase project `adbzxxzyqeurjfrrenme`, 4 migrations
+applied, versions match the remote history. Six tables, RLS enabled and
+forced, all grants revoked from anon/authenticated. The only anon-reachable
+surface is `get_public_counter()`, which returns counts and no money.
+`node scripts/rls-attack.mjs` passes 16/16 — **except section 5 (door-role
+leakage), which has never run** because it needs a `DOOR_JWT`.
 
 Wired and verified against the live project:
-- **Checkout** — `POST /api/checkout`. Amount computed server-side from
-  config via `computeOrderTotals`; the client cannot send a price. Capacity
-  and the sales gate are checked atomically inside `create_pending_order`
-  (`FOR UPDATE` on the settings row). Rate-limited per IP and per phone.
-  A live call returned a real Paystack authorization URL.
-- **Payment** — `POST /api/webhooks/paystack` verifies the HMAC-SHA512
-  signature against the raw body before parsing, then settles through
-  `mark_order_paid`. That function is the single idempotent flip: verified
-  create → paid → replay=already_paid → wrong-amount=no-op →
-  unknown-ref=not_found, minting exactly the right number of tickets once.
-  `/api/orders/[reference]` lazily verifies with Paystack and settles
-  through the same function, so whichever path lands second is a no-op.
+- **Checkout** — `POST /api/checkout`. Amount computed server-side from config
+  via `computeOrderTotals`; the client cannot send a price. Capacity and the
+  sales gate are checked atomically inside `create_pending_order`. Rate-limited
+  per IP and per phone.
+- **Payment** — `POST /api/webhooks/paystack` verifies HMAC-SHA512 over the raw
+  body before parsing, then settles through `mark_order_paid` — the single
+  idempotent flip. `/api/orders/[reference]` lazily verifies with Paystack and
+  settles through the same function, so whichever lands second is a no-op.
+  Migration 4 added the capacity re-check that stopped a late payment minting
+  past capacity.
 - **Door** — `record_check_in` decides first-scan-wins with one conditional
-  UPDATE. Verified over real HTTP with a door JWT: admitted → already_used
-  (carrying who and when) → not_found, with `admitted_count` staying 1.
-- **Auth** — real. Six-digit gate PIN is the door terminal account's
-  password; `/admin/login` is email+password with an admin role check.
-  `middleware.ts` fronts both tools. Role is read from `staff_users`, never
-  from JWT metadata. Create accounts with `node scripts/seed-staff.mjs`.
-- **Admin API** — `/api/admin/*`, all behind `requireStaff`. CSV export
-  writes an audit row naming who pulled it.
-
-`node scripts/rls-attack.mjs` passes 16/16 against the live project,
-including section 5 (door-role leakage) with a real door JWT: a door
-account cannot read `orders` or `settings_audit` and cannot close sales,
-and the manifest carries exactly its five permitted columns.
-
-`lib/mock-data.ts` is gone — it was shipping 12 fake buyer records in the
-production client bundle.
+  UPDATE, and clamps a client-supplied `p_scanned_at` to `now()`.
+- **Offline shell** — `public/sw.js`, a hand-rolled service worker registered
+  only from `/scan`. Network-first on the `/scan` document, cache-first on
+  `/_next/static/*`, everything else passed through untouched; `/api/*`,
+  `/ticket/*`, `/admin*`, `/` and `/checkout` denied by name. The page reports
+  the assets it actually loaded so the FIRST online visit is enough. `/scan`
+  shows **Offline ready** vs **Preparing…** in the top bar.
+- **Auth** — six-digit gate PIN is the door terminal account's password;
+  `/admin/login` is email+password with an admin role check. Role is read from
+  `staff_users`, never from JWT metadata. Create accounts with
+  `node scripts/seed-staff.mjs`.
+- **Admin API** — `/api/admin/*` behind `requireStaffRequest`: role check,
+  same-origin check on mutations, per-staff and per-IP rate limits, audit rows
+  on export, void, comp, rename and resend.
+- **Save Pass** — real PNG export (`lib/pass-export.ts`), drawn on a canvas
+  with the QR serialised out of the live DOM. Share sheet where available,
+  download otherwise.
+- **Email** — Resend via plain fetch (`lib/email.ts`), sent on the transition
+  to paid only, through Next 15's `after()`. Admin resend button reports the
+  server's real answer.
+- **Tests** — `npm test`, 57 passing: money sweep, parsers, CSV guard, webhook
+  signature gate, email. `npm run test:integration` exists but **has never
+  run** (writes real rows; needs `INTEGRATION=1`).
 
 ### What is left
 
-**Read `signout-tickets-finish-plan.md` first.** A full end-to-end audit on
-2026-08-19 produced it: nine work packages with disjoint file ownership, each
-executable without further context. It supersedes this list, which describes
-only the *known* gaps. The audit also found P0 correctness bugs that were not
-on any list:
+**Blocked on the human, not on the agent:**
+1. **`staff_users` is empty.** Nobody can log into `/scan` or `/admin`. This
+   blocks: the scanner acceptance test, the airplane-mode drill, section 5 of
+   the attack script, issuing a comp ticket, and testing Save Pass or email
+   end-to-end. `node scripts/seed-staff.mjs` — needs an admin password and a
+   6-digit door PIN. Never commit either.
+2. **Not deployed.** No Vercel project, no env vars set there. Until that
+   exists the Paystack webhook URL cannot be registered, and until *that*
+   happens the webhook cannot fire.
+3. **Real-Android airplane-mode drill.** The offline shell is unproven on
+   hardware — devtools offline mode is not the same thing.
 
-- **`/scan` cannot load in airplane mode.** No service worker; the IndexedDB
-  layer only helps if the tab is already open, and `middleware.ts` needs the
-  network to answer. A reload at the door locks that phone out for the night.
-- **First-scan-wins has a hole.** The online `admitted` branch never mirrors
-  into IndexedDB, so after losing signal the same QR admits a second person.
-- **The money path can oversell.** `create_pending_order` sweeps pending to
-  abandoned and releases capacity; `mark_order_paid` then mints for those
-  orders with no capacity re-check.
-- **Online scan has no timeout** — on captive Wi-Fi the door hangs for tens of
-  seconds against a 300ms budget.
-
-Plus an enumerable comp-ticket reference, CSV formula injection in the export,
-and several places where the UI asserts things that did not happen (a
-fabricated sold count, a fake waitlist, "confirmation sent to your email").
-
-The originally-known gaps, all still true:
-
-- **No test suite.** Everything above was verified by hand against the live
-  project. Nothing stops a regression.
-- **Not deployed.** No Vercel project, no env vars set there, no webhook URL
-  registered in the Paystack dashboard. Until that last step the webhook
-  cannot fire.
-- **No CSP.** Other security headers are set (see `next.config.ts`); a real
-  CSP needs per-request nonces stamped in middleware because Next inlines
+**Still genuinely undone:**
+- **No CSP.** Other security headers are set (`next.config.ts`). A real CSP
+  needs per-request nonces stamped in middleware because Next inlines
   hydration scripts. Deliberately not shipped as `unsafe-inline` theatre.
-- **"Save Pass" still saves nothing** — it shows a "screenshot this" notice.
-  This is the primary delivery path in practice, so it matters.
-- **No email.** Resend is unwired; the admin resend button only toasts.
-- **Offline not tested on real hardware.** The logic is fixed and the sync
-  path is idempotent, but the airplane-mode requirement is unproven on an
-  actual Android phone.
-- Hero image is still a remote Unsplash URL on the LCP path.
-- `.mcp.json` still needs `&read_only=true` appended before the sales link
-  is distributed — from that point the buyer list is real PII.
-- **`staff_users` is empty on the live project.** Nobody can log in to `/scan`
-  or `/admin` until `node scripts/seed-staff.mjs` is run again.
-
-3 `TODO(handoff)` markers remain — `grep -rn "TODO(handoff)"`.
+- `.mcp.json` still needs `&read_only=true` appended before the sales link is
+  distributed — from that point the buyer list is real PII.
+- `npm audit` reports 3 high advisories in `sharp` (libvips), reachable only
+  by upgrading to Next 16. Not exploitable here: `images.remotePatterns` is
+  empty, so the only image sharp ever decodes is our own `public/assets/hero.jpg`.
+  Re-evaluate after the event, not during it.
