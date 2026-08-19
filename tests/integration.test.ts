@@ -225,6 +225,88 @@ describe.skipIf(!ENABLED || !DOOR_JWT)('the door race', () => {
   });
 });
 
+describe.skipIf(!ENABLED)('the capacity race', () => {
+  /**
+   * The property the whole event rests on: overselling means personally
+   * refunding people you know.
+   *
+   * create_pending_order serialises every checkout on `select ... from
+   * event_settings where id for update`. That row lock is the only thing
+   * standing between 50 simultaneous buyers and 50 sold seats when 5 remain.
+   * A read-then-insert without it would pass a single-threaded test and fail
+   * in exactly the ten seconds that matter, when a link hits a WhatsApp group.
+   *
+   * This suite TEMPORARILY lowers live capacity, so restore is unconditional
+   * and runs even if an assertion throws.
+   */
+  const SEATS_LEFT = 5;
+  const ATTEMPTS = 50;
+  let originalCapacity: number | null = null;
+
+  afterAll(async () => {
+    if (originalCapacity === null) return;
+    await table('event_settings?id=eq.true', {
+      method: 'PATCH',
+      body: JSON.stringify({ capacity: originalCapacity }),
+    });
+  });
+
+  it(`sells exactly ${SEATS_LEFT} seats to ${ATTEMPTS} simultaneous buyers`, async () => {
+    const settingsRes = await table('event_settings?select=capacity');
+    const [settings] = await settingsRes.json();
+    originalCapacity = settings.capacity;
+
+    // Whatever is already committed or held right now, plus exactly five.
+    const counter = await rpc('get_public_counter', {});
+    const taken = counter.row.capacity - counter.row.tickets_remaining;
+
+    await table('event_settings?id=eq.true', {
+      method: 'PATCH',
+      body: JSON.stringify({ capacity: taken + SEATS_LEFT }),
+    });
+
+    const references = Array.from(
+      { length: ATTEMPTS },
+      (_, i) => `${PREFIX}RACE-${Date.now().toString(36).toUpperCase()}-${i}`
+    );
+    references.forEach((r) => created.push(r));
+
+    // Genuinely concurrent: all 50 in flight before any resolves.
+    const results = await Promise.all(
+      references.map((reference) =>
+        rpc('create_pending_order', {
+          p_reference: reference,
+          p_buyer_name: 'Race Tester',
+          p_buyer_email: 'race@invalid.local',
+          p_buyer_phone: '+2348000000000',
+          p_quantity: 1,
+          p_unit_price_kobo: 0,
+          p_service_charge_kobo: 0,
+          p_fee_kobo: 0,
+          p_total_kobo: 0,
+        })
+      )
+    );
+
+    const outcomes = results.map((r) => r.row?.outcome);
+    const created_ = outcomes.filter((o) => o === 'created').length;
+    const soldOut = outcomes.filter((o) => o === 'sold_out').length;
+
+    console.log(
+      `\n  capacity race: ${ATTEMPTS} concurrent attempts against ${SEATS_LEFT} seats ` +
+        `-> created=${created_} sold_out=${soldOut} other=${ATTEMPTS - created_ - soldOut}`
+    );
+
+    expect(created_).toBe(SEATS_LEFT);
+    expect(soldOut).toBe(ATTEMPTS - SEATS_LEFT);
+
+    // And the database agrees it is full — no phantom seat left behind.
+    const after = await rpc('get_public_counter', {});
+    expect(after.row.tickets_remaining).toBe(0);
+    expect(after.row.is_sold_out).toBe(true);
+  });
+});
+
 describe.skipIf(!ENABLED)('the config and the database agree', () => {
   /**
    * capacity and the sales hard stop are stored twice on purpose — the
