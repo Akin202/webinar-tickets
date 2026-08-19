@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
+import { deliverTicketEmail } from '@/lib/email';
 
 /**
  * THE authority on payment status. Nothing else marks an order paid — the
@@ -66,6 +67,21 @@ export async function POST(req: Request) {
     // 500 so Paystack retries — transient DB failure must not lose a payment.
     console.error('webhook: mark_order_paid errored', error);
     return NextResponse.json({ error: 'processing failed' }, { status: 500 });
+  }
+
+  // Only on the transition. mark_order_paid returns 'already_paid' on a
+  // replay, so Paystack's retries cannot turn into a stream of duplicate
+  // emails to the same buyer.
+  if (row?.outcome === 'paid') {
+    // after() rather than a bare floating promise: this runs once the
+    // response is sent, but the runtime keeps the function alive for it.
+    // An un-awaited fetch would simply be killed when the handler returns.
+    // Nothing here may affect the 200 — Paystack retries non-2xx, and a
+    // bounced email is not a reason to reprocess a payment.
+    after(async () => {
+      const result = await deliverTicketEmail(reference);
+      if (!result.ok) console.error(`webhook: ticket email for ${reference} — ${result.reason}`);
+    });
   }
 
   if (row?.outcome === 'amount_mismatch') {

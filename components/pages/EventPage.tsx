@@ -29,10 +29,10 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 const defaultFaqs = [
   {
     question: "How do I get my ticket after paying?",
-    // No email is sent yet and there is no Wallet pass — saying otherwise
-    // sends people looking through an inbox for something that will never
-    // arrive. Restore the email line when Resend is actually wired.
-    answer: "Your QR pass appears on screen the moment payment clears. Save it or screenshot it right away — and keep the ticket link, which opens the same pass any time from any device."
+    // Still no Google Wallet pass, so that claim stays out. Email is real
+    // now but described as a backup, because it is: it can bounce, land in
+    // spam, or be typed wrong at checkout.
+    answer: "Your QR pass appears on screen the moment payment clears — save it there and then, using the Save Pass button. We also email you the link as a backup, but do not wait on it: save the pass on the spot."
   },
   {
     question: "What is the dress code for Last Dance?",

@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { paystackVerify } from '@/lib/api/paystack';
+import { deliverTicketEmail } from '@/lib/email';
 import { orderFromRow, ticketFromRow } from '@/lib/api/mappers';
 import { rateLimit, clientIp } from '@/lib/api/rate-limit';
 
@@ -51,12 +52,22 @@ export async function GET(
     try {
       const verified = await paystackVerify(clean);
       if (verified?.status === 'success') {
-        await supabase.rpc('mark_order_paid', {
+        const { data: settled } = await supabase.rpc('mark_order_paid', {
           p_reference: clean,
           p_amount_kobo: verified.amountKobo,
           p_channel: verified.channel,
           p_raw: verified.raw,
         });
+        // The buyer usually beats the webhook home, so this path is often the
+        // one that actually flips the order. Same 'paid'-only guard: whichever
+        // of the two lands second gets 'already_paid' and sends nothing.
+        const settledRow = Array.isArray(settled) ? settled[0] : settled;
+        if (settledRow?.outcome === 'paid') {
+          after(async () => {
+            const result = await deliverTicketEmail(clean);
+            if (!result.ok) console.error(`order: ticket email for ${clean} — ${result.reason}`);
+          });
+        }
         const { data: fresh } = await supabase
           .from('orders')
           .select('*')

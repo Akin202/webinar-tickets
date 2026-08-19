@@ -281,13 +281,13 @@ export const CheckoutPage: React.FC = () => {
               <p className="font-mono text-lg font-bold text-brand-primary">
                 {purchaseState.order.reference}
               </p>
-              {/* No email and no WhatsApp message is sent — the claim that
-                  used to sit here sent buyers hunting an inbox for something
-                  that would never arrive, on the one screen where they most
-                  need to trust the app. The reference below plus the pass
-                  itself are the whole delivery mechanism today. */}
+              {/* Email is now genuinely sent, but it is the backup channel and
+                  it can bounce — so it is described as a copy, not as the
+                  delivery. The pass on this screen is the thing that matters,
+                  and the wording keeps the buyer's attention on saving it. */}
               <p className="text-xs text-brand-dim mt-1">
-                Save this reference. Your pass link works any time, on any device.
+                Save this reference. Your pass link works any time, on any device — and
+                a copy is on its way to your email.
               </p>
             </div>
 

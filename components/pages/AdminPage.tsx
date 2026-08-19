@@ -29,6 +29,7 @@ import {
   issueComplimentaryTicket,
   exportOrdersCsv,
   setSalesOpen,
+  resendTicketEmail,
 } from '@/lib/data-access';
 import {
   Order,
@@ -153,6 +154,8 @@ export const AdminPage: React.FC = () => {
   const [salesToggleBusy, setSalesToggleBusy] = useState<boolean>(false);
   const [voidModalTicket, setVoidModalTicket] = useState<{ id: string; code: string } | null>(null);
   const [voidReason, setVoidReason] = useState<string>('');
+  /** Reference currently being emailed, so the button cannot be double-fired. */
+  const [resendingRef, setResendingRef] = useState<string | null>(null);
 
   /**
    * Guards against out-of-order responses. Typing "ade" fires three queries;
@@ -242,13 +245,22 @@ export const AdminPage: React.FC = () => {
     setExpandedOrderId((current) => (current === orderId ? null : orderId));
   };
 
-  // TODO(handoff): this only shows a toast — no email is sent. Wire to
-  // Resend once ticket delivery exists (Session 2). Must be rate-limited
-  // and written to an audit log; resending is a support action on real
-  // buyer data.
-  const handleResend = (order: Order, e: React.MouseEvent) => {
+  // Resend a buyer's ticket email. The toast reports what the server actually
+  // did — this button used to claim success without sending anything, which
+  // is the worst possible failure for a support action: the organiser tells
+  // the buyer "I've resent it" and stops looking.
+  const handleResend = async (order: Order, e: React.MouseEvent) => {
     e.stopPropagation();
-    triggerNotice(`Ticket link resent to ${order.buyerEmail}`);
+    if (resendingRef === order.reference) return;
+    setResendingRef(order.reference);
+    try {
+      await resendTicketEmail(order.reference);
+      triggerNotice(`Ticket link sent to ${order.buyerEmail}`);
+    } catch (err) {
+      triggerNotice(err instanceof Error ? err.message : 'Could not send that email.');
+    } finally {
+      setResendingRef(null);
+    }
   };
 
   // Void ticket handler
@@ -816,9 +828,14 @@ export const AdminPage: React.FC = () => {
                               </Link>
                               <button
                                 type="button"
-                                onClick={(e) => handleResend(order, e)}
-                                title="Resend Pass via Email/SMS"
-                                className="p-1 rounded hover:bg-gray-200 text-gray-600"
+                                onClick={(e) => void handleResend(order, e)}
+                                disabled={resendingRef === order.reference || order.status !== 'paid'}
+                                title={
+                                  order.status === 'paid'
+                                    ? 'Email this buyer their ticket link again'
+                                    : 'Only a paid order has a ticket to send'
+                                }
+                                className="p-1 rounded hover:bg-gray-200 text-gray-600 disabled:opacity-40"
                               >
                                 <Send className="w-3.5 h-3.5" />
                               </button>

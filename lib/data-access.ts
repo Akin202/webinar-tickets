@@ -318,6 +318,15 @@ export async function issueComplimentaryTicket(input: {
   return ticket;
 }
 
+/** Admin only. Rejects with the server's reason if the send did not land —
+ *  a resend button that cannot fail is a resend button that does nothing. */
+export async function resendTicketEmail(reference: string): Promise<void> {
+  await apiJson('/api/admin/resend', {
+    method: 'POST',
+    body: JSON.stringify({ reference }),
+  });
+}
+
 /** Admin only. Every export is written to the audit log server-side. */
 export async function exportOrdersCsv(): Promise<string> {
   const res = await fetch('/api/admin/export', { cache: 'no-store' });
