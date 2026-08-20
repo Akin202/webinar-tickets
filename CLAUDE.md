@@ -106,6 +106,12 @@ node scripts/purge-test-data.mjs   # dry run; --confirm to actually clear
 node scripts/seed-staff.mjs        # create an admin or door account
 ```
 
+The lockfile is **`bun.lock`**, not `package-lock.json` — AI Studio switched it
+and Vercel builds from it. The `npm run` scripts above still work against an
+existing `node_modules`, but `npm ci` will fail with no `package-lock.json`.
+Install with `bun install`. Do not commit both lockfiles: two of them make
+Vercel's package-manager detection nondeterministic.
+
 ## Layout
 ```
 app/                 App Router routes. Thin server components that export
@@ -124,9 +130,27 @@ config/ types/       The contracts.
 
 ## Current state
 
-**Everything on the nine-package finish plan is built except deployment.**
-`npm run build`, `npm run lint` and `npm test` all pass clean. Zero
+**Everything on the nine-package finish plan is built, and it is deployed.**
+`npm run build`, `npm run lint` and `npm test` (59) all pass clean. Zero
 `TODO(handoff)` markers remain.
+
+**`main` is the only trunk.** It briefly was not: the visual work is authored
+in Google AI Studio and pushed to `main` through AI Studio's GitHub
+integration (which is why `metadata.json` and `assets/.aistudio/` live in the
+tree), while the hardening work sat on `security/production-pass`. Vercel
+deploys `main`, so for a while production was running the app *without* the
+seat release, body caps, webhook rate limit, error boundaries or
+`/api/health`. Merged at `483f992` on 2026-08-20. **Do not open a long-lived
+parallel branch again** — AI Studio pushes to `main`, so anything not on
+`main` is invisible to it and to production.
+
+**Deployed on Vercel** at `lastdance.tickitid.online` (DNS resolves to Vercel,
+TLS live). `/api/health` returns `{"ok":true,"database":true,"paystack":true}`.
+Live Paystack keys are set in Vercel; `.env.local` is still on `sk_test_`, and
+that difference matters — see the purge note below. `NEXT_PUBLIC_SITE_URL`
+should stay UNSET in Vercel: `.env.local` says `localhost:3000` and the config
+fallback (`eventConfig.seo.siteUrl`) is already correct. Confirmed correct in
+production — `og:url` renders as `https://lastdance.tickitid.online`.
 
 **The backend is live.** Supabase project `adbzxxzyqeurjfrrenme`, 5 migrations
 applied, versions match the remote history. Six tables, RLS enabled and
@@ -185,31 +209,31 @@ Wired and verified against the live project:
 ### What is left
 
 **Blocked on the human, not on the agent:**
-1. **Nothing is deployed.** `lastdance.tickitid.online` has no DNS record at
-   all — the apex is still Namecheap parking. No Vercel project, no env vars
-   set there. That hostname is the Paystack callback, the WhatsApp OG card,
-   every email link and the webhook endpoint, so nothing downstream of it can
-   be tested. When setting env vars there, LEAVE `NEXT_PUBLIC_SITE_URL` UNSET
-   rather than copying `.env.local` — that file says `localhost:3000`, and the
-   config fallback (`eventConfig.seo.siteUrl`) is already correct.
-2. **Still on Paystack test keys** (`sk_test_`). No live transaction has ever
-   run end to end, so Part 2 check 1 of `signout-production-security.md` is
-   unperformed.
-3. **Resend is unverified.** `send.tickitid.online` has no DNS records, so the
+1. **Resend is unverified.** `send.tickitid.online` has no DNS records, so the
    backup delivery channel does not work.
-4. **Real-Android airplane-mode drill.** The offline shell is unproven on
-   hardware — devtools offline mode is not the same thing.
-5. **Section 5 of the attack script.** Unblocked now; needs a `DOOR_JWT`.
+2. **Real-Android airplane-mode drill.** The offline shell is unproven on
+   hardware — devtools offline mode is not the same thing. The service worker
+   caches by asset hash, so this has to be redone after any deploy.
+3. **Section 5 of the attack script.** Unblocked now; needs a `DOOR_JWT`.
 
-**The database holds test data.** Every row in `orders`, `tickets`,
-`check_ins` and `settings_audit` was written by a test — the integration
-suite's `INTEG-*` rows and manual purchases on test keys. Minted test tickets
-hold seats against capacity and appear in the admin list and the CSV export.
-`node scripts/purge-test-data.mjs` clears all four tables and re-asserts
-capacity from the config; dry run is the default. **Run it as the last step
-before the sales link goes out**, not before — testing between now and then
-writes more rows. It refuses to run on a live Paystack key without an explicit
-override, for the obvious reason.
+**The database was purged on 2026-08-20** and currently reads 300 remaining,
+0 sold, 0 checked in, `sales_open=true`. All 72 test-era rows across `orders`,
+`tickets`, `check_ins` and `settings_audit` are gone; `staff_users` and the
+auth users were untouched, so both logins still work. A JSON + CSV snapshot of
+what was deleted — including two real live-mode purchases, one of them a
+friend's, settled with him directly — is at
+`~/Documents/signout-backup-2026-08-20/`, outside the repo because it is PII.
+
+**Purge again as the last step before the sales link goes out.** Every test
+between now and then writes rows that hold seats.
+`node scripts/purge-test-data.mjs` is dry-run by default; `--confirm` writes.
+
+Be aware the script's `sk_live_` refusal reads **`.env.local`**, which still
+holds `sk_test_` while Vercel holds the live key — so the guard is inert on
+this machine and will delete real sales without complaint. After the final
+purge, paste the live secret into `.env.local` to arm it. `.gitignore` covers
+`.env*`. Note also that the purge re-asserts `capacity` but **not**
+`sales_open` — read the line it prints.
 
 **Still genuinely undone:**
 - **No CSP.** Other security headers are set (`next.config.ts`). A real CSP
