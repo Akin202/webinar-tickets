@@ -1,6 +1,6 @@
 {
-  "name": "Engineering Sign-Out After-Party Ticketing",
-  "description": "Official ticketing platform for the Sign-Out After-Party 'Last Dance'.",
+  "name": "Sign-Out After-Party — Last Dance",
+  "description": "Official ticketing platform for the Last Dance Sign-Out After-Party at BFF Lagos, hosted by The After Party Committee.",
   "requestFramePermissions": [
     "camera"
   ],

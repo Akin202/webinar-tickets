@@ -195,10 +195,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               <span className="text-[11px] font-extrabold uppercase tracking-widest text-brand-primary font-mono-code">
                 Official Admission Pass
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase mt-0.5 font-display">
+              <h2 className="text-2xl sm:text-3xl font-black text-brand-text tracking-tight uppercase mt-0.5 font-display">
                 {eventConfig.event.name}
               </h2>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5 font-mono-code">
+              <p className="text-xs text-brand-muted font-bold uppercase tracking-wider mt-0.5 font-mono-code">
                 {eventConfig.event.tagline} • {eventConfig.event.hostedBy}
               </p>
             </div>

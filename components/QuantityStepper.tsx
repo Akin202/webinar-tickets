@@ -39,7 +39,7 @@ export const QuantityStepper: React.FC<QuantityStepperProps> = ({
   return (
     <div
       id="quantity-stepper"
-      className="inline-flex items-center gap-2 p-1 rounded-xl bg-brand-subtle border border-brand-border"
+      className="inline-flex items-center gap-1.5 p-1 rounded-2xl bg-brand-surface border border-brand-border"
       role="group"
       aria-label="Select ticket quantity"
     >
@@ -49,23 +49,23 @@ export const QuantityStepper: React.FC<QuantityStepperProps> = ({
         onClick={handleDecrement}
         disabled={disabled || isMin}
         aria-label="Decrease quantity"
-        className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold text-lg border transition-all ${
+        className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-lg border transition-all ${
           disabled || isMin
-            ? 'opacity-40 cursor-not-allowed bg-transparent border-transparent text-brand-dim'
+            ? 'opacity-30 cursor-not-allowed bg-transparent border-transparent text-brand-dim'
             : 'bg-brand-card hover:bg-brand-card-hover border-brand-border text-brand-text active:scale-95'
         }`}
         style={{
           transition: prefersReducedMotion ? 'none' : 'transform 0.15s ease, opacity 0.15s ease',
         }}
       >
-        <Minus className="w-5 h-5" />
+        <Minus className="w-4 h-4" />
       </button>
 
-      <div className="min-w-[48px] h-12 flex flex-col items-center justify-center px-2">
-        <span className="text-xl sm:text-2xl font-bold font-mono text-brand-text leading-none">
+      <div className="min-w-[48px] h-11 flex flex-col items-center justify-center px-2">
+        <span className="text-xl font-extrabold font-display text-brand-text leading-none">
           {value}
         </span>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-muted mt-0.5">
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-brand-muted mt-0.5">
           {value === 1 ? 'Pass' : 'Passes'}
         </span>
       </div>
@@ -76,16 +76,16 @@ export const QuantityStepper: React.FC<QuantityStepperProps> = ({
         onClick={handleIncrement}
         disabled={disabled || isMax}
         aria-label="Increase quantity"
-        className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold text-lg border transition-all ${
+        className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-lg border transition-all ${
           disabled || isMax
-            ? 'opacity-40 cursor-not-allowed bg-transparent border-transparent text-brand-dim'
+            ? 'opacity-30 cursor-not-allowed bg-transparent border-transparent text-brand-dim'
             : 'bg-brand-card hover:bg-brand-card-hover border-brand-border text-brand-text active:scale-95'
         }`}
         style={{
           transition: prefersReducedMotion ? 'none' : 'transform 0.15s ease, opacity 0.15s ease',
         }}
       >
-        <Plus className="w-5 h-5" />
+        <Plus className="w-4 h-4" />
       </button>
     </div>
   );

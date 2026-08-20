@@ -24,43 +24,36 @@
 
 :root {
   /* --- brand base: overridden by the injected block from config --- */
-  --brand-primary: #e2ff00;
-  --brand-accent: #e2ff00;
-  --brand-surface: #060709;
-  --brand-text: #f8fafc;
-  --font-heading: var(--font-anton), system-ui, -apple-system, sans-serif;
-  --font-body: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+  --brand-primary: #c8b88a;
+  --brand-accent: #e11d48;
+  --brand-surface: #070709;
+  --brand-text: #f5f5f4;
+  --font-heading: var(--font-bricolage), system-ui, -apple-system, sans-serif;
+  --font-body: var(--font-inter), system-ui, -apple-system, sans-serif;
 
   /* --- brand derived: follow whatever the config sets above --- */
-  --brand-primary-hover: color-mix(in oklab, var(--brand-primary) 88%, black);
-  --brand-surface-raised: color-mix(in oklab, var(--brand-surface) 96%, white);
-  --brand-surface-card: color-mix(in oklab, var(--brand-surface) 92%, white);
-  --brand-surface-card-hover: color-mix(in oklab, var(--brand-surface) 86%, white);
-  --brand-surface-subtle: color-mix(in oklab, var(--brand-surface) 82%, white);
-  --brand-border: color-mix(in oklab, var(--brand-surface) 80%, white);
-  --brand-border-strong: color-mix(in oklab, var(--brand-surface) 72%, white);
+  --brand-primary-hover: #d8c9a3;
+  --brand-surface-raised: #111114;
+  --brand-surface-card: #111114;
+  --brand-surface-card-hover: #18181c;
+  --brand-surface-subtle: #1c1c21;
+  --brand-border: #232328;
+  --brand-border-strong: #33333b;
   --brand-border-focus: var(--brand-primary);
   --brand-card-danger: color-mix(in oklab, var(--brand-surface) 88%, var(--brand-urgent));
-  /* Both percentages are computed against the 4.5:1 floor, not chosen by eye.
-     The binding case is --brand-text-dim on --brand-surface-subtle, which is
-     the lightest background either token ever sits on (the ticket card's
-     attendee panel): at the previous 42% that pairing measured 2.27:1 — half
-     the required contrast, on the smallest type in the app. 62% brings it to
-     4.60:1. --brand-text-muted moves to 72% to keep a visible step between
-     the two levels now that dim has caught up to where muted used to be. */
-  --brand-text-muted: color-mix(in oklab, var(--brand-text) 72%, var(--brand-surface));
-  --brand-text-dim: color-mix(in oklab, var(--brand-text) 62%, var(--brand-surface));
+  --brand-text-muted: #a1a1aa;
+  --brand-text-dim: #71717a;
 
   /* --- brand status (public surfaces only) --- */
-  --brand-urgent: #ff3344;
+  --brand-urgent: #ef4444;
   --brand-urgent-bg: #450a0a;
   --brand-urgent-border: #7f1d1d;
   --brand-success: #22c55e;
   --brand-success-bg: #052e16;
   --brand-success-border: #15803d;
-  --brand-warning: var(--brand-primary);
-  --brand-warning-bg: color-mix(in oklab, var(--brand-primary) 18%, black);
-  --brand-warning-border: color-mix(in oklab, var(--brand-primary) 38%, black);
+  --brand-warning: #e4572e;
+  --brand-warning-bg: color-mix(in oklab, var(--brand-primary) 15%, black);
+  --brand-warning-border: color-mix(in oklab, var(--brand-primary) 35%, black);
 
   /* --- tool chrome: /admin, /scan/login --- */
   --tool-surface: #f8f9fa;
@@ -74,15 +67,10 @@
   --scan-admit: #047857;
   --scan-already: #991b1b;
   --scan-notfound: #7f1d1d;
-  /* Deliberately much darker than --scan-notfound. At arm's length, at 30%
-     brightness, #881337 and #7f1d1d were the same screen. Shape and glyph
-     carry the distinction; the panel value only has to stop fighting them. */
   --scan-void: #3f0517;
   --scan-unpaid: #b45309;
   --scan-hazard: #facc15;
   --scan-hazard-ink: #000000;
-  /* Not a verdict about a ticket — the phone failed to record a check-in.
-     Off the red/amber/green axis on purpose so it can never read as one. */
   --scan-fault: #1e293b;
 
   /* --- scanner chrome (dark, glare-resistant) --- */
@@ -145,19 +133,36 @@
 
 .font-display {
   font-family: var(--font-heading);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .font-mono-code {
   font-family: var(--font-space-grotesk), ui-monospace, monospace;
 }
 
+.ember-glow {
+  box-shadow: 0 0 35px -5px rgba(228, 87, 46, 0.35);
+}
+
+.ember-glow-sm {
+  box-shadow: 0 0 16px -2px rgba(228, 87, 46, 0.25);
+}
+
+.grain-overlay {
+  background-image: radial-gradient(rgba(228, 87, 46, 0.08) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.card-grain {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+}
+
 .acid-glow {
-  box-shadow: 0 0 25px -5px color-mix(in oklab, var(--brand-primary) 40%, transparent);
+  box-shadow: 0 0 25px -5px rgba(228, 87, 46, 0.4);
 }
 
 .acid-glow-sm {
-  box-shadow: 0 0 12px -2px color-mix(in oklab, var(--brand-primary) 30%, transparent);
+  box-shadow: 0 0 12px -2px rgba(228, 87, 46, 0.3);
 }
 
 .acid-border {

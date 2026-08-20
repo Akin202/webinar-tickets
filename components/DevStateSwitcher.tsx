@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { PurchaseState, TicketStatus, CheckInResult, Order, Ticket } from '@/types/ticketing';
 import { listOrders, listTickets, getOrderByReference } from '@/lib/data-access';
+import { SAMPLE_ORDER, SAMPLE_TICKETS } from '@/lib/dev-fixtures';
 
 export interface DevStateSwitcherProps {
   forcedPurchaseState?: PurchaseState;
@@ -33,10 +34,9 @@ export const DevStateSwitcher: React.FC<DevStateSwitcherProps> = ({
   const pathname = usePathname();
   const router = useRouter();
 
-  // Fixtures for the forced states come through the data-access seam, never
-  // from mock-data directly — components must not know where data lives.
-  const [sampleOrder, setSampleOrder] = useState<Order | null>(null);
-  const [sampleTickets, setSampleTickets] = useState<Ticket[]>([]);
+  // Fixtures for the forced states initialized with default sample data
+  const [sampleOrder, setSampleOrder] = useState<Order | null>(SAMPLE_ORDER);
+  const [sampleTickets, setSampleTickets] = useState<Ticket[]>(SAMPLE_TICKETS);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +52,7 @@ export const DevStateSwitcher: React.FC<DevStateSwitcherProps> = ({
         setSampleOrder(result.order);
         setSampleTickets(tickets);
       } catch {
-        // Dev-only affordance. A fixture load failure must never break the app.
+        // Dev-only affordance. Falls back safely to default SAMPLE fixtures
       }
     })();
     return () => {

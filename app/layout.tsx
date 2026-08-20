@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Anton, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
+import { Bricolage_Grotesque, Inter, Space_Grotesk } from 'next/font/google';
 import { eventConfig } from '@/config/event.config';
 import { BrandThemeStyle } from '@/lib/theme';
 import { DevStateProvider } from '@/components/dev/DevStateProvider';
@@ -9,22 +9,19 @@ import './globals.css';
  * Self-hosted via next/font — no render-blocking request to Google, and no
  * layout shift. The families are surfaced as CSS variables so that
  * event.config.ts stays the thing that decides which one is used where.
- *
- * Swapping a font for a new event means changing BOTH the import here and
- * brand.fontHeading / brand.fontBody in the config; next/font resolves at
- * build time, so it cannot be driven by a runtime string alone.
  */
-const anton = Anton({
-  weight: '400',
+const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-anton',
+  variable: '--font-bricolage',
+  weight: ['700', '800'],
 });
 
-const jakarta = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-jakarta',
+  variable: '--font-inter',
+  weight: ['400', '500', '600', '700'],
 });
 
 const spaceGrotesk = Space_Grotesk({
@@ -74,7 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${anton.variable} ${jakarta.variable} ${spaceGrotesk.variable}`}
+      className={`${bricolage.variable} ${inter.variable} ${spaceGrotesk.variable}`}
     >
       <head>
         {/* Brand custom properties, derived from event.config.ts. Rendered

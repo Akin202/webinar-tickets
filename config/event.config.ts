@@ -2,16 +2,16 @@ export const eventConfig = {
   event: {
     name: "Sign-Out After-Party",
     tagline: "Last Dance",
-    hostedBy: "The After-Party Committee",
+    hostedBy: "The After Party Committee",
     date: "2026-08-25",
     // West Africa Time. Nigeria does not observe DST, so this is constant.
     utcOffset: "+01:00",
     doorsOpen: "23:30",   // 11:30 PM. 24h clock — do not write 11:30.
     endsAt: "04:00",
     venueName: "BFF Lagos",
-    venueAddress: "4 jinbowu street, Yaba Lagos, Nigeria",
+    venueAddress: "4 Jibowu Street, Yaba Lagos, Nigeria",
     venueMapUrl: "https://maps.app.goo.gl/vNbJxWt4wQzpwJHc6?g_st=ic",
-    dressCode: "style your signout outfit",
+    dressCode: "Style your signout outfit",
     policies: {
       ageOrIdPolicy: "must be above 18 years",
       refundPolicy: "no refunds, no transfers, no resales",
@@ -49,10 +49,10 @@ export const eventConfig = {
   },
 
   brand: {
-    primary: "#e2ff00",
-    accent: "#00f0ff",
-    ink: "#ffffff",
-    surface: "#060709",
+    primary: "#C8B88A",
+    accent: "#E11D48",
+    ink: "#F5F5F4",
+    surface: "#070709",
     // Self-hosted. A remote host on the LCP path costs a DNS lookup, a TLS
     // handshake and a connection to somebody else's CDN before the largest
     // element can even start downloading — on Slow 4G that is most of the
@@ -61,8 +61,8 @@ export const eventConfig = {
     // next/font self-hosts these under generated family names, exposed as
     // CSS variables from app/layout.tsx. Referencing the raw family name
     // here would silently fall back to the system font.
-    fontHeading: "var(--font-anton), Impact, sans-serif",
-    fontBody: "var(--font-jakarta), system-ui, sans-serif",
+    fontHeading: "var(--font-bricolage), 'Bricolage Grotesque', sans-serif",
+    fontBody: "var(--font-inter), Inter, system-ui, sans-serif",
   },
 
   staff: {
@@ -87,7 +87,7 @@ export const eventConfig = {
     // bounce. The apex holds no CNAME, so Namecheap's free email forwarding
     // can point this at a real inbox. Resend is send-only and gives no mailbox.
     email: "support@tickitid.online",
-    organiserName: "After party Committee",
+    organiserName: "The After Party Committee",
   },
 
   seo: {

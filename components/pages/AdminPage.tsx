@@ -1172,7 +1172,7 @@ export const AdminPage: React.FC = () => {
                   required
                   value={compName}
                   onChange={(e) => setCompName(e.target.value)}
-                  placeholder="e.g. Prof. O. M. Sadiq (Dean of Engineering)"
+                  placeholder="e.g. Committee Guest / VIP Lead"
                   className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-xl text-gray-900 text-sm focus:border-gray-900 focus:outline-none"
                   autoFocus
                 />

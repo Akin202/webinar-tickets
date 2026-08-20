@@ -9,6 +9,7 @@ import {
   listOrders,
 } from '@/lib/data-access';
 import { IS_DEV } from '@/lib/dev-mode';
+import { SAMPLE_ORDER, SAMPLE_TICKETS } from '@/lib/dev-fixtures';
 import { Order, Ticket, TicketStatus } from '@/types/ticketing';
 import { TicketCard } from '@/components/TicketCard';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
@@ -39,25 +40,48 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
       try {
         let result: { order: Order; tickets: Ticket[] } | null = null;
         if (reference) {
-          result = await getOrderByReference(reference);
+          // In DEV, if testing with the sample reference, use dev fixture directly
+          if (IS_DEV && reference === SAMPLE_ORDER.reference) {
+            result = { order: SAMPLE_ORDER, tickets: SAMPLE_TICKETS };
+          } else {
+            result = await getOrderByReference(reference);
+          }
         }
-        // DEV ONLY: with no reference, preview the most recent order.
-        // listOrders is admin-only in production — an anonymous visitor
-        // without a reference gets not-found, never someone else's ticket.
+        // DEV ONLY: with no reference or sample ref, preview fixture or recent order
         if (!result && IS_DEV) {
-          const { orders } = await listOrders({ limit: 1 });
-          if (orders[0]) {
-            result = await getOrderByReference(orders[0].reference);
+          try {
+            const { orders } = await listOrders({ limit: 1 });
+            if (orders[0]) {
+              result = await getOrderByReference(orders[0].reference);
+            }
+          } catch {
+            // Unauthenticated or offline in dev: use sample fixture
+            result = { order: SAMPLE_ORDER, tickets: SAMPLE_TICKETS };
+          }
+          if (!result) {
+            result = { order: SAMPLE_ORDER, tickets: SAMPLE_TICKETS };
           }
         }
 
-        if (result && isMounted) {
-          setOrder(result.order);
-          setTicketsList(result.tickets);
+        if (isMounted) {
+          if (result) {
+            setOrder(result.order);
+            setTicketsList(result.tickets);
+          } else {
+            setOrder(null);
+            setTicketsList([]);
+          }
         }
       } catch (err) {
         console.error('Error loading ticket:', err);
-        if (isMounted) setLoadFailed(true);
+        // In dev mode, fallback to sample order instead of failing hard if network/rate-limit hit
+        if (IS_DEV && isMounted) {
+          setOrder(SAMPLE_ORDER);
+          setTicketsList(SAMPLE_TICKETS);
+          setLoadFailed(false);
+        } else if (isMounted) {
+          setLoadFailed(true);
+        }
       } finally {
         if (isMounted) {
           setLoading(false);
