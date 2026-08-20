@@ -1,8 +1,8 @@
 export const eventConfig = {
   event: {
-    name: "Engineering Sign-Out After-Party",
+    name: "Sign-Out After-Party",
     tagline: "Last Dance",
-    hostedBy: "Faculty of Engineering, University of Lagos",
+    hostedBy: "The After-Party Committee",
     date: "2026-08-25",
     // West Africa Time. Nigeria does not observe DST, so this is constant.
     utcOffset: "+01:00",
@@ -96,8 +96,8 @@ export const eventConfig = {
     // critical, not cosmetic: it decides where Paystack sends buyers back to.
     // It must always name a host we control.
     siteUrl: "https://lastdance.tickitid.online",
-    title: "Engineering Sign-Out After-Party — Last Dance",
-    description: "Official ticketing for the Engineering Sign-Out After-Party 'Last Dance' at BFF Lagos. August 25, 2026.",
+    title: "Sign-Out After-Party — Last Dance",
+    description: "Official ticketing for the Sign-Out After-Party 'Last Dance' at BFF Lagos. August 25, 2026.",
   },
 
   featureFlags: {

@@ -167,7 +167,7 @@ export const EventPage: React.FC = () => {
                 <span className="text-[11px] sm:text-xs">OFFICIAL ADMISSION PASS</span>
               </div>
               <div className="flex items-center gap-2 sm:gap-3 text-slate-300">
-                <span className="hidden sm:inline text-slate-400">NO. #ENG-2026-LD</span>
+                <span className="hidden sm:inline text-slate-400">NO. #TKT-2026-LD</span>
                 <span className="px-2.5 py-0.5 rounded-full bg-brand-primary/15 border border-brand-primary/40 text-brand-primary text-[10px] sm:text-[11px] font-black">
                   ADMIT ONE • GENERAL PASS
                 </span>
@@ -177,10 +177,10 @@ export const EventPage: React.FC = () => {
             {/* Main Ticket Body */}
             <div className="p-4 sm:p-10 pb-6 sm:pb-8">
               
-              {/* Event Tagline & Faculty Branding */}
+              {/* Event Tagline & Branding */}
               <div className="text-center">
                 <span className="inline-block text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.2em] sm:tracking-[0.25em] text-brand-primary bg-brand-primary/10 border border-brand-primary/30 px-3 py-1 rounded-full mb-2 sm:mb-3">
-                  FACULTY OF ENGINEERING • UNILAG
+                  SIGN-OUT 2026 • OFFICIAL ACCESS
                 </span>
 
                 <h1 className="text-4xl xs:text-5xl sm:text-8xl md:text-9xl font-black tracking-tighter text-brand-primary uppercase font-display leading-[0.88] drop-shadow-[0_4px_28px_rgba(226,255,0,0.4)] select-none break-words">
@@ -189,7 +189,7 @@ export const EventPage: React.FC = () => {
 
                 {/* Sub-banner ribbon (Clean ticket strip with NO stray dots) */}
                 <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-3 sm:mt-4 py-2 border-y border-brand-border text-slate-200 font-bold uppercase text-xs sm:text-base md:text-lg tracking-wider sm:tracking-widest px-2 font-mono-code bg-brand-subtle/30">
-                  <span className="text-brand-primary font-black">ENGINEERING SIGN-OUT</span>
+                  <span className="text-brand-primary font-black">SIGN-OUT</span>
                   <span className="text-slate-500">/</span>
                   <span className="text-white font-black">AFTER PARTY</span>
                 </div>
@@ -198,7 +198,7 @@ export const EventPage: React.FC = () => {
               {/* Event Description & BYOB Highlight Box */}
               <div className="py-6 sm:py-7 text-center max-w-2xl mx-auto space-y-4">
                 <p className="text-base sm:text-xl text-slate-200 font-semibold leading-relaxed">
-                  Hosted by {eventConfig.event.hostedBy}. The definitive sign-out celebration to wrap up an epic university journey.
+                  Hosted by the Faculty of Engineering. The definitive sign-out after-party celebration to wrap up an epic university journey.
                 </p>
 
                 {/* Event Highlights & Badges Bar (BYOB & Dress Code) */}
@@ -638,14 +638,6 @@ export const EventPage: React.FC = () => {
         <div className="max-w-5xl mx-auto pt-8 mt-8 border-t border-brand-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <p>© 2026 {eventConfig.event.name} • {eventConfig.event.hostedBy}. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <Link href="/admin" className="hover:text-white transition-colors">
-              Organizers Admin
-            </Link>
-            <span>•</span>
-            <Link href="/scan" className="hover:text-white transition-colors">
-              Door Scanner
-            </Link>
-            <span>•</span>
             <a
               href="#faq-refund-policy-box"
               className="hover:text-white transition-colors"
