@@ -14,6 +14,10 @@ import {
   ArrowRight,
   Share2,
   CheckCircle,
+  Wine,
+  Sparkles,
+  PartyPopper,
+  Flame,
 } from 'lucide-react';
 import { eventConfig, doorsOpenIso, eventDayStamp } from '@/config/event.config';
 import { getPublicSalesCounter } from '@/lib/data-access';
@@ -27,6 +31,10 @@ import { SectionHeading } from '@/components/SectionHeading';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 const defaultFaqs = [
+  {
+    question: "Is this event BYOB (Bring Your Own Bottle)?",
+    answer: "Yes! Last Dance is a BYOB (Bring Your Own Bottle) event. Everyone is encouraged to bring their own bottles, drinks, and alcohol to celebrate the sign-out in full energy with fellow graduating engineers."
+  },
   {
     question: "How do I get my ticket after paying?",
     // Still no Google Wallet pass, so that claim stays out. Email is real
@@ -102,17 +110,19 @@ export const EventPage: React.FC = () => {
   const unitPriceFormatted = koboToNaira(eventConfig.ticketing.priceKobo);
 
   return (
-    <div className="min-h-screen bg-brand-surface text-white flex flex-col selection:bg-brand-primary selection:text-black">
+    <div className="min-h-screen bg-brand-surface text-white flex flex-col selection:bg-brand-primary selection:text-black overflow-x-hidden pb-20 sm:pb-0">
       {/* ========================================================
           1. TOP TICKER RIBBON (Poster Ticker Tape)
       ======================================================== */}
-      <div className="w-full bg-brand-primary text-black py-1.5 px-4 overflow-hidden select-none border-b border-black font-mono-code font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-between">
-        <div className="flex items-center gap-6 animate-pulse whitespace-nowrap mx-auto">
+      <div className="w-full bg-brand-primary text-black py-1.5 px-3 overflow-hidden select-none border-b border-black font-mono-code font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center">
+        <div className="flex items-center gap-4 sm:gap-6 animate-pulse whitespace-nowrap overflow-x-auto no-scrollbar mx-auto max-w-full">
           <span>⚡ {eventConfig.event.tagline.toUpperCase()}</span>
           <span>•</span>
           <span>{eventConfig.event.name.toUpperCase()}</span>
           <span>•</span>
           <span>DOORS OPEN {eventConfig.event.doorsOpen}</span>
+          <span>•</span>
+          <span>🍾 BYOB EVENT</span>
           <span>•</span>
           <span>{eventConfig.event.venueName.toUpperCase()}</span>
           <span>•</span>
@@ -121,23 +131,13 @@ export const EventPage: React.FC = () => {
       </div>
 
       {/* ========================================================
-          2. ICONIC FLYER HERO SECTION
+          2. AUTHENTIC TICKETING PASS HERO SECTION
       ======================================================== */}
       <header
         id="event-hero"
-        className="relative w-full overflow-hidden border-b border-brand-border bg-brand-raised pt-6 sm:pt-10 pb-12 sm:pb-16 px-4 sm:px-6"
+        className="relative w-full overflow-hidden border-b border-brand-border bg-brand-raised pt-4 sm:pt-10 pb-10 sm:pb-16 px-3 sm:px-6"
       >
-        {/* Background Nightclub Atmosphere.
-
-            next/image rather than a CSS background: a background-image is
-            invisible to the preload scanner, so the browser could not begin
-            fetching the largest element until the stylesheet had parsed.
-            `priority` emits a <link rel="preload"> in the server-rendered
-            head, which is the change that actually moves LCP — self-hosting
-            the file alone would not have.
-
-            alt="" on purpose: this is atmosphere behind a poster and carries
-            no information a screen reader needs. */}
+        {/* Background Nightclub Atmosphere */}
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
           <Image
             src={eventConfig.brand.heroImageUrl}
@@ -145,123 +145,240 @@ export const EventPage: React.FC = () => {
             fill
             priority
             sizes="100vw"
-            className="object-cover object-center opacity-30 scale-105 contrast-125"
+            className="object-cover object-center opacity-25 scale-105 contrast-125"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-brand-surface via-brand-surface/80 to-brand-surface/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-brand-surface via-brand-surface/85 to-brand-surface/70" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,var(--brand-surface)_90%)]" />
         </div>
 
-        {/* Flyer Container */}
+        {/* Master Ticket Frame Container */}
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
-          {/* Main Poster Box Frame */}
-          <div className="w-full rounded-3xl bg-brand-card/90 border-2 border-brand-border p-6 sm:p-10 shadow-2xl backdrop-blur-md relative overflow-hidden">
-            {/* Top Acid Neon Glow Line */}
-            <div className="absolute top-0 inset-x-0 h-1.5 bg-brand-primary shadow-[0_0_15px_var(--brand-primary)]" />
+          
+          {/* Main Admission Pass / Ticket Box */}
+          <div className="w-full rounded-2xl sm:rounded-3xl bg-brand-card/95 border-2 border-brand-border shadow-2xl backdrop-blur-md relative overflow-hidden">
+            
+            {/* Top Metallic / Neon Ticket Accent Strip */}
+            <div className="h-2 w-full bg-brand-primary shadow-[0_0_15px_var(--brand-primary)]" />
 
-            {/* Poster Header: Giant condensed LAST DANCE Title */}
-            <div className="text-center pt-2 pb-4">
-              <h1 className="text-6xl sm:text-8xl md:text-9xl font-black tracking-tighter text-brand-primary uppercase font-display leading-[0.88] drop-shadow-[0_4px_24px_rgba(226,255,0,0.35)] select-none">
-                {eventConfig.event.tagline.toUpperCase()}
-              </h1>
-
-              {/* Sub-banners: ENGINEERING SIGNOUT (Left) & AFTER PARTY (Right) */}
-              <div className="flex items-center justify-between mt-3 sm:mt-4 pt-2 border-t-2 border-b-2 border-brand-primary/40 text-brand-primary font-black uppercase text-xs sm:text-lg md:text-xl tracking-widest px-2 font-mono-code">
-                <span>ENGINEERING SIGNOUT</span>
-                <span className="hidden sm:inline text-white">•</span>
-                <span>AFTER PARTY</span>
+            {/* Ticket Header Ribbon */}
+            <div className="px-4 sm:px-8 py-3 sm:py-3.5 bg-brand-subtle/70 border-b border-brand-border flex flex-wrap items-center justify-between gap-2 text-xs font-mono-code font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-brand-primary">
+                <Ticket className="w-4 h-4" />
+                <span className="text-[11px] sm:text-xs">OFFICIAL ADMISSION PASS</span>
+              </div>
+              <div className="flex items-center gap-2 sm:gap-3 text-slate-300">
+                <span className="hidden sm:inline text-slate-400">NO. #ENG-2026-LD</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-brand-primary/15 border border-brand-primary/40 text-brand-primary text-[10px] sm:text-[11px] font-black">
+                  ADMIT ONE • GENERAL PASS
+                </span>
               </div>
             </div>
 
-            {/* Poster Middle: Host & Dress Code */}
-            <div className="py-6 sm:py-8 text-center max-w-2xl mx-auto space-y-4">
-              <p className="text-base sm:text-xl text-slate-200 font-semibold leading-relaxed">
-                Hosted by {eventConfig.event.hostedBy}. The definitive sign-out celebration — open to everyone who wants to be there.
+            {/* Main Ticket Body */}
+            <div className="p-4 sm:p-10 pb-6 sm:pb-8">
+              
+              {/* Event Tagline & Faculty Branding */}
+              <div className="text-center">
+                <span className="inline-block text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.2em] sm:tracking-[0.25em] text-brand-primary bg-brand-primary/10 border border-brand-primary/30 px-3 py-1 rounded-full mb-2 sm:mb-3">
+                  FACULTY OF ENGINEERING • UNILAG
+                </span>
+
+                <h1 className="text-4xl xs:text-5xl sm:text-8xl md:text-9xl font-black tracking-tighter text-brand-primary uppercase font-display leading-[0.88] drop-shadow-[0_4px_28px_rgba(226,255,0,0.4)] select-none break-words">
+                  {eventConfig.event.tagline.toUpperCase()}
+                </h1>
+
+                {/* Sub-banner ribbon (Clean ticket strip with NO stray dots) */}
+                <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-3 sm:mt-4 py-2 border-y border-brand-border text-slate-200 font-bold uppercase text-xs sm:text-base md:text-lg tracking-wider sm:tracking-widest px-2 font-mono-code bg-brand-subtle/30">
+                  <span className="text-brand-primary font-black">ENGINEERING SIGN-OUT</span>
+                  <span className="text-slate-500">/</span>
+                  <span className="text-white font-black">AFTER PARTY</span>
+                </div>
+              </div>
+
+              {/* Event Description & BYOB Highlight Box */}
+              <div className="py-6 sm:py-7 text-center max-w-2xl mx-auto space-y-4">
+                <p className="text-base sm:text-xl text-slate-200 font-semibold leading-relaxed">
+                  Hosted by {eventConfig.event.hostedBy}. The definitive sign-out celebration to wrap up an epic university journey.
+                </p>
+
+                {/* Event Highlights & Badges Bar (BYOB & Dress Code) */}
+                <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+                  {/* Distinct BYOB Pill Badge */}
+                  <div
+                    id="byob-pill-badge"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-400/15 border-2 border-amber-400 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.25)] text-xs sm:text-sm font-black uppercase tracking-wider animate-pulse-subtle"
+                  >
+                    <Wine className="w-4 h-4 text-amber-300" />
+                    <span>BYOB • BRING YOUR OWN BOTTLE</span>
+                  </div>
+
+                  {/* Dress Code Pill Badge */}
+                  <div
+                    id="dress-code-badge"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-card-hover border border-brand-border-strong text-xs sm:text-sm font-bold text-slate-200"
+                  >
+                    <Shirt className="w-4 h-4 text-brand-primary" />
+                    <span>Dress Code: <strong className="text-brand-primary font-bold">{eventConfig.event.dressCode}</strong></span>
+                  </div>
+                </div>
+
+                {/* Streamlined BYOB Admission Notice Strip */}
+                <div
+                  id="byob-details-card"
+                  className="mx-auto max-w-xl p-3.5 sm:p-4 rounded-2xl bg-brand-subtle/80 border border-brand-border text-center flex items-center justify-center gap-3"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-amber-400/20 text-amber-300 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-300 font-medium text-left leading-snug">
+                    <strong className="text-amber-300 font-bold">Party Policy:</strong> This is a BYOB event — everyone is welcome to come with their own drinks, bottles & alcohol.
+                  </p>
+                </div>
+              </div>
+
+              {/* Ticket Key Metadata Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-center">
+                
+                {/* Doors Open */}
+                <div className="p-4 rounded-2xl bg-brand-subtle/60 border border-brand-border flex flex-col items-center justify-center">
+                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
+                    Doors Open
+                  </span>
+                  <span className="text-3xl sm:text-4xl font-black text-brand-primary font-display tracking-tight mt-0.5">
+                    {eventConfig.event.doorsOpen}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">11:30 PM (WAT)</span>
+                </div>
+
+                {/* Venue */}
+                <div className="p-4 rounded-2xl bg-brand-subtle/60 border border-brand-border flex flex-col items-center justify-center">
+                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
+                    Venue Location
+                  </span>
+                  <span className="text-xl sm:text-2xl font-black text-brand-primary font-display uppercase tracking-wider mt-0.5">
+                    {eventConfig.event.venueName}
+                  </span>
+                  <span className="text-[11px] text-slate-400 truncate max-w-[200px] font-mono">
+                    {eventConfig.event.venueAddress}
+                  </span>
+                </div>
+
+                {/* Date */}
+                <div className="p-4 rounded-2xl bg-brand-subtle/60 border border-brand-border flex flex-col items-center justify-center">
+                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
+                    Event Date
+                  </span>
+                  <span className="text-3xl sm:text-4xl font-black text-brand-primary font-display tracking-tight mt-0.5">
+                    {eventDayStamp}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">25th August 2026</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Perforated Tear-off Line with Realistic Notches */}
+            <div className="relative flex items-center justify-between px-0 py-2">
+              {/* Left Cutout Notch */}
+              <div className="w-6 h-10 -ml-3 rounded-r-full bg-brand-surface border-y border-r border-brand-border" />
+              
+              {/* Dashed Tear Line */}
+              <div className="flex-1 border-t-2 border-dashed border-brand-border/70 mx-3" />
+              
+              {/* Right Cutout Notch */}
+              <div className="w-6 h-10 -mr-3 rounded-l-full bg-brand-surface border-y border-l border-brand-border" />
+            </div>
+
+            {/* Ticket Action Stub / Admission Terminal */}
+            <div className="p-5 sm:p-8 pt-4 bg-brand-subtle/40">
+              
+              {/* Decorative Ticket Barcode & Serial Matrix */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-brand-border text-center sm:text-left">
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400 block">
+                    Admission Price
+                  </span>
+                  <div className="flex items-baseline gap-2 justify-center sm:justify-start">
+                    <span className="text-3xl sm:text-4xl font-black text-brand-primary font-mono leading-none">
+                      {unitPriceFormatted}
+                    </span>
+                    <span className="text-xs text-slate-400 font-medium">/ person</span>
+                  </div>
+                </div>
+
+                {/* Faux Barcode Representation */}
+                <div className="flex flex-col items-center sm:items-end">
+                  <div className="flex items-center gap-[2px] h-9 px-3 py-1 bg-white/90 rounded-md">
+                    <div className="w-0.5 h-full bg-black" />
+                    <div className="w-1 h-full bg-black" />
+                    <div className="w-0.5 h-full bg-black" />
+                    <div className="w-1.5 h-full bg-black" />
+                    <div className="w-0.5 h-full bg-black" />
+                    <div className="w-1 h-full bg-black" />
+                    <div className="w-0.5 h-full bg-black" />
+                    <div className="w-2 h-full bg-black" />
+                    <div className="w-0.5 h-full bg-black" />
+                    <div className="w-1.5 h-full bg-black" />
+                    <div className="w-1 h-full bg-black" />
+                    <div className="w-0.5 h-full bg-black" />
+                    <div className="w-1.5 h-full bg-black" />
+                    <div className="w-0.5 h-full bg-black" />
+                    <div className="w-2 h-full bg-black" />
+                    <div className="w-1 h-full bg-black" />
+                    <div className="w-0.5 h-full bg-black" />
+                  </div>
+                  <span className="text-[9px] font-mono text-slate-400 tracking-wider mt-1">
+                    *SECURE-QR-GATE-GATEPASS*
+                  </span>
+                </div>
+              </div>
+
+              {/* Countdown to Doors Open */}
+              <div className="py-6 text-center">
+                <span className="text-xs uppercase tracking-widest text-slate-400 font-bold block mb-2">
+                  Countdown to Doors Open ({eventConfig.event.doorsOpen})
+                </span>
+                <Countdown targetIso={doorsOpenIso} />
+              </div>
+
+              {/* Primary Call to Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
+                <Link
+                  href="/checkout"
+                  id="hero-primary-cta-btn"
+                  className={`w-full sm:w-auto min-h-[58px] px-10 py-4 rounded-2xl bg-brand-primary hover:bg-brand-primary-hover text-black font-black text-lg sm:text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-[0_0_25px_rgba(226,255,0,0.45)] ${
+                    prefersReducedMotion ? '' : 'transition-transform duration-150 active:scale-95'
+                  }`}
+                >
+                  <Ticket className="w-6 h-6 text-black" />
+                  <span>BUY PARTY PASS ({unitPriceFormatted})</span>
+                  <ArrowRight className="w-5 h-5 text-black" />
+                </Link>
+
+                <button
+                  type="button"
+                  id="hero-share-btn"
+                  onClick={handleShare}
+                  className="w-full sm:w-auto min-h-[58px] px-6 py-4 rounded-2xl bg-brand-card-hover hover:bg-brand-border border border-brand-border-strong text-white font-bold text-base flex items-center justify-center gap-2 transition-colors"
+                  aria-label="Share event link"
+                >
+                  {copiedLink ? (
+                    <>
+                      <CheckCircle className="w-5 h-5 text-brand-primary" />
+                      <span className="text-brand-primary">Link Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-5 h-5 text-slate-400" />
+                      <span>Share Event</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Micro-trust copy */}
+              <p className="text-[11px] text-slate-400 text-center mt-4 font-medium">
+                Instant digital pass generated upon payment • Gate QR scan admission • Strict 18+ valid ID required
               </p>
-
-              {/* Dress Code & Vibe Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-card-hover border border-brand-border-strong text-xs sm:text-sm font-bold text-brand-primary">
-                <Shirt className="w-4 h-4 text-brand-primary" />
-                <span>Dress Code: {eventConfig.event.dressCode}</span>
-              </div>
-            </div>
-
-            {/* Poster Bottom Anchors (Flyer style: Doors Open, Venue, Date) */}
-            <div className="pt-4 border-t-2 border-brand-border flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-              {/* Left Time Stamp */}
-              <div className="flex flex-col items-center sm:items-start">
-                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
-                  Doors Open
-                </span>
-                <span className="text-4xl sm:text-6xl font-black text-brand-primary font-display tracking-tight leading-none">
-                  {eventConfig.event.doorsOpen}
-                </span>
-              </div>
-
-              {/* Center Venue Stamp */}
-              <div className="flex flex-col items-center justify-center px-4 py-2 rounded-2xl bg-brand-card-hover border border-brand-primary/30 shadow-inner">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                  Official Venue
-                </span>
-                <span className="text-xl sm:text-2xl font-black text-brand-primary font-display tracking-[0.2em] uppercase">
-                  {eventConfig.event.venueName}
-                </span>
-                <span className="text-[11px] text-slate-400 font-mono truncate max-w-[220px]">
-                  {eventConfig.event.venueAddress}
-                </span>
-              </div>
-
-              {/* Right Date Stamp */}
-              <div className="flex flex-col items-center sm:items-end">
-                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
-                  Event Date
-                </span>
-                <span className="text-4xl sm:text-6xl font-black text-brand-primary font-display tracking-tight leading-none">
-                  {eventDayStamp}
-                </span>
-              </div>
-            </div>
-
-            {/* Countdown to Event */}
-            <div className="mt-8 pt-6 border-t border-brand-border text-center">
-              <span className="text-xs uppercase tracking-widest text-slate-400 font-bold block mb-2">
-                Countdown to Doors Open ({eventConfig.event.doorsOpen})
-              </span>
-              <Countdown targetIso={doorsOpenIso} />
-            </div>
-
-            {/* Primary Action Buttons */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
-              <Link
-                href="/checkout"
-                id="hero-primary-cta-btn"
-                className={`w-full sm:w-auto min-h-[56px] px-10 py-4 rounded-2xl bg-brand-primary hover:bg-brand-primary-hover text-black font-black text-lg sm:text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-[0_0_25px_rgba(226,255,0,0.4)] ${
-                  prefersReducedMotion ? '' : 'transition-transform duration-150 active:scale-95'
-                }`}
-              >
-                <Ticket className="w-6 h-6 text-black" />
-                <span>BUY PARTY PASS ({unitPriceFormatted})</span>
-                <ArrowRight className="w-5 h-5 text-black" />
-              </Link>
-
-              <button
-                type="button"
-                id="hero-share-btn"
-                onClick={handleShare}
-                className="w-full sm:w-auto min-h-[56px] px-6 py-4 rounded-2xl bg-brand-card-hover hover:bg-brand-border border border-brand-border-strong text-white font-bold text-base flex items-center justify-center gap-2 transition-colors"
-                aria-label="Share event link"
-              >
-                {copiedLink ? (
-                  <>
-                    <CheckCircle className="w-5 h-5 text-brand-primary" />
-                    <span className="text-brand-primary">Link Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="w-5 h-5 text-slate-400" />
-                    <span>Share Event</span>
-                  </>
-                )}
-              </button>
             </div>
           </div>
         </div>
@@ -315,11 +432,18 @@ export const EventPage: React.FC = () => {
         <div className="max-w-4xl mx-auto">
           <SectionHeading
             title="Event Schedule & Venue Guidelines"
-            subtitle="Important entry, dress code, and gate guidelines for all attendees."
+            subtitle="Important entry, BYOB policy, dress code, and gate guidelines for all attendees."
             eyebrow="Crucial Guidelines"
           />
 
           <div className="space-y-3.5 sm:space-y-4">
+            <DetailRow
+              icon={Wine}
+              label="BYOB Policy (Bring Your Own Bottle)"
+              value="Bring Your Own Alcohol / Drinks"
+              subValue="This event is BYOB! Everyone is required and encouraged to come with their own bottle and drinks of choice."
+            />
+
             <DetailRow
               icon={Calendar}
               label="Date & Schedule"
@@ -534,3 +658,4 @@ export const EventPage: React.FC = () => {
     </div>
   );
 };
+

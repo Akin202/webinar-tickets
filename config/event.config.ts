@@ -79,7 +79,7 @@ export const eventConfig = {
   },
 
   support: {
-    whatsappNumber: "+2348039927805",
+    whatsappNumber: "+2348139927805",
     whatsappMessage: "Hi, I need help with my sign-out ticket",
     // Deliberately on the APEX, not on lastdance.*. The sales host is a CNAME
     // to Vercel, and RFC 1034 forbids any other record coexisting with a CNAME

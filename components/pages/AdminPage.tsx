@@ -410,98 +410,98 @@ export const AdminPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* ========================================================
             1. STATS ROW (SalesSummary)
         ======================================================== */}
-        <section aria-label="Sales Metrics" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+        <section aria-label="Sales Metrics" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+          <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-200 shadow-sm">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider block truncate">
               Tickets Sold
             </span>
-            <div className="text-2xl font-bold font-mono text-gray-900 mt-1">
+            <div className="text-xl sm:text-2xl font-bold font-mono text-gray-900 mt-1">
               {summary ? summary.ticketsSold : '—'}
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">
+            <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 truncate">
               {/* capacity 0 is reachable — an admin can set it while closing
                   sales — and 0/0 renders as "NaN% of capacity". */}
               {summary && summary.capacity > 0
-                ? `${Math.round((summary.ticketsSold / summary.capacity) * 100)}% of capacity`
+                ? `${Math.round((summary.ticketsSold / summary.capacity) * 100)}% of cap`
                 : '— of capacity'}
             </p>
           </div>
 
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+          <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-200 shadow-sm">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider block truncate">
               Remaining
             </span>
-            <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
+            <div className="text-xl sm:text-2xl font-bold font-mono text-emerald-700 mt-1">
               {summary ? summary.ticketsRemaining : '—'}
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">Available for purchase</p>
+            <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 truncate">Available</p>
           </div>
 
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+          <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-200 shadow-sm">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider block truncate">
               Checked In
             </span>
-            <div className="text-2xl font-bold font-mono text-blue-700 mt-1">
+            <div className="text-xl sm:text-2xl font-bold font-mono text-blue-700 mt-1">
               {summary ? summary.ticketsCheckedIn : '—'}
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">
+            <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 truncate">
               {summary && summary.ticketsSold > 0
                 ? Math.round((summary.ticketsCheckedIn / summary.ticketsSold) * 100)
                 : 0}
-              % turn-up rate
+              % turn-up
             </p>
           </div>
 
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+          <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-200 shadow-sm">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider block truncate">
               Gross Revenue
             </span>
-            <div className="text-xl font-bold font-mono text-gray-900 mt-1">
+            <div className="text-lg sm:text-xl font-bold font-mono text-gray-900 mt-1 truncate">
               {summary ? koboToNaira(summary.grossKobo) : '—'}
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">Total collected</p>
+            <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 truncate">Total collected</p>
           </div>
 
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+          <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-200 shadow-sm col-span-2 sm:col-span-1">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider block truncate">
               Net Revenue
             </span>
-            <div className="text-xl font-bold font-mono text-gray-900 mt-1">
+            <div className="text-lg sm:text-xl font-bold font-mono text-gray-900 mt-1 truncate">
               {summary ? koboToNaira(summary.netKobo) : '—'}
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">
-              After processor fees &amp; {eventConfig.ticketing.serviceChargeLabel.toLowerCase()}
+            <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 truncate">
+              After fees &amp; charges
             </p>
           </div>
 
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+          <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-200 shadow-sm">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider block truncate">
               {eventConfig.ticketing.serviceChargeLabel}
             </span>
-            <div className="text-xl font-bold font-mono text-gray-900 mt-1">
+            <div className="text-lg sm:text-xl font-bold font-mono text-gray-900 mt-1 truncate">
               {summary ? koboToNaira(summary.serviceChargeKobo) : '—'}
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">
-              Collected for FlagIQ &middot; gateway {summary ? koboToNaira(summary.gatewayFeesKobo) : '—'}
+            <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 truncate">
+              Gateway {summary ? koboToNaira(summary.gatewayFeesKobo) : '—'}
             </p>
           </div>
 
           <div
-            className={`p-4 rounded-lg border ${
+            className={`p-3 sm:p-4 rounded-xl border shadow-sm ${
               summary?.salesClosed
                 ? 'bg-red-50 border-red-300'
                 : 'bg-white border-gray-200'
             }`}
           >
-            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider block truncate">
               Ticket Sales
             </span>
             <div
-              className={`text-xl font-bold font-mono mt-1 ${
+              className={`text-lg sm:text-xl font-bold font-mono mt-1 ${
                 summary?.salesClosed ? 'text-red-700' : 'text-green-700'
               }`}
             >
@@ -513,17 +513,17 @@ export const AdminPage: React.FC = () => {
               onClick={() =>
                 summary?.salesClosed ? handleSetSalesOpen(true) : setIsCloseSalesModalOpen(true)
               }
-              className="mt-2 min-h-[36px] w-full px-3 py-1.5 rounded-md border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-1.5"
+              className="mt-2 min-h-[36px] w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
             >
               {summary?.salesClosed ? (
                 <>
                   <Unlock className="w-3.5 h-3.5" />
-                  <span>Re-open sales</span>
+                  <span>Re-open</span>
                 </>
               ) : (
                 <>
                   <Lock className="w-3.5 h-3.5" />
-                  <span>Close sales</span>
+                  <span>Close</span>
                 </>
               )}
             </button>
@@ -623,15 +623,15 @@ export const AdminPage: React.FC = () => {
         </section>
 
         {/* ========================================================
-            3. ORDERS TABLE WITH FILTER, SORT, EXPANSION & ACTIONS
+            3. ORDERS TABLE & MOBILE CARDS WITH FILTER, SORT, EXPANSION & ACTIONS
         ======================================================== */}
-        <section className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {/* Controls Bar */}
-          <div className="p-4 border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-gray-50/50">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="p-3.5 sm:p-4 border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-gray-50/50">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
               {/* Search input */}
-              <div className="relative min-w-[260px]">
-                <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <div className="relative flex-1 min-w-[200px] sm:min-w-[260px]">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   id="admin-search-input"
@@ -639,12 +639,12 @@ export const AdminPage: React.FC = () => {
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search name, phone, ref..."
                   aria-label="Search orders by name, phone or reference"
-                  className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-500"
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                 />
               </div>
 
               {/* Status filter tabs */}
-              <div className="flex rounded border border-gray-300 bg-white p-0.5 text-xs font-medium text-gray-600">
+              <div className="flex rounded-lg border border-gray-300 bg-white p-0.5 text-xs font-medium text-gray-600 overflow-x-auto">
                 {(['all', 'paid', 'pending', 'failed'] as const).map((st) => (
                   <button
                     key={st}
@@ -653,7 +653,7 @@ export const AdminPage: React.FC = () => {
                       setStatusFilter(st);
                       setPage(1);
                     }}
-                    className={`px-2.5 py-1 rounded capitalize text-xs transition-colors ${
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-md capitalize text-xs transition-colors whitespace-nowrap ${
                       statusFilter === st
                         ? 'bg-gray-900 text-white font-bold'
                         : 'hover:text-gray-900'
@@ -665,12 +665,12 @@ export const AdminPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="text-xs text-gray-500 flex items-center gap-2">
-              <span>Showing {orders.length} of {totalCount} records</span>
+            <div className="text-xs text-gray-500 flex items-center justify-between sm:justify-end gap-2 pt-1 sm:pt-0">
+              <span className="font-medium">Showing {orders.length} of {totalCount} records</span>
               <button
                 type="button"
                 onClick={loadData}
-                className="p-1 rounded hover:bg-gray-200 text-gray-600"
+                className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-600 active:scale-95 transition-all"
                 title="Refresh Table"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -678,8 +678,196 @@ export const AdminPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Table Container */}
-          <div className="overflow-x-auto">
+          {/* MOBILE VIEW: High-density order cards (< md screens) */}
+          <div className="block md:hidden divide-y divide-gray-200">
+            {loading && (
+              <div className="p-4 space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse bg-gray-100 rounded-xl p-4 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-1/3" />
+                    <div className="h-4 bg-gray-200 rounded w-2/3" />
+                    <div className="h-3 bg-gray-200 rounded w-1/2" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!loading && error && (
+              <div className="py-8 px-4 text-center text-red-600 bg-red-50/50">
+                <AlertCircle className="w-6 h-6 mx-auto mb-1.5" />
+                <span className="font-semibold text-xs">{error}</span>
+              </div>
+            )}
+
+            {!loading && !error && orders.length === 0 && (
+              <div className="py-12 px-4 text-center text-gray-500">
+                <p className="font-medium text-sm text-gray-700">No orders match your filter.</p>
+                <p className="text-xs text-gray-400 mt-1">Try resetting search keywords or status tabs.</p>
+              </div>
+            )}
+
+            {!loading &&
+              !error &&
+              visibleOrders.map((order) => {
+                const isExpanded = expandedOrderId === order.id;
+                const orderTickets = allTickets.filter((t) => t.orderId === order.id);
+                return (
+                  <div key={order.id} className="p-3.5 transition-colors hover:bg-gray-50">
+                    <div
+                      onClick={() => handleToggleRow(order.id)}
+                      className="cursor-pointer space-y-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="font-mono text-xs font-bold text-gray-900 block">
+                            {order.reference}
+                          </span>
+                          <h4 className="text-sm font-bold text-gray-900 mt-0.5">
+                            {order.buyerName}
+                          </h4>
+                          <span className="font-mono text-xs text-gray-600 block">
+                            {order.buyerPhone}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                              order.status === 'paid'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : order.status === 'pending'
+                                ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                : 'bg-red-50 text-red-800 border-red-300'
+                            }`}
+                          >
+                            {order.status}
+                          </span>
+                          <span className="font-mono font-bold text-sm text-gray-900">
+                            {koboToNaira(order.totalKobo)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-gray-100 text-xs text-gray-500">
+                        <div className="flex items-center gap-2">
+                          <span className="px-1.5 py-0.5 rounded bg-gray-100 font-mono font-bold text-gray-800 text-[11px]">
+                            {order.quantity} {order.quantity === 1 ? 'ticket' : 'tickets'}
+                          </span>
+                          <span className="text-[11px] text-gray-400">
+                            {new Date(order.createdAt).toLocaleDateString([], {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <Link
+                            href={`/ticket/${order.reference}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            title="View Customer Pass"
+                            className="min-h-[36px] min-w-[36px] p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={(e) => void handleResend(order, e)}
+                            disabled={resendingRef === order.reference || order.status !== 'paid'}
+                            className="min-h-[36px] min-w-[36px] p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 flex items-center justify-center"
+                            title="Resend email receipt"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleRow(order.id)}
+                            className="min-h-[36px] px-2 rounded-lg bg-gray-100 text-xs font-semibold text-gray-700 flex items-center gap-1"
+                          >
+                            <span>{isExpanded ? 'Hide' : 'Tickets'}</span>
+                            {isExpanded ? (
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expandable Mobile Tickets Drawer */}
+                    {isExpanded && (
+                      <div className="mt-3 pt-3 border-t border-gray-200 bg-slate-50/70 p-3 rounded-xl space-y-2">
+                        <div className="flex items-center justify-between text-xs font-bold text-gray-700">
+                          <span>Individual Passes ({orderTickets.length})</span>
+                          <span className="text-[11px] font-normal text-gray-500 truncate max-w-[160px]">
+                            {order.buyerEmail}
+                          </span>
+                        </div>
+
+                        {orderTickets.length === 0 ? (
+                          <p className="text-xs text-gray-500 py-1">No tickets found.</p>
+                        ) : (
+                          <div className="divide-y divide-gray-200/60">
+                            {orderTickets.map((ticket, tIdx) => (
+                              <div
+                                key={ticket.id}
+                                className="py-2 flex items-center justify-between gap-2 text-xs"
+                              >
+                                <div>
+                                  <p className="font-bold text-gray-900 leading-snug">
+                                    #{tIdx + 1} {ticket.holderName}
+                                  </p>
+                                  <p className="font-mono text-[11px] text-gray-500">
+                                    {ticket.code}
+                                  </p>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                      ticket.status === 'valid'
+                                        ? 'bg-emerald-100 text-emerald-800'
+                                        : ticket.status === 'checked_in'
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : 'bg-red-100 text-red-800'
+                                    }`}
+                                  >
+                                    {ticket.status === 'checked_in' ? 'Scanned' : ticket.status}
+                                  </span>
+
+                                  {ticket.status !== 'void' && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setVoidModalTicket({
+                                          id: ticket.id,
+                                          code: ticket.code,
+                                        });
+                                      }}
+                                      className="min-h-[32px] px-2 py-1 rounded bg-white hover:bg-red-50 border border-gray-300 text-red-600 text-[11px] font-bold flex items-center gap-1"
+                                    >
+                                      <Ban className="w-3 h-3" />
+                                      <span>Void</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+
+          {/* DESKTOP VIEW: Sortable HTML Table (>= md screens) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-gray-100 border-b border-gray-200 text-gray-600 font-semibold uppercase text-[10px] tracking-wider select-none">
                 <tr>
@@ -964,11 +1152,11 @@ export const AdminPage: React.FC = () => {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
         >
-          <div className="w-full max-w-md bg-white rounded-lg border border-gray-300 shadow-2xl p-6 space-y-4">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-gray-300 shadow-2xl p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto my-auto">
             <div>
-              <h3 className="text-base font-bold text-gray-900">Issue Complimentary Ticket</h3>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900">Issue Complimentary Ticket</h3>
               <p className="text-xs text-gray-500 mt-0.5">
                 Generates a 100% discount VIP pass with unique QR verification.
               </p>
@@ -985,7 +1173,7 @@ export const AdminPage: React.FC = () => {
                   value={compName}
                   onChange={(e) => setCompName(e.target.value)}
                   placeholder="e.g. Prof. O. M. Sadiq (Dean of Engineering)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-xl text-gray-900 text-sm focus:border-gray-900 focus:outline-none"
                   autoFocus
                 />
               </div>
@@ -999,7 +1187,7 @@ export const AdminPage: React.FC = () => {
                   value={compPhone}
                   onChange={(e) => setCompPhone(e.target.value)}
                   placeholder="e.g. 08023456789"
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 font-mono"
+                  className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-xl text-gray-900 text-sm font-mono focus:border-gray-900 focus:outline-none"
                 />
               </div>
 
@@ -1007,13 +1195,13 @@ export const AdminPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsCompModalOpen(false)}
-                  className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 rounded font-bold text-gray-700"
+                  className="flex-1 min-h-[44px] py-2 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-gray-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-gray-900 hover:bg-black text-white rounded font-bold"
+                  className="flex-1 min-h-[44px] py-2 bg-gray-900 hover:bg-black text-white rounded-xl font-bold"
                 >
                   Issue Pass
                 </button>
@@ -1027,19 +1215,19 @@ export const AdminPage: React.FC = () => {
           MODAL: Void Ticket Confirmation
       ======================================================== */}
       {isCloseSalesModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white border border-gray-200 shadow-xl p-5">
-            <h2 className="text-base font-bold text-gray-900">Close ticket sales?</h2>
-            <p className="mt-2 text-sm text-gray-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-gray-200 shadow-2xl p-5 sm:p-6 max-h-[90vh] overflow-y-auto my-auto">
+            <h2 className="text-base sm:text-lg font-bold text-gray-900">Close ticket sales?</h2>
+            <p className="mt-2 text-xs sm:text-sm text-gray-600 leading-relaxed">
               The checkout page will stop accepting purchases immediately and show
               buyers a &ldquo;sales closed&rdquo; message. Nobody can buy a ticket until you
               re-open it. You can re-open at any time.
             </p>
-            <div className="mt-5 flex items-center justify-end gap-2">
+            <div className="mt-5 flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
               <button
                 type="button"
                 onClick={() => setIsCloseSalesModalOpen(false)}
-                className="min-h-[38px] px-4 py-2 rounded-md border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                className="flex-1 sm:flex-none min-h-[44px] px-4 py-2 rounded-xl border border-gray-300 bg-white text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50"
               >
                 Cancel
               </button>
@@ -1047,7 +1235,7 @@ export const AdminPage: React.FC = () => {
                 type="button"
                 disabled={salesToggleBusy}
                 onClick={() => handleSetSalesOpen(false)}
-                className="min-h-[38px] px-4 py-2 rounded-md bg-red-600 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                className="flex-1 sm:flex-none min-h-[44px] px-4 py-2 rounded-xl bg-red-600 text-xs sm:text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
               >
                 {salesToggleBusy ? 'Closing…' : 'Close sales'}
               </button>
@@ -1060,17 +1248,17 @@ export const AdminPage: React.FC = () => {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
         >
-          <div className="w-full max-w-sm bg-white rounded-lg border border-red-200 shadow-2xl p-6 space-y-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl border border-red-200 shadow-2xl p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto my-auto">
             <div className="flex items-center gap-2 text-red-600">
               <Ban className="w-5 h-5" />
               <h3 className="text-base font-bold text-gray-900">Void Ticket Pass</h3>
             </div>
 
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-600 leading-relaxed">
               Are you sure you want to permanently cancel ticket{' '}
-              <strong className="font-mono text-gray-900">{voidModalTicket.code}</strong>?
+              <strong className="font-mono text-gray-900 font-bold">{voidModalTicket.code}</strong>?
               This ticket will be rejected immediately by door scanners.
             </p>
 
@@ -1085,7 +1273,7 @@ export const AdminPage: React.FC = () => {
                   value={voidReason}
                   onChange={(e) => setVoidReason(e.target.value)}
                   placeholder="e.g. Duplicate order / Chargeback / Transfer error"
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-xl text-gray-900 text-sm focus:border-red-500 focus:outline-none"
                   autoFocus
                 />
               </div>
@@ -1094,13 +1282,13 @@ export const AdminPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setVoidModalTicket(null)}
-                  className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 rounded font-bold text-gray-700"
+                  className="flex-1 min-h-[44px] py-2 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-gray-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-bold"
+                  className="flex-1 min-h-[44px] py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold"
                 >
                   Confirm Void
                 </button>

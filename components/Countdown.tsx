@@ -33,16 +33,45 @@ function calculateTimeRemaining(targetIso: string): TimeRemaining {
 }
 
 export const Countdown: React.FC<CountdownProps> = ({ targetIso }) => {
+  const [mounted, setMounted] = useState(false);
   const [timeLeft, setTimeLeft] = useState<TimeRemaining>(() => calculateTimeRemaining(targetIso));
   const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
+    setMounted(true);
+    setTimeLeft(calculateTimeRemaining(targetIso));
+
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeRemaining(targetIso));
     }, 1000);
 
     return () => clearInterval(timer);
   }, [targetIso]);
+
+  if (!mounted) {
+    return (
+      <div
+        id="countdown-timer"
+        className="flex items-center justify-center gap-2 sm:gap-3 py-2"
+        aria-label="Countdown to event"
+      >
+        {['DAYS', 'HOURS', 'MINUTES', 'SECONDS'].map((label) => (
+          <div
+            key={label}
+            className="flex flex-col items-center justify-center min-w-[70px] sm:min-w-[80px] px-2.5 py-2.5 rounded-xl bg-brand-card border border-brand-border shadow-sm relative overflow-hidden"
+          >
+            <div className="absolute top-0 inset-x-0 h-0.5 bg-brand-primary/40" />
+            <span className="text-2xl sm:text-3xl font-black text-brand-primary tracking-tight font-display">
+              --
+            </span>
+            <span className="text-[10px] sm:text-xs font-bold tracking-widest text-slate-400 uppercase mt-0.5">
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   if (timeLeft.isExpired) {
     return (

@@ -1,0 +1,6 @@
+{
+  "name": "Engineering Sign-Out After-Party Ticketing",
+  "description": "Official ticketing platform for the Engineering Sign-Out After-Party 'Last Dance' by Faculty of Engineering, University of Lagos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

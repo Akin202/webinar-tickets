@@ -60,10 +60,11 @@ export const DevStateSwitcher: React.FC<DevStateSwitcherProps> = ({
     };
   }, []);
 
-  const isCheckout = pathname.startsWith('/checkout');
-  const isTicket = pathname.startsWith('/ticket');
-  const isScan = pathname.startsWith('/scan');
-  const isAdmin = pathname.startsWith('/admin');
+  const currentPath = pathname || '';
+  const isCheckout = currentPath.startsWith('/checkout');
+  const isTicket = currentPath.startsWith('/ticket');
+  const isScan = currentPath.startsWith('/scan');
+  const isAdmin = currentPath.startsWith('/admin');
 
   const purchaseStates: { label: string; state: PurchaseState }[] = [
     { label: 'Idle (Standard Form)', state: { status: 'idle' } },

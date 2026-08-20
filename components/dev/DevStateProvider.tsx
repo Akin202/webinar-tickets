@@ -11,13 +11,10 @@ import dynamic from 'next/dynamic';
  * shipped to production. Inlining the NODE_ENV comparison lets the bundler
  * prove the import() unreachable and drop it entirely.
  */
-const DevStateSwitcher =
-  process.env.NODE_ENV !== 'production'
-    ? dynamic(
-        () => import('@/components/DevStateSwitcher').then((m) => m.DevStateSwitcher),
-        { ssr: false }
-      )
-    : null;
+const DevStateSwitcher = dynamic(
+  () => import('@/components/DevStateSwitcher').then((m) => m.DevStateSwitcher),
+  { ssr: false }
+);
 
 /**
  * Replaces the state the old Vite App.tsx lifted above <Routes>. App Router
