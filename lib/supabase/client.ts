@@ -15,10 +15,9 @@ let browserClient: SupabaseClient | null = null;
 
 export function getSupabaseBrowserClient(): SupabaseClient {
   if (!browserClient) {
-    browserClient = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+    browserClient = createBrowserClient(url, anonKey);
   }
   return browserClient;
 }

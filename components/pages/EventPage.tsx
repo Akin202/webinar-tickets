@@ -20,10 +20,8 @@ import {
   Flame,
 } from 'lucide-react';
 import { eventConfig, doorsOpenIso, eventDayStamp } from '@/config/event.config';
-import { getPublicSalesCounter } from '@/lib/data-access';
-import { PublicSalesCounter, koboToNaira } from '@/types/ticketing';
+import { koboToNaira } from '@/types/ticketing';
 import { Countdown } from '@/components/Countdown';
-import { CapacityMeter } from '@/components/CapacityMeter';
 import { PriceTag } from '@/components/PriceTag';
 import { DetailRow } from '@/components/DetailRow';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
@@ -63,27 +61,7 @@ const defaultFaqs = [
 export const EventPage: React.FC = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
-  const [salesSummary, setSalesSummary] = useState<PublicSalesCounter | null>(null);
-  const [counterUnavailable, setCounterUnavailable] = useState<boolean>(false);
   const prefersReducedMotion = useReducedMotion();
-
-  React.useEffect(() => {
-    let isMounted = true;
-    getPublicSalesCounter()
-      .then((summary) => {
-        if (isMounted) setSalesSummary(summary);
-      })
-      .catch(() => {
-        // The counter is social proof, not a blocker. If it cannot be read,
-        // the strip is removed rather than filled with a guess — an invented
-        // number on a page taking real money from people who know me is not
-        // a rounding error, it is a lie about how full the room is.
-        if (isMounted) setCounterUnavailable(true);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const toggleFaq = (index: number) => {
     setOpenFaqIndex((prev) => (prev === index ? null : index));
@@ -385,45 +363,7 @@ export const EventPage: React.FC = () => {
       </header>
 
       {/* ========================================================
-          3. LIVE CAPACITY STRIP
-      ======================================================== */}
-      {!counterUnavailable && (
-        <section
-          id="live-status-strip"
-          aria-label="Live ticket capacity status"
-          className="w-full bg-brand-raised border-b border-brand-border py-6 px-4 sm:px-6"
-        >
-          <div className="max-w-3xl mx-auto">
-            {salesSummary ? (
-              <CapacityMeter
-                sold={salesSummary.ticketsSold}
-                capacity={salesSummary.capacity}
-                lowStockThreshold={eventConfig.ticketing.lowStockThreshold}
-                showCount={eventConfig.featureFlags.showLiveSalesCounter}
-              />
-            ) : (
-              /* Placeholder, not a number. The real count is one round trip
-                 away and the page must never show a figure it has not been
-                 told. */
-              <div
-                className="w-full p-4 rounded-xl bg-brand-card border border-brand-border"
-                aria-busy="true"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm sm:text-base font-semibold text-brand-muted">
-                    Ticket Capacity
-                  </span>
-                  <span className="text-sm text-brand-muted">Checking availability…</span>
-                </div>
-                <div className="w-full h-3 rounded-full bg-brand-subtle" />
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* ========================================================
-          4. EVENT DETAILS & ACCESS RULES
+          3. EVENT DETAILS & ACCESS RULES
       ======================================================== */}
       <section
         id="the-details-section"
@@ -477,7 +417,7 @@ export const EventPage: React.FC = () => {
       </section>
 
       {/* ========================================================
-          5. PRICING & IMMEDIATE CHECKOUT PASS CARD
+          4. PRICING & IMMEDIATE CHECKOUT PASS CARD
       ======================================================== */}
       <section
         id="pricing-cta-section"
@@ -498,8 +438,8 @@ export const EventPage: React.FC = () => {
             <PriceTag size="lg" />
           </div>
 
-          <p className="text-sm font-semibold text-rose-400 mb-8">
-            Strict capacity limited to {eventConfig.ticketing.capacity} passes.
+          <p className="text-sm font-semibold text-brand-muted mb-8">
+            Limited admission passes available. Early booking strongly recommended.
           </p>
 
           <Link

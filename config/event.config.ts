@@ -102,7 +102,7 @@ export const eventConfig = {
 
   featureFlags: {
     allowNameChange: true,       // holder can rename their ticket before the event
-    showLiveSalesCounter: true,  // "312 going" on the public page — social proof
+    showLiveSalesCounter: false, // hidden from public page per ticket policy
   },
 } as const;
 
