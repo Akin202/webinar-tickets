@@ -40,3 +40,31 @@ export function assertSameOrigin(req: Request): NextResponse | null {
   }
   return null;
 }
+
+/**
+ * Rejects cross-site GETs, for the cookie-authenticated reads that no other
+ * site has any business triggering.
+ *
+ * Deliberately NOT assertSameOrigin: browsers do not send `Origin` on a
+ * same-origin GET, so that helper's missing-origin rejection would refuse the
+ * admin's own fetch. `Sec-Fetch-Site` is sent on every request by every
+ * current browser and, like Origin, is forbidden to page JavaScript.
+ *
+ * Scope, honestly stated: this does not stop a data leak. A hostile page
+ * cannot read the response of a cross-site fetch anyway — the same-origin
+ * policy already handles that, and this route sets no CORS headers. What it
+ * stops is a hostile page silently burning an admin's export rate limit and
+ * writing junk into the audit trail, which is the thing that would make the
+ * audit trail useless in an actual incident.
+ *
+ * `none` (a typed URL or bookmark) and `same-site` are allowed. An absent
+ * header — an older browser, or curl — is allowed too, because the staff
+ * session check is the real gate and failing closed here would lock out a
+ * legitimate admin on event night for no security gain.
+ */
+export function assertNotCrossSite(req: Request): NextResponse | null {
+  if (req.headers.get('sec-fetch-site') === 'cross-site') {
+    return NextResponse.json({ error: 'Cross-site request refused.' }, { status: 403 });
+  }
+  return null;
+}

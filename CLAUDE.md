@@ -82,9 +82,10 @@ by the holder.
 - **Privacy:** the buyer list contains the names, email addresses and phone
   numbers of ~400 identifiable people. It must be impossible to read any of it
   with the public anon key. RLS on every table, verified by an actual attack
-  script. Before the sales link is distributed, append `&read_only=true` to the
-  Supabase MCP URL in `.mcp.json`. From that point the buyer list is real PII
-  and no agent gets write access to it outside a reviewed migration.
+  script. `&read_only=true` is now set on the Supabase MCP URL in `.mcp.json`
+  — from this point the buyer list is real PII and no agent gets write access
+  to it outside a reviewed migration. Do not remove that flag to make a task
+  easier.
 - **Link previews:** the URL is distributed on WhatsApp. OG tags must be in the
   server-rendered HTML — WhatsApp's crawler does not execute JavaScript.
 - **Accessibility:** 4.5:1 minimum contrast. Scanner states must be
@@ -95,8 +96,14 @@ by the holder.
 ## Commands
 ```bash
 npm run dev
-npm run build          # must pass before any commit
+npm run build             # must pass before any commit
+npm test                  # 59 unit tests, no network
 npx supabase db push
+
+node scripts/rls-attack.mjs        # 13/13; add DOOR_JWT= for section 5
+node scripts/reconcile.mjs         # Paystack vs orders, both directions
+node scripts/purge-test-data.mjs   # dry run; --confirm to actually clear
+node scripts/seed-staff.mjs        # create an admin or door account
 ```
 
 ## Layout
@@ -121,12 +128,20 @@ config/ types/       The contracts.
 `npm run build`, `npm run lint` and `npm test` all pass clean. Zero
 `TODO(handoff)` markers remain.
 
-**The backend is live.** Supabase project `adbzxxzyqeurjfrrenme`, 4 migrations
+**The backend is live.** Supabase project `adbzxxzyqeurjfrrenme`, 5 migrations
 applied, versions match the remote history. Six tables, RLS enabled and
 forced, all grants revoked from anon/authenticated. The only anon-reachable
 surface is `get_public_counter()`, which returns counts and no money.
-`node scripts/rls-attack.mjs` passes 16/16 — **except section 5 (door-role
-leakage), which has never run** because it needs a `DOOR_JWT`.
+`node scripts/rls-attack.mjs` passes 13/13 — **except section 5 (door-role
+leakage), which has never run** because it needs a `DOOR_JWT`. That is no
+longer blocked: both staff accounts exist, so the token is obtainable.
+
+Grants were verified independently of the script, with
+`has_function_privilege` against the live catalog: `mark_order_paid` and
+`create_pending_order` are service-role only, `get_public_counter` is anon,
+and the rest are `authenticated` plus an internal `current_staff_role()`
+check. The `SECURITY DEFINER` warnings from `get_advisors` are those
+by-design surfaces, not findings.
 
 Wired and verified against the live project:
 - **Checkout** — `POST /api/checkout`. Amount computed server-side from config
@@ -160,31 +175,54 @@ Wired and verified against the live project:
 - **Email** — Resend via plain fetch (`lib/email.ts`), sent on the transition
   to paid only, through Next 15's `after()`. Admin resend button reports the
   server's real answer.
-- **Tests** — `npm test`, 57 passing: money sweep, parsers, CSV guard, webhook
-  signature gate, email. `npm run test:integration` exists but **has never
-  run** (writes real rows; needs `INTEGRATION=1`).
+- **Tests** — `npm test`, 59 passing: money sweep, parsers, CSV guard, webhook
+  signature gate, email. `npm run test:integration` **has run** against the
+  live project: webhook replay, amount mismatch, the two-phone door race and
+  the 50-buyer capacity race all pass. The capacity race is now gated behind a
+  second flag (`INTEGRATION_CAPACITY=1`) because it writes to the live
+  `event_settings` row — do not run it during event week.
 
 ### What is left
 
 **Blocked on the human, not on the agent:**
-1. **`staff_users` is empty.** Nobody can log into `/scan` or `/admin`. This
-   blocks: the scanner acceptance test, the airplane-mode drill, section 5 of
-   the attack script, issuing a comp ticket, and testing Save Pass or email
-   end-to-end. `node scripts/seed-staff.mjs` — needs an admin password and a
-   6-digit door PIN. Never commit either.
-2. **Not deployed.** No Vercel project, no env vars set there. Until that
-   exists the Paystack webhook URL cannot be registered, and until *that*
-   happens the webhook cannot fire.
-3. **Real-Android airplane-mode drill.** The offline shell is unproven on
+1. **Nothing is deployed.** `lastdance.tickitid.online` has no DNS record at
+   all — the apex is still Namecheap parking. No Vercel project, no env vars
+   set there. That hostname is the Paystack callback, the WhatsApp OG card,
+   every email link and the webhook endpoint, so nothing downstream of it can
+   be tested. When setting env vars there, LEAVE `NEXT_PUBLIC_SITE_URL` UNSET
+   rather than copying `.env.local` — that file says `localhost:3000`, and the
+   config fallback (`eventConfig.seo.siteUrl`) is already correct.
+2. **Still on Paystack test keys** (`sk_test_`). No live transaction has ever
+   run end to end, so Part 2 check 1 of `signout-production-security.md` is
+   unperformed.
+3. **Resend is unverified.** `send.tickitid.online` has no DNS records, so the
+   backup delivery channel does not work.
+4. **Real-Android airplane-mode drill.** The offline shell is unproven on
    hardware — devtools offline mode is not the same thing.
+5. **Section 5 of the attack script.** Unblocked now; needs a `DOOR_JWT`.
+
+**The database holds test data.** Every row in `orders`, `tickets`,
+`check_ins` and `settings_audit` was written by a test — the integration
+suite's `INTEG-*` rows and manual purchases on test keys. Minted test tickets
+hold seats against capacity and appear in the admin list and the CSV export.
+`node scripts/purge-test-data.mjs` clears all four tables and re-asserts
+capacity from the config; dry run is the default. **Run it as the last step
+before the sales link goes out**, not before — testing between now and then
+writes more rows. It refuses to run on a live Paystack key without an explicit
+override, for the obvious reason.
 
 **Still genuinely undone:**
 - **No CSP.** Other security headers are set (`next.config.ts`). A real CSP
   needs per-request nonces stamped in middleware because Next inlines
   hydration scripts. Deliberately not shipped as `unsafe-inline` theatre.
-- `.mcp.json` still needs `&read_only=true` appended before the sales link is
-  distributed — from that point the buyer list is real PII.
+- **Rate limiting is per-instance memory** (`lib/api/rate-limit.ts`) and fails
+  open on a cold start. Accepted: the hard guarantees are in the database. Be
+  aware Vercel will run several instances under a WhatsApp broadcast spike, so
+  the effective limit is the configured one times the instance count.
 - `npm audit` reports 3 high advisories in `sharp` (libvips), reachable only
   by upgrading to Next 16. Not exploitable here: `images.remotePatterns` is
   empty, so the only image sharp ever decodes is our own `public/assets/hero.jpg`.
   Re-evaluate after the event, not during it.
+- **Refund policy is config-only.** `event.policies.refundPolicy` says "no
+  refunds, no transfers, no resales" and that needs to be visible on the page
+  before the first sale, not just in a file.

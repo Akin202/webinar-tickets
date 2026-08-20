@@ -4,6 +4,7 @@ import { requireStaffRequest } from '@/lib/api/staff-guard';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { rateLimit } from '@/lib/api/rate-limit';
 import { deliverTicketEmail } from '@/lib/email';
+import { readCappedJson, cappedBodyError } from '@/lib/api/body-limit';
 
 const resendSchema = z.object({
   reference: z.string().trim().min(4).max(64),
@@ -26,9 +27,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Too many resends. Wait a minute.' }, { status: 429 });
   }
 
+  const body = await readCappedJson(req);
+  if (!body.ok) return cappedBodyError(body, 'Invalid request.');
+
   let parsed;
   try {
-    parsed = resendSchema.parse(await req.json());
+    parsed = resendSchema.parse(body.value);
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }

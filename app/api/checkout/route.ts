@@ -6,6 +6,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { paystackInitialize } from '@/lib/api/paystack';
 import { rateLimit, clientIp } from '@/lib/api/rate-limit';
 import { generateReference } from '@/lib/api/reference';
+import { readCappedJson, cappedBodyError } from '@/lib/api/body-limit';
 
 const checkoutSchema = z.object({
   buyerName: z.string().trim().min(2).max(120),
@@ -20,9 +21,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Too many attempts. Please wait a minute.' }, { status: 429 });
   }
 
+  const body = await readCappedJson(req);
+  if (!body.ok) return cappedBodyError(body, 'Invalid checkout details.');
+
   let parsed;
   try {
-    parsed = checkoutSchema.parse(await req.json());
+    parsed = checkoutSchema.parse(body.value);
   } catch {
     return NextResponse.json({ error: 'Invalid checkout details.' }, { status: 400 });
   }
@@ -89,8 +93,28 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ authorizationUrl: init.authorizationUrl, reference });
   } catch (err) {
-    // Order stays pending and is swept to abandoned after 30 minutes.
     console.error('paystack initialize failed:', err);
+
+    // Release the seat now rather than letting the 30-minute sweep do it.
+    // Paystack never issued a checkout for this reference, so the order is
+    // already dead — holding its seats punishes the next buyer for our
+    // dependency being down, which during a rush is exactly when it hurts.
+    //
+    // Safe against the case where Paystack actually did create the
+    // transaction and only the response failed: mark_order_paid accepts
+    // 'abandoned' as a flippable prior status and re-checks capacity for it,
+    // so a late genuine payment still settles, and settles correctly.
+    const { error: releaseError } = await supabase
+      .from('orders')
+      .update({ status: 'abandoned' })
+      .eq('reference', reference)
+      .eq('status', 'pending');
+
+    if (releaseError) {
+      // Not fatal — the sweep is still the backstop.
+      console.error(`checkout: could not release seats for ${reference}`, releaseError);
+    }
+
     return NextResponse.json(
       { error: 'Payment provider unavailable. Please retry shortly.' },
       { status: 502 }

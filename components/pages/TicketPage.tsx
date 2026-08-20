@@ -11,6 +11,7 @@ import {
 import { IS_DEV } from '@/lib/dev-mode';
 import { Order, Ticket, TicketStatus } from '@/types/ticketing';
 import { TicketCard } from '@/components/TicketCard';
+import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
 import { useDevState } from '@/components/dev/DevStateProvider';
 
 interface TicketPageProps {
@@ -24,11 +25,17 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
   const [ticketsList, setTicketsList] = useState<Ticket[]>([]);
   const [selectedTicketIndex, setSelectedTicketIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  // Distinct from "no order came back". A lookup that THREW means we do not
+  // know whether the ticket exists — telling that buyer "not found" is a lie
+  // that sends them to the back of a queue holding a ticket they paid for.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
       setLoading(true);
+      setLoadFailed(false);
       try {
         let result: { order: Order; tickets: Ticket[] } | null = null;
         if (reference) {
@@ -50,6 +57,7 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
         }
       } catch (err) {
         console.error('Error loading ticket:', err);
+        if (isMounted) setLoadFailed(true);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -61,7 +69,7 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
     return () => {
       isMounted = false;
     };
-  }, [reference]);
+  }, [reference, reloadKey]);
 
   const handleUpdateAttendeeName = (ticketId: string, newName: string) => {
     setTicketsList((prev) =>
@@ -75,6 +83,38 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
           <p className="text-xs font-mono text-brand-muted">Fetching Ticket Details...</p>
+        </div>
+      </main>
+    );
+  }
+
+  // A failed lookup is not a missing ticket. This is the screen someone reads
+  // while standing outside the venue, so it must never imply their pass is
+  // invalid, and it must always offer a way to reach a person.
+  if (loadFailed) {
+    return (
+      <main className="min-h-screen bg-brand-surface text-brand-text py-12 px-4 sm:px-6">
+        <div className="max-w-md mx-auto text-center space-y-4">
+          <div className="p-4 rounded-2xl bg-brand-urgent-bg text-brand-urgent inline-block">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <h1 className="text-xl font-bold">Couldn&apos;t load your ticket</h1>
+          <p className="text-sm text-brand-muted">
+            This is a connection or server problem on our side &mdash;{' '}
+            <strong>not</strong> a problem with your ticket. Your pass is safe.
+            Try again, and if it keeps failing, message us and we&apos;ll check
+            you in by hand.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-center pt-2">
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="inline-flex min-h-[44px] px-4 py-2 rounded-xl bg-brand-primary text-brand-surface font-bold text-sm items-center justify-center"
+            >
+              Try Again
+            </button>
+            <WhatsAppSupportButton label="Get Help on WhatsApp" orderRef={reference} />
+          </div>
         </div>
       </main>
     );

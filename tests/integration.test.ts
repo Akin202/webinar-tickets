@@ -1,5 +1,6 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { eventConfig } from '@/config/event.config';
 
 /**
  * Integration tests against the LIVE Supabase project.
@@ -18,6 +19,9 @@ import { readFileSync } from 'node:fs';
  *
  *   INTEGRATION=1 DOOR_JWT=<token> npx vitest run tests/integration.test.ts
  *
+ * The capacity race additionally needs INTEGRATION_CAPACITY=1 — it is the one
+ * test that writes to the live event_settings row. See the flag below.
+ *
  * DOOR_JWT comes from signing in as the door account:
  *   curl -s -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \
  *     -H "apikey: $ANON_KEY" -H "Content-Type: application/json" \
@@ -25,6 +29,25 @@ import { readFileSync } from 'node:fs';
  */
 
 const ENABLED = process.env.INTEGRATION === '1';
+
+/**
+ * The capacity race gets its own flag on top of INTEGRATION=1.
+ *
+ * It is the only test here that WRITES TO THE LIVE event_settings ROW: it
+ * lowers capacity to `taken + 5` so fifty concurrent buyers have something to
+ * race for, and restores it afterwards. `afterAll` covers a failed assertion,
+ * but nothing covers the process dying between the two — a Ctrl-C, a CI
+ * timeout, an OOM — and what that leaves behind is a live event configured to
+ * sell five seats. Sales would then close, silently, at whatever number
+ * happened to be current when someone pressed Ctrl-C.
+ *
+ * So it is opt-in, and deliberately not part of `npm run test:integration`:
+ *
+ *   INTEGRATION=1 INTEGRATION_CAPACITY=1 npx vitest run tests/integration.test.ts
+ *
+ * Run it when the row lock changes. Do not run it during event week.
+ */
+const CAPACITY_ENABLED = ENABLED && process.env.INTEGRATION_CAPACITY === '1';
 
 function env(): Record<string, string> {
   try {
@@ -106,21 +129,48 @@ async function ticketCodeFor(reference: string): Promise<string | null> {
   return Array.isArray(rows) && rows[0]?.code ? rows[0].code : null;
 }
 
+/** PostgREST `in.(...)` list. References are alphanumeric plus dashes. */
+function inList(values: string[]): string {
+  return `in.(${values.map((v) => `"${v}"`).join(',')})`;
+}
+
 afterAll(async () => {
-  if (!ENABLED) return;
-  // Ordered by dependency: check-ins, then tickets, then the orders.
-  for (const reference of created) {
-    const res = await table(`orders?select=id&reference=eq.${reference}`);
-    const rows = await res.json().catch(() => null);
-    const orderId = Array.isArray(rows) ? rows[0]?.id : null;
-    if (!orderId) continue;
-    const t = await table(`tickets?select=id&order_id=eq.${orderId}`);
-    const ticketRows = (await t.json().catch(() => [])) as Array<{ id: string }>;
-    for (const ticket of ticketRows) {
-      await table(`check_ins?ticket_id=eq.${ticket.id}`, { method: 'DELETE' });
-    }
-    await table(`tickets?order_id=eq.${orderId}`, { method: 'DELETE' });
-    await table(`orders?id=eq.${orderId}`, { method: 'DELETE' });
+  if (!ENABLED || created.length === 0) return;
+
+  // Batched, not per-reference. The previous version issued up to four
+  // sequential requests for EACH created reference; the capacity race creates
+  // fifty, so cleanup needed ~200 round trips and ran past the 30s hook
+  // timeout. Vitest killed it partway through and the survivors — eighteen
+  // INTEG-RACE orders — sat in the live database until someone went looking.
+  // Five requests total cannot time out the same way.
+  const orderRes = await table(`orders?select=id&reference=${inList(created)}`);
+  const orderRows = (await orderRes.json().catch(() => [])) as Array<{ id: string }>;
+  const orderIds = orderRows.map((o) => o.id);
+  if (orderIds.length === 0) return;
+
+  const ticketRes = await table(`tickets?select=id&order_id=${inList(orderIds)}`);
+  const ticketRows = (await ticketRes.json().catch(() => [])) as Array<{ id: string }>;
+  const ticketIds = ticketRows.map((t) => t.id);
+
+  // Dependency order: check_ins reference tickets, tickets reference orders
+  // with ON DELETE RESTRICT.
+  if (ticketIds.length > 0) {
+    await table(`check_ins?ticket_id=${inList(ticketIds)}`, { method: 'DELETE' });
+    await table(`tickets?id=${inList(ticketIds)}`, { method: 'DELETE' });
+  }
+  await table(`orders?id=${inList(orderIds)}`, { method: 'DELETE' });
+
+  // Say so if it did not work. A silent cleanup failure is how test rows end
+  // up holding seats in a live event, and the whole point of the INTEG- prefix
+  // is that the leftovers are findable — but only if someone knows to look.
+  const leftover = await table(`orders?select=reference&reference=${inList(created)}`);
+  const remaining = (await leftover.json().catch(() => [])) as Array<{ reference: string }>;
+  if (remaining.length > 0) {
+    console.error(
+      `\n  ! CLEANUP INCOMPLETE — ${remaining.length} test order(s) still in the live database:\n` +
+        `    ${remaining.map((r) => r.reference).join(', ')}\n` +
+        `    Remove them with: node scripts/purge-test-data.mjs\n`
+    );
   }
 });
 
@@ -210,7 +260,11 @@ describe.skipIf(!ENABLED || !DOOR_JWT)('the door race', () => {
       rpc('record_check_in', { p_code: code, p_device: 'door-b', p_scanned_at: scannedAt }, DOOR_JWT),
     ]);
 
-    const outcomes = [a.row?.outcome, b.row?.outcome].sort();
+    // record_check_in returns its verdict in `result`, NOT `outcome` — unlike
+    // create_pending_order and mark_order_paid, which is exactly why this was
+    // wrong. Reading the missing key gave undefined and the assertion compared
+    // [undefined, undefined], which never ran because the suite never ran.
+    const outcomes = [a.row?.result, b.row?.result].sort();
     expect(outcomes).toEqual(['admitted', 'already_used']);
   });
 
@@ -220,7 +274,135 @@ describe.skipIf(!ENABLED || !DOOR_JWT)('the door race', () => {
       { p_code: 'SGN-2345-6789', p_device: 'door-a', p_scanned_at: new Date().toISOString() },
       DOOR_JWT
     );
-    expect(result.row?.outcome).toBe('not_found');
+    expect(result.row?.result).toBe('not_found');
+  });
+});
+
+describe.skipIf(!CAPACITY_ENABLED)('the capacity race', () => {
+  /**
+   * The property the whole event rests on: overselling means personally
+   * refunding people you know.
+   *
+   * create_pending_order serialises every checkout on `select ... from
+   * event_settings where id for update`. That row lock is the only thing
+   * standing between 50 simultaneous buyers and 50 sold seats when 5 remain.
+   * A read-then-insert without it would pass a single-threaded test and fail
+   * in exactly the ten seconds that matter, when a link hits a WhatsApp group.
+   *
+   * This suite TEMPORARILY lowers live capacity, so restore is unconditional
+   * and runs even if an assertion throws.
+   */
+  const SEATS_LEFT = 5;
+  const ATTEMPTS = 50;
+  let originalCapacity: number | null = null;
+
+  afterAll(async () => {
+    if (originalCapacity === null) return;
+    await table('event_settings?id=eq.true', {
+      method: 'PATCH',
+      body: JSON.stringify({ capacity: originalCapacity }),
+    });
+  });
+
+  it(`sells exactly ${SEATS_LEFT} seats to ${ATTEMPTS} simultaneous buyers`, async () => {
+    const settingsRes = await table('event_settings?select=capacity');
+    const [settings] = await settingsRes.json();
+    originalCapacity = settings.capacity;
+
+    // Whatever is already committed or held right now, plus exactly five.
+    const counter = await rpc('get_public_counter', {});
+    const taken = counter.row.capacity - counter.row.tickets_remaining;
+
+    await table('event_settings?id=eq.true', {
+      method: 'PATCH',
+      body: JSON.stringify({ capacity: taken + SEATS_LEFT }),
+    });
+
+    const references = Array.from(
+      { length: ATTEMPTS },
+      (_, i) => `${PREFIX}RACE-${Date.now().toString(36).toUpperCase()}-${i}`
+    );
+    references.forEach((r) => created.push(r));
+
+    // Genuinely concurrent: all 50 in flight before any resolves.
+    const results = await Promise.all(
+      references.map((reference) =>
+        rpc('create_pending_order', {
+          p_reference: reference,
+          p_buyer_name: 'Race Tester',
+          p_buyer_email: 'race@invalid.local',
+          p_buyer_phone: '+2348000000000',
+          p_quantity: 1,
+          p_unit_price_kobo: 0,
+          p_service_charge_kobo: 0,
+          p_fee_kobo: 0,
+          p_total_kobo: 0,
+        })
+      )
+    );
+
+    const outcomes = results.map((r) => r.row?.outcome);
+    const created_ = outcomes.filter((o) => o === 'created').length;
+    const soldOut = outcomes.filter((o) => o === 'sold_out').length;
+
+    console.log(
+      `\n  capacity race: ${ATTEMPTS} concurrent attempts against ${SEATS_LEFT} seats ` +
+        `-> created=${created_} sold_out=${soldOut} other=${ATTEMPTS - created_ - soldOut}`
+    );
+
+    expect(created_).toBe(SEATS_LEFT);
+    expect(soldOut).toBe(ATTEMPTS - SEATS_LEFT);
+
+    // And the database agrees it is full — no phantom seat left behind.
+    const after = await rpc('get_public_counter', {});
+    expect(after.row.tickets_remaining).toBe(0);
+    expect(after.row.is_sold_out).toBe(true);
+  });
+});
+
+describe.skipIf(!ENABLED)('the config and the database agree', () => {
+  /**
+   * capacity and the sales hard stop are stored twice on purpose — the
+   * database enforces them so a client cannot ignore them, and the config
+   * file drives the UI copy. The initial-schema migration says "if you change
+   * one, change both in the same commit" and nothing has ever enforced that.
+   *
+   * A drift here is not cosmetic. Config higher than the database means the
+   * page advertises seats checkout will refuse; database higher than config
+   * means we oversell a hall that has a fire limit.
+   */
+  it('stores the same capacity the config advertises', async () => {
+    const res = await table('event_settings?select=capacity,sales_open,sales_hard_stop');
+    const [settings] = await res.json();
+
+    expect(settings.capacity).toBe(eventConfig.ticketing.capacity);
+  });
+
+  it('stores the same sales hard stop the config advertises', async () => {
+    const res = await table('event_settings?select=sales_hard_stop');
+    const [settings] = await res.json();
+
+    expect(new Date(settings.sales_hard_stop).toISOString()).toBe(
+      new Date(eventConfig.ticketing.salesHardStopAt).toISOString()
+    );
+  });
+
+  it('never advertises more seats than checkout will actually sell', async () => {
+    // get_public_counter and create_pending_order both gate on capacity, and
+    // used to count it differently: the counter ignored pending holds, so the
+    // page could offer a seat checkout would then refuse.
+    const counter = await rpc('get_public_counter', {});
+    const held = await table(
+      'orders?select=quantity&status=eq.pending&created_at=gte.' +
+        new Date(Date.now() - 30 * 60_000).toISOString()
+    );
+    const holds: { quantity: number }[] = await held.json();
+    const heldSeats = holds.reduce((sum, o) => sum + o.quantity, 0);
+
+    const minted = counter.row.tickets_sold;
+    expect(counter.row.tickets_remaining).toBe(
+      Math.max(0, counter.row.capacity - minted - heldSeats)
+    );
   });
 });
 
@@ -233,8 +415,17 @@ describe('integration coverage notice', () => {
           '    the webhook-replay, amount-mismatch and two-phone-race properties\n' +
           '    are unproven until they run against the live project.\n'
       );
-    } else if (!DOOR_JWT) {
-      console.warn('\n  ! Door-race suite SKIPPED — no DOOR_JWT. This is NOT a pass.\n');
+    } else {
+      if (!DOOR_JWT) {
+        console.warn('\n  ! Door-race suite SKIPPED — no DOOR_JWT. This is NOT a pass.\n');
+      }
+      if (!CAPACITY_ENABLED) {
+        console.warn(
+          '\n  ! Capacity-race suite SKIPPED — no INTEGRATION_CAPACITY=1. This is NOT a pass.\n' +
+            '    It writes to the live event_settings row, so it is opt-in. Run it when the\n' +
+            '    row lock changes; do not run it during event week.\n'
+        );
+      }
     }
     expect(true).toBe(true);
   });

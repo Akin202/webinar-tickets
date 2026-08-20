@@ -4,6 +4,7 @@ import { paystackVerify } from '@/lib/api/paystack';
 import { deliverTicketEmail } from '@/lib/email';
 import { orderFromRow, ticketFromRow } from '@/lib/api/mappers';
 import { rateLimit, clientIp } from '@/lib/api/rate-limit';
+import { logSettleOutcome } from '@/lib/api/settle-log';
 
 /**
  * The ticket page's data source. The reference is a bearer token — an
@@ -52,16 +53,27 @@ export async function GET(
     try {
       const verified = await paystackVerify(clean);
       if (verified?.status === 'success') {
-        const { data: settled } = await supabase.rpc('mark_order_paid', {
+        const { data: settled, error: settleError } = await supabase.rpc('mark_order_paid', {
           p_reference: clean,
           p_amount_kobo: verified.amountKobo,
           p_channel: verified.channel,
           p_raw: verified.raw,
         });
+
+        // Paystack says this transaction succeeded, so a failure to settle it
+        // is money we have taken and not recorded. The webhook will retry the
+        // same call, but if it never arrives this log is the only trace.
+        if (settleError) {
+          console.error(`verify: mark_order_paid errored on ${clean}`, settleError);
+        }
+
         // The buyer usually beats the webhook home, so this path is often the
         // one that actually flips the order. Same 'paid'-only guard: whichever
         // of the two lands second gets 'already_paid' and sends nothing.
         const settledRow = Array.isArray(settled) ? settled[0] : settled;
+        if (!settleError) {
+          logSettleOutcome('verify', clean, verified.amountKobo, settledRow?.outcome);
+        }
         if (settledRow?.outcome === 'paid') {
           after(async () => {
             const result = await deliverTicketEmail(clean);
