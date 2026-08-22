@@ -127,7 +127,7 @@ export const EventPage: React.FC = () => {
           <span className="text-[#33333B]">•</span>
           <span className="font-semibold">DOORS 23:30</span>
           <span className="text-[#33333B]">•</span>
-          <span className="font-semibold">25/08</span>
+          <span className="font-semibold">{eventDayStamp}</span>
           <span className="text-[#33333B]">•</span>
           <span className="text-[#F5F5F4] font-bold">📍 BFF LAGOS</span>
           <span className="text-[#33333B]">•</span>
@@ -268,15 +268,15 @@ export const EventPage: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Date: 25/08 */}
+                {/* Date: 26/08 */}
                 <div className="p-4 rounded-2xl bg-[#16161B] border border-[#232328] flex flex-col items-center justify-center">
                   <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-[#A1A1AA]">
                     Event Date
                   </span>
                   <span className="text-3xl sm:text-4xl font-black text-[#C8B88A] font-display tracking-tight mt-1">
-                    25/08
+                    {eventDayStamp}
                   </span>
-                  <span className="text-[11px] text-brand-dim font-mono mt-0.5">25th August 2026</span>
+                  <span className="text-[11px] text-brand-dim font-mono mt-0.5">26th August 2026</span>
                 </div>
               </div>
             </div>

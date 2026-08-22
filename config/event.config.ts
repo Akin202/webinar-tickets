@@ -3,7 +3,7 @@ export const eventConfig = {
     name: "Sign-Out After-Party",
     tagline: "Last Dance",
     hostedBy: "The After Party Committee",
-    date: "2026-08-25",
+    date: "2026-08-26",
     // West Africa Time. Nigeria does not observe DST, so this is constant.
     utcOffset: "+01:00",
     doorsOpen: "23:30",   // 11:30 PM. 24h clock — do not write 11:30.
@@ -45,7 +45,7 @@ export const eventConfig = {
     // BACKSTOP ONLY, not the primary gate. Without it, someone who finds the
     // link a week later can still pay for an event that already happened,
     // which is a refund and a reputation problem rather than a sale.
-    salesHardStopAt: "2026-08-26T04:00:00+01:00",
+    salesHardStopAt: "2026-08-27T04:00:00+01:00",
   },
 
   brand: {
@@ -97,7 +97,7 @@ export const eventConfig = {
     // It must always name a host we control.
     siteUrl: "https://lastdance.tickitid.online",
     title: "Sign-Out After-Party — Last Dance",
-    description: "Official ticketing for the Sign-Out After-Party 'Last Dance' at BFF Lagos. August 25, 2026.",
+    description: "Official ticketing for the Sign-Out After-Party 'Last Dance' at BFF Lagos. August 26, 2026.",
   },
 
   featureFlags: {

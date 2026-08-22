@@ -121,7 +121,7 @@ export const DevStateSwitcher: React.FC<DevStateSwitcherProps> = ({
             result: {
               kind: 'already_used',
               ticket: sampleTickets[1] ?? sampleTickets[0],
-              firstScannedAt: '2026-08-25T23:45:00Z',
+              firstScannedAt: '2026-08-26T23:45:00Z',
               firstScannedBy: 'Gate Door Lead (Emeka)',
             },
           },
