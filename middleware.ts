@@ -15,31 +15,45 @@ import { createServerClient } from '@supabase/ssr';
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  const { pathname } = request.nextUrl;
+  const isLoginPage = pathname === '/scan/login' || pathname === '/admin/login';
+
+  // One redirect, shared by both ways of failing below, so a missing env var
+  // and a missing session cannot drift into behaving differently.
+  const redirectToLogin = () => {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.startsWith('/admin') ? '/admin/login' : '/scan/login';
+    url.search = '';
+    return NextResponse.redirect(url);
+  };
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+  // FAIL CLOSED — do not "return response" here. Without Supabase config this
+  // gate cannot tell who is signed in, and the answer to "I don't know" must
+  // be "no". Letting the request through would render /admin — which lists
+  // ~400 buyers' names, emails and phone numbers — to anyone who asks, off
+  // nothing worse than a missing env var. The login pages stay reachable so
+  // there is no redirect loop.
   if (!supabaseUrl || !supabaseKey) {
-    return response;
+    return isLoginPage ? response : redirectToLogin();
   }
 
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseKey,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
-        },
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
       },
-    }
-  );
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        response = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
 
   // getUser(), not getSession(): validates the JWT against the auth server
   // instead of trusting whatever cookie the client sent.
@@ -47,14 +61,8 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-  const isLoginPage = pathname === '/scan/login' || pathname === '/admin/login';
-
   if (!user && !isLoginPage) {
-    const url = request.nextUrl.clone();
-    url.pathname = pathname.startsWith('/admin') ? '/admin/login' : '/scan/login';
-    url.search = '';
-    return NextResponse.redirect(url);
+    return redirectToLogin();
   }
 
   return response;
