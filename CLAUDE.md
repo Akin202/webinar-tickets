@@ -153,7 +153,8 @@ fallback (`eventConfig.seo.siteUrl`) is already correct. Confirmed correct in
 production — `og:url` renders as `https://lastdance.tickitid.online`.
 
 **The backend is live.** Supabase project `adbzxxzyqeurjfrrenme`, 5 migrations
-applied, versions match the remote history. Six tables, RLS enabled and
+applied and a sixth written but not yet pushed (see "What is left"),
+versions match the remote history. Six tables, RLS enabled and
 forced, all grants revoked from anon/authenticated. The only anon-reachable
 surface is `get_public_counter()`, which returns counts and no money.
 `node scripts/rls-attack.mjs` passes 13/13 — **except section 5 (door-role
@@ -215,25 +216,62 @@ Wired and verified against the live project:
    hardware — devtools offline mode is not the same thing. The service worker
    caches by asset hash, so this has to be redone after any deploy.
 3. **Section 5 of the attack script.** Unblocked now; needs a `DOOR_JWT`.
+4. **The anti-spam migration is written but NOT APPLIED.**
+   `supabase/migrations/20260823102214_hold_window_and_phone_cap.sql` needs
+   `npx supabase db push`, which needs `supabase link` and the database
+   password. Until it runs, the hold window is still 30 minutes, there is no
+   per-phone cap, and — the urgent part — **`event_settings.sales_hard_stop`
+   is still `2026-08-26T03:00Z`, i.e. 04:00 WAT on the morning of the party.**
+   Enforcement reads that row, not `config/event.config.ts`, so as it stands
+   checkout starts refusing everybody about nineteen hours before doors open
+   with most of the hall unsold. The migration corrects it to the 27th and
+   audits the change.
 
-**The database was purged on 2026-08-20** and currently reads 300 remaining,
-0 sold, 0 checked in, `sales_open=true`. All 72 test-era rows across `orders`,
-`tickets`, `check_ins` and `settings_audit` are gone; `staff_users` and the
-auth users were untouched, so both logins still work. A JSON + CSV snapshot of
-what was deleted — including two real live-mode purchases, one of them a
-friend's, settled with him directly — is at
-`~/Documents/signout-backup-2026-08-20/`, outside the repo because it is PII.
+### SALES ARE LIVE. DO NOT PURGE.
 
-**Purge again as the last step before the sales link goes out.** Every test
-between now and then writes rows that hold seats.
-`node scripts/purge-test-data.mjs` is dry-run by default; `--confirm` writes.
+The link went out and a Twitter video did ~125k views. As of **2026-08-23** the
+database holds real buyers: 236 orders, **23 paid**, 24 tickets, 0 check-ins.
+The 2026-08-20 purge is history — a JSON + CSV snapshot of what that one
+deleted is at `~/Documents/signout-backup-2026-08-20/`, outside the repo
+because it is PII.
 
-Be aware the script's `sk_live_` refusal reads **`.env.local`**, which still
-holds `sk_test_` while Vercel holds the live key — so the guard is inert on
-this machine and will delete real sales without complaint. After the final
-purge, paste the live secret into `.env.local` to arm it. `.gitignore` covers
-`.env*`. Note also that the purge re-asserts `capacity` but **not**
-`sales_open` — read the line it prints.
+**`scripts/purge-test-data.mjs` is now a loaded gun and its safety is off.**
+The `sk_live_` refusal reads `.env.local`, which still holds `sk_test_` while
+the live key lives only in Vercel — so the guard **does not fire on this
+machine** and the script will delete real paid orders without complaint. The
+`--max 200` ceiling is the only thing left in the way, and the table is
+already past it. Paste the live secret into `.env.local` to arm the guard.
+`.gitignore` covers `.env*`.
+
+Likewise **do not run `INTEGRATION_CAPACITY=1`** — it writes to the live
+`event_settings` row. This is event week.
+
+### What the traffic exposed
+
+Conversion is ~10%: at one point 114 of 300 seats were held by 26 unpaid
+checkouts. A pending order held its seats for 30 minutes, `maxPerOrder` is 5,
+and one unverified phone could start 3 orders per 10 minutes — 15 seats. Twenty
+invented numbers could have shown "sold out" to the whole audience for free.
+
+Two layers were added in response, and they are not equally strong:
+
+- **The database is the guarantee.** The hold window is **10 minutes**, and one
+  phone may hold at most `maxPerOrder` seats unpaid at once (`phone_limit`, a
+  third outcome from `create_pending_order` alongside `sales_closed` and
+  `sold_out`). The interval is duplicated into `get_public_counter`; the two
+  must always match or the page advertises seats checkout will refuse.
+  `tests/migration-invariants.test.ts` pins both, offline.
+- **The API limits only take the edge off.** They are per-instance memory that
+  fails open on a cold start — see the note below.
+
+**`DEVICE_ID_SECRET`** keys a signed httpOnly `sot_did` cookie
+(`lib/api/device-id.ts`), stamped by middleware on `/` and `/checkout` only,
+so checkout can rate-limit per device. The reason is CGNAT: Nigerian mobile
+data egresses thousands of subscribers through a handful of addresses, so a
+per-IP ceiling throttles the crowd while an abuser steps around it by toggling
+airplane mode. A request with no valid cookie skipped the page, and shares a
+stricter bucket. **Unset is safe** — everything falls back to the IP-only
+behaviour that shipped before it.
 
 **Still genuinely undone:**
 - **No CSP.** Other security headers are set (`next.config.ts`). A real CSP
@@ -242,7 +280,10 @@ purge, paste the live secret into `.env.local` to arm it. `.gitignore` covers
 - **Rate limiting is per-instance memory** (`lib/api/rate-limit.ts`) and fails
   open on a cold start. Accepted: the hard guarantees are in the database. Be
   aware Vercel will run several instances under a WhatsApp broadcast spike, so
-  the effective limit is the configured one times the instance count.
+  the effective limit is the configured one times the instance count. The
+  device cookie improves the *keying*, not this — a cookie cannot make a
+  per-instance counter global. Anything that must actually hold goes in a
+  migration, not here.
 - `npm audit` reports 3 high advisories in `sharp` (libvips), reachable only
   by upgrading to Next 16. Not exploitable here: `images.remotePatterns` is
   empty, so the only image sharp ever decodes is our own `public/assets/hero.jpg`.

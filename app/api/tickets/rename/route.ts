@@ -5,6 +5,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { rateLimit, clientIp } from '@/lib/api/rate-limit';
 import { assertSameOrigin } from '@/lib/api/origin';
 import { readCappedJson, cappedBodyError } from '@/lib/api/body-limit';
+import { readDeviceId, isDeviceIdConfigured } from '@/lib/api/device-id';
 
 const renameSchema = z.object({
   ticketId: z.string().uuid(),
@@ -38,7 +39,20 @@ export async function POST(req: Request) {
   }
 
   const ip = clientIp(req);
-  if (!rateLimit(`rename:ip:${ip}`, 5, 60_000)) {
+
+  // Same layering as checkout. The ticket page is not in the middleware
+  // matcher, so a holder arriving straight from their emailed link may legitimately
+  // carry no cookie — hence the no-cookie bucket here is per-IP and merely
+  // tighter than the ceiling below, not punitive.
+  if (isDeviceIdConfigured()) {
+    const deviceId = await readDeviceId(req);
+    const key = deviceId ? `rename:device:${deviceId}` : `rename:nocookie:${ip}`;
+    if (!rateLimit(key, 5, 10 * 60_000)) {
+      return NextResponse.json({ error: 'Too many attempts.' }, { status: 429 });
+    }
+  }
+
+  if (!rateLimit(`rename:ip:${ip}`, 15, 60_000)) {
     return NextResponse.json({ error: 'Too many attempts.' }, { status: 429 });
   }
 

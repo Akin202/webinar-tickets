@@ -7,6 +7,7 @@ import { paystackInitialize } from '@/lib/api/paystack';
 import { rateLimit, clientIp } from '@/lib/api/rate-limit';
 import { generateReference } from '@/lib/api/reference';
 import { readCappedJson, cappedBodyError } from '@/lib/api/body-limit';
+import { readDeviceId, isDeviceIdConfigured } from '@/lib/api/device-id';
 
 const checkoutSchema = z.object({
   buyerName: z.string().trim().min(2).max(120),
@@ -17,7 +18,28 @@ const checkoutSchema = z.object({
 
 export async function POST(req: Request) {
   const ip = clientIp(req);
-  if (!rateLimit(`checkout:ip:${ip}`, 10, 60_000)) {
+
+  // Layered, most precise first. The device cookie is stamped on the page view
+  // (middleware.ts), so a real buyer arrives holding one and gets their own
+  // budget; a script posting straight at this endpoint holds none and shares
+  // the stricter per-IP no-cookie bucket with every other such caller.
+  if (isDeviceIdConfigured()) {
+    const deviceId = await readDeviceId(req);
+    const key = deviceId ? `checkout:device:${deviceId}` : `checkout:nocookie:${ip}`;
+    if (!rateLimit(key, 3, 10 * 60_000)) {
+      return NextResponse.json(
+        { error: 'Too many checkout attempts. Please wait a few minutes.' },
+        { status: 429 }
+      );
+    }
+  }
+
+  // Raised from 10 deliberately, and it is not a weakening: Nigerian mobile
+  // data is behind carrier-grade NAT, so thousands of real buyers share a
+  // handful of addresses and 10/min throttled the crowd rather than the abuser.
+  // The device buckets above now carry the precision this one was failing to
+  // provide; this is left as a coarse ceiling on any single address.
+  if (!rateLimit(`checkout:ip:${ip}`, 20, 60_000)) {
     return NextResponse.json({ error: 'Too many attempts. Please wait a minute.' }, { status: 429 });
   }
 
@@ -74,6 +96,19 @@ export async function POST(req: Request) {
   }
   if (row.outcome === 'sold_out') {
     return NextResponse.json({ error: 'Not enough tickets remaining.', code: 'sold_out' }, { status: 409 });
+  }
+  // The database's own cap on how many seats one phone may hold unpaid at
+  // once. This is the guarantee — the rate limits above are per-instance
+  // memory and fail open on a cold start, so they trim abuse rather than
+  // stopping it. Only this one actually protects the seat count.
+  if (row.outcome === 'phone_limit') {
+    return NextResponse.json(
+      {
+        error: 'You already have tickets reserved. Complete that payment first, or wait a few minutes and try again.',
+        code: 'phone_limit',
+      },
+      { status: 429 }
+    );
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || eventConfig.seo.siteUrl;
