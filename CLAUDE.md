@@ -227,10 +227,63 @@ Wired and verified against the live project:
    with most of the hall unsold. The migration corrects it to the 27th and
    audits the change.
 
+### Vercel's firewall is blocking the Paystack webhook
+
+Attack Challenge Mode is on **site-wide**, `/api/*` included. Verified
+2026-08-23:
+
+```
+POST /api/webhooks/paystack  ->  403,  x-vercel-mitigated: challenge
+GET  /api/orders/TEST        ->  403
+GET  /                       ->  403 to any non-browser client
+```
+
+Paystack is a server and cannot solve a JavaScript challenge, so
+`charge.success` never reaches the handler and the webhook — the intended
+settlement path — is dead. **Money is still settling only because
+`/api/orders/[reference]` lazily verifies with Paystack and calls the same
+idempotent `mark_order_paid`**, and a returning buyer's real browser does solve
+the challenge. Settlement therefore depends on the buyer coming back to their
+ticket link. Pay-and-close-the-tab is the exposure.
+
+**Fix, in the Vercel dashboard:** a firewall bypass rule for
+`/api/webhooks/paystack` (preferred over switching challenge mode off — the
+pages benefit from it). That endpoint does not need the firewall: it verifies
+HMAC-SHA512 over the raw body before parsing, caps the body at 64 KB, and
+rate-limits per IP.
+
+This also means **`curl` cannot verify production from a terminal.** Checking a
+deploy landed has to happen in a browser, or the check will report a 403 that
+says nothing about the app.
+
+### Reconciliation, 2026-08-23
+
+`node scripts/reconcile.mjs` (needs the live Paystack key in `.env.local`,
+which is now present) reports:
+
+- **2026-08-21 → 2026-08-24: both sides agree, zero discrepancies.** 16
+  successful Paystack transactions, 16 orders marked paid, identical amounts.
+  Despite the dead webhook, nobody who paid is missing a ticket.
+- Over the wider window two `MONEY TAKEN, NO TICKET` rows appear. Both are
+  **pre-purge and already settled** — their emails are in
+  `~/Documents/signout-backup-2026-08-20/orders.csv`, i.e. they are the two
+  real live-mode purchases the 20 August purge deleted. Not a live problem.
+
+Re-run it before the doors open. It is read-only.
+
+### Deployments must be authored as FlagIQ
+
+Vercel will not deploy a commit whose git author is not the project owner.
+Commits authored `Mustang Akin <190403063@live.unilag.edu.ng>` push to GitHub
+fine and then simply do not ship. The repo-local git identity is now set to
+`FlagIQ <kevinaki2000@gmail.com>`, matching every commit AI Studio makes.
+Check `git log --format='%an'` before wondering why production is stale.
+
 ### SALES ARE LIVE. DO NOT PURGE.
 
 The link went out and a Twitter video did ~125k views. As of **2026-08-23** the
-database holds real buyers: 236 orders, **23 paid**, 24 tickets, 0 check-ins.
+database holds real buyers: 252 orders, **24 paid**, 25 tickets (1 void), 0
+check-ins.
 The 2026-08-20 purge is history — a JSON + CSV snapshot of what that one
 deleted is at `~/Documents/signout-backup-2026-08-20/`, outside the repo
 because it is PII.
