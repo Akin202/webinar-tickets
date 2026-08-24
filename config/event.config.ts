@@ -90,6 +90,23 @@ export const eventConfig = {
     organiserName: "The After Party Committee",
   },
 
+  legal: {
+    // Shown on /cookies. Bump this whenever the disclosure in
+    // lib/cookie-inventory.ts changes, and bump the `_v1` suffix on the
+    // notice's storage key in components/CookieNotice.tsx at the same time
+    // if the change is material enough that people should see it again.
+    policyLastUpdated: "2026-08-24",
+    // Who is answerable for the data. Named separately from `hostedBy`
+    // because the party's host and the data controller need not stay the
+    // same party when this build is reused for another faculty's event.
+    dataControllerName: "The After Party Committee",
+    // The buyer leaves this domain to pay, so the disclosure has to say
+    // whose site they land on. Named here rather than in the JSX because
+    // the processor is an instance-level choice, not a component detail.
+    paymentProcessorName: "Paystack",
+    paymentProcessorPrivacyUrl: "https://paystack.com/privacy/merchant",
+  },
+
   seo: {
     // Also the fallback when NEXT_PUBLIC_SITE_URL is unset — see app/layout.tsx,
     // app/api/checkout/route.ts and lib/email.ts. That makes this value safety

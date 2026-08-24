@@ -15,6 +15,7 @@ import { eventConfig } from '@/config/event.config';
 import { CheckoutValues, PurchaseState, Order, Ticket } from '@/types/ticketing';
 import { CheckoutForm } from '@/components/CheckoutForm';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
+import { CookieNotice } from '@/components/CookieNotice';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import {
   initiatePurchase,
@@ -472,6 +473,11 @@ export const CheckoutPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Same essential-cookies notice as the event page. This is the
+          other path on which middleware stamps the anti-abuse cookie,
+          so it is the other path that owes a disclosure. */}
+      <CookieNotice />
     </main>
   );
 };

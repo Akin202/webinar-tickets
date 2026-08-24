@@ -27,6 +27,7 @@ import { DetailRow } from '@/components/DetailRow';
 import { QuantityStepper } from '@/components/QuantityStepper';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
 import { SectionHeading } from '@/components/SectionHeading';
+import { CookieNotice } from '@/components/CookieNotice';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 const defaultFaqs = [
@@ -638,7 +639,18 @@ export const EventPage: React.FC = () => {
       {showStickyBar && (
         <div
           id="sticky-mobile-buy-bar"
-          className="fixed bottom-0 inset-x-0 z-40 sm:hidden bg-[#0A0A0B]/95 border-t border-[#26262A] p-3 backdrop-blur-xl flex items-center justify-between gap-3 shadow-2xl animate-in slide-in-from-bottom duration-200"
+          // Offset upward by the cookie notice's height while it is on screen,
+          // so the notice can never cover the buy CTA. The variable is set and
+          // cleared by CookieNotice; with no notice mounted it resolves to 0px
+          // and this behaves exactly as `bottom-0` did.
+          //
+          // transition-[transform,opacity] is load-bearing, not tidying:
+          // `duration-200` sets only a duration, and CSS defaults
+          // transition-property to `all`, so once `bottom` became a value that
+          // CHANGES it started animating too — a layout-bound property, which
+          // this project's motion rule forbids. Naming the two compositor
+          // properties keeps the entrance animation and drops the rest.
+          className="fixed bottom-[var(--cookie-notice-height,0px)] inset-x-0 z-40 sm:hidden bg-[#0A0A0B]/95 border-t border-[#26262A] p-3 backdrop-blur-xl flex items-center justify-between gap-3 shadow-2xl animate-in slide-in-from-bottom duration-200 transition-[transform,opacity]"
         >
           <div className="flex flex-col">
             <span className="text-[10px] uppercase font-extrabold text-brand-muted tracking-wider">
@@ -698,9 +710,17 @@ export const EventPage: React.FC = () => {
             >
               Terms &amp; Policy
             </a>
+            <Link href="/cookies" className="hover:text-brand-text transition-colors">
+              Cookies &amp; Privacy
+            </Link>
           </div>
         </div>
       </footer>
+
+      {/* Last in the tree on purpose: it is fixed-position, so DOM order only
+          decides where it lands in the tab sequence, and the end is where a
+          dismissible notice belongs rather than ahead of the buy button. */}
+      <CookieNotice />
     </div>
   );
 };
