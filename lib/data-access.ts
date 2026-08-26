@@ -158,8 +158,14 @@ export async function sendCampaignTest(input: {
   await apiJson('/api/admin/campaigns/test', { method: 'POST', body: JSON.stringify(input) });
 }
 
+/**
+ * `testEmail` sends the real campaign to that one address instead of the
+ * resolved audience — same rows, same batch worker, one recipient. Additive:
+ * existing callers that omit it are unaffected.
+ */
 export async function createEmailCampaign(input: {
   kind: EmailCampaignKind; audience: EmailCampaignAudience; subject: string; message: string;
+  testEmail?: string;
 }): Promise<EmailCampaign> {
   const result = await apiJson<{ campaign: EmailCampaign }>('/api/admin/campaigns', {
     method: 'POST', body: JSON.stringify(input),

@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   campaignContent,
   emailFromUnsubscribeToken,
@@ -127,5 +129,44 @@ describe('send preflight', () => {
     // while every marketing send wedges.
     expect(campaignConfigError('essential')).toBeNull();
     expect(campaignConfigError('marketing')).toContain('EMAIL_UNSUBSCRIBE_SECRET');
+  });
+});
+
+/**
+ * The test-recipient override, pinned against the route source.
+ *
+ * The route cannot be imported here — it pulls in `server-only` and the
+ * Supabase admin client — so these assert on the text, the same technique
+ * tests/migration-invariants.test.ts uses for SQL. They exist because the
+ * override has one genuinely dangerous failure mode: `testEmail` is a
+ * request-only field, and the campaign row is built with a spread. Let it
+ * reach the insert and every campaign creation dies on a column that does not
+ * exist in email_campaigns.
+ */
+describe('campaign test-recipient override', () => {
+  const routeSource = readFileSync(
+    resolve(import.meta.dirname, '../app/api/admin/campaigns/route.ts'),
+    'utf8'
+  );
+
+  it('strips testEmail out before the row spread', () => {
+    expect(routeSource).toMatch(/const\s*\{\s*testEmail,\s*\.\.\.campaignFields\s*\}\s*=\s*parsed\.data/);
+  });
+
+  it('never spreads the raw parsed body into the insert', () => {
+    const insert = routeSource.slice(routeSource.indexOf("from('email_campaigns').insert"));
+    expect(insert).toContain('...campaignFields');
+    expect(insert).not.toContain('...parsed.data');
+  });
+
+  it('skips audience resolution entirely when a test address is given', () => {
+    // Not a filter over the resolved audience — a replacement. An admin must be
+    // able to send a dry run to an address that is not a paid buyer.
+    expect(routeSource).toMatch(/testEmail\s*\?\s*\[\{\s*email:\s*testEmail\.toLowerCase\(\)/);
+    expect(routeSource).toMatch(/:\s*await resolveCampaignRecipients\(/);
+  });
+
+  it('validates the address rather than trusting it', () => {
+    expect(routeSource).toMatch(/testEmail:\s*z\.string\(\)\.trim\(\)\.email\(\)\.max\(254\)\.optional\(\)/);
   });
 });

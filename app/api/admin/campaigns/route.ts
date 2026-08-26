@@ -10,6 +10,11 @@ const schema = z.object({
   audience: z.enum(['all_paid', 'checked_in', 'not_checked_in']),
   subject: z.string().trim().min(1).max(150),
   message: z.string().trim().min(1).max(10000),
+  // A dry run of the real thing: same campaign row, same recipient rows, same
+  // batch worker, one address. /api/admin/campaigns/test proves the provider
+  // call works but writes nothing, so until now the batch path could only be
+  // exercised for the first time on the whole paid audience.
+  testEmail: z.string().trim().email().max(254).optional(),
 });
 
 export async function GET(req: Request) {
@@ -29,11 +34,22 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(body.value);
   if (!parsed.success) return NextResponse.json({ error: 'Complete all campaign fields.' }, { status: 400 });
   const supabase = getSupabaseAdminClient();
+  // testEmail is a request-only field — email_campaigns has no such column, and
+  // the row below is built from a spread. Pull it out before that spread rather
+  // than after, so it can never reach the insert.
+  const { testEmail, ...campaignFields } = parsed.data;
   try {
-    const recipients = await resolveCampaignRecipients(parsed.data.kind, parsed.data.audience);
+    // No new capability: /api/admin/campaigns/test already sends admin-authored
+    // copy to an arbitrary address. This routes the same power through the batch
+    // machinery instead of around it, behind the same admin guard. Marketing
+    // consent is deliberately bypassed for this one typed address — a test
+    // recipient is not in marketing_preferences and never would be.
+    const recipients = testEmail
+      ? [{ email: testEmail.toLowerCase(), buyerName: auth.staff.name }]
+      : await resolveCampaignRecipients(campaignFields.kind, campaignFields.audience);
     if (recipients.length === 0) return NextResponse.json({ error: 'This audience has no eligible recipients.' }, { status: 409 });
     const { data: campaign, error } = await supabase.from('email_campaigns').insert({
-      ...parsed.data, created_by: auth.staff.id, targeted_count: recipients.length,
+      ...campaignFields, created_by: auth.staff.id, targeted_count: recipients.length,
     }).select('*').single();
     if (error || !campaign) throw error ?? new Error('Campaign insert failed');
     const { error: recipientError } = await supabase.from('email_campaign_recipients').insert(

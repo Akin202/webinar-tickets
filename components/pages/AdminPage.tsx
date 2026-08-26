@@ -175,6 +175,7 @@ export const AdminPage: React.FC = () => {
   const [campaignSubject, setCampaignSubject] = useState('');
   const [campaignMessage, setCampaignMessage] = useState('');
   const [campaignCount, setCampaignCount] = useState<number | null>(null);
+  const [campaignTestOnly, setCampaignTestOnly] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   const [campaignBusy, setCampaignBusy] = useState(false);
   const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
@@ -398,17 +399,25 @@ export const AdminPage: React.FC = () => {
   };
 
   const handleSendCampaign = async () => {
-    if (!window.confirm(`Send this ${campaignKind} email to ${campaignCount ?? 0} unique recipients?`)) return;
+    // Name the single address rather than a count, so a test send and a send to
+    // the whole paid audience can never read the same in the confirm dialog.
+    const confirmation = campaignTestOnly
+      ? `Send this ${campaignKind} email to ${testEmail} ONLY? This is a real campaign, limited to one recipient.`
+      : `Send this ${campaignKind} email to ${campaignCount ?? 0} unique recipients?`;
+    if (!window.confirm(confirmation)) return;
     setCampaignBusy(true);
     try {
       let campaign = await createEmailCampaign({ kind: campaignKind, audience: campaignAudience,
-        subject: campaignSubject, message: campaignMessage });
+        subject: campaignSubject, message: campaignMessage,
+        testEmail: campaignTestOnly ? testEmail : undefined });
       // Each call drains at most 100 persisted recipients; continue until terminal.
       while (campaign.status === 'draft' || campaign.status === 'sending') {
         campaign = await processEmailCampaign(campaign.id);
       }
       setCampaigns(await listEmailCampaigns());
-      setCampaignSubject(''); setCampaignMessage('');
+      // Keep the draft after a test send — the whole point is to check it and
+      // then send the same copy for real. Only clear on the real send.
+      if (!campaignTestOnly) { setCampaignSubject(''); setCampaignMessage(''); }
       triggerNotice(`Campaign finished: ${campaign.sentCount} sent, ${campaign.failedCount} failed.`);
     } catch (err) { triggerNotice(err instanceof Error ? err.message : 'Campaign send failed. Resume it from history.');
       void listEmailCampaigns().then(setCampaigns).catch(() => {}); }
@@ -761,9 +770,20 @@ export const AdminPage: React.FC = () => {
                   className="min-h-10 min-w-0 flex-1 rounded border border-gray-300 px-2.5 text-sm" />
                 <button type="button" disabled={campaignBusy || !testEmail || !campaignSubject || !campaignMessage} onClick={handleTestCampaign}
                   className="min-h-10 rounded border border-gray-300 px-3 text-xs font-semibold disabled:opacity-50">Send test</button>
-                <button type="button" disabled={campaignBusy || !campaignCount || !campaignSubject || !campaignMessage} onClick={handleSendCampaign}
-                  className="min-h-10 rounded bg-gray-900 px-4 text-xs font-bold text-white disabled:opacity-50">{campaignBusy ? 'Sending…' : 'Review & send'}</button>
+                <button type="button" disabled={campaignBusy || (campaignTestOnly ? !testEmail : !campaignCount) || !campaignSubject || !campaignMessage} onClick={handleSendCampaign}
+                  className="min-h-10 rounded bg-gray-900 px-4 text-xs font-bold text-white disabled:opacity-50">{campaignBusy ? 'Sending…' : campaignTestOnly ? 'Send to test only' : 'Review & send'}</button>
               </div>
+              {/* "Send test" above proves the provider call; this proves the whole
+                  batch path — campaign row, recipient rows, resume — against one
+                  address. Worth doing once before any send to the real audience. */}
+              <label className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                <input type="checkbox" checked={campaignTestOnly} onChange={(e) => setCampaignTestOnly(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300" />
+                Send the real campaign to the test recipient only
+              </label>
+              {campaignTestOnly && <p className="rounded bg-blue-50 p-2 text-xs text-blue-900">
+                This creates a genuine campaign and sends it to <strong>{testEmail || 'the address above'}</strong> alone. It appears in history as 1 recipient.
+              </p>}
             </div>
             <div>
               <div className="mb-2 flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-gray-500">Preview</span>
