@@ -14,6 +14,7 @@ const checkoutSchema = z.object({
   buyerEmail: z.string().trim().email().max(254),
   buyerPhone: z.string().trim().min(7).max(20),
   quantity: z.number().int().min(1).max(eventConfig.ticketing.maxPerOrder),
+  marketingOptIn: z.boolean().optional().default(false),
 });
 
 export async function POST(req: Request) {
@@ -61,47 +62,58 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Too many orders for this phone number. Please wait.' }, { status: 429 });
   }
 
-  // THE money computation. Server-side, from config — a client-sent amount
-  // is never read, so there is nothing for a tampered client to tamper with.
-  const totals = computeOrderTotals({
-    quantity: parsed.quantity,
-    unitPriceKobo: eventConfig.ticketing.priceKobo,
-    serviceChargeRate: eventConfig.ticketing.serviceChargeRate,
-    passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
-  });
-
   const reference = generateReference();
   const supabase = getSupabaseAdminClient();
+  let totals: ReturnType<typeof computeOrderTotals> | null = null;
+  let outcome: string | null = null;
+  let createError: unknown = null;
 
-  // Atomic capacity + sales-gate check and insert (FOR UPDATE inside).
-  const { data, error } = await supabase.rpc('create_pending_order', {
-    p_reference: reference,
-    p_buyer_name: parsed.buyerName,
-    p_buyer_email: parsed.buyerEmail,
-    p_buyer_phone: buyerPhone,
-    p_quantity: parsed.quantity,
-    p_unit_price_kobo: totals.unitPriceKobo,
-    p_service_charge_kobo: totals.serviceChargeKobo,
-    p_fee_kobo: totals.gatewayFeeKobo,
-    p_total_kobo: totals.totalKobo,
-  });
-  const row = Array.isArray(data) ? data[0] : data;
-
-  if (error || !row) {
-    console.error('create_pending_order failed:', error);
-    return NextResponse.json({ error: 'Could not start your order. Please retry.' }, { status: 500 });
+  // Fetch, calculate, then let the locked RPC compare the price. If an admin
+  // changes it in that tiny gap, retry once with the new authoritative value.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const { data: settings, error: settingsError } = await supabase
+      .from('event_settings').select('current_price_kobo').maybeSingle();
+    if (settingsError || !settings) {
+      return NextResponse.json({ error: 'Could not load the current ticket price.' }, { status: 503 });
+    }
+    totals = computeOrderTotals({
+      quantity: parsed.quantity,
+      unitPriceKobo: settings.current_price_kobo,
+      serviceChargeRate: eventConfig.ticketing.serviceChargeRate,
+      passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
+    });
+    const created = await supabase.rpc('create_pending_order', {
+      p_reference: reference,
+      p_buyer_name: parsed.buyerName,
+      p_buyer_email: parsed.buyerEmail,
+      p_buyer_phone: buyerPhone,
+      p_quantity: parsed.quantity,
+      p_unit_price_kobo: totals.unitPriceKobo,
+      p_service_charge_kobo: totals.serviceChargeKobo,
+      p_fee_kobo: totals.gatewayFeeKobo,
+      p_total_kobo: totals.totalKobo,
+      p_marketing_opt_in: parsed.marketingOptIn,
+    });
+    createError = created.error;
+    const createdRow = (Array.isArray(created.data) ? created.data[0] : created.data) as { outcome?: string } | null;
+    outcome = createdRow?.outcome ?? null;
+    if (outcome !== 'price_changed') break;
   }
-  if (row.outcome === 'sales_closed') {
+  if (createError || !outcome || !totals || outcome === 'price_changed') {
+    console.error('create_pending_order failed:', createError);
+    return NextResponse.json({ error: 'The ticket price just changed. Please retry.' }, { status: 409 });
+  }
+  if (outcome === 'sales_closed') {
     return NextResponse.json({ error: 'Ticket sales are currently closed.', code: 'sales_closed' }, { status: 409 });
   }
-  if (row.outcome === 'sold_out') {
+  if (outcome === 'sold_out') {
     return NextResponse.json({ error: 'Not enough tickets remaining.', code: 'sold_out' }, { status: 409 });
   }
   // The database's own cap on how many seats one phone may hold unpaid at
   // once. This is the guarantee — the rate limits above are per-instance
   // memory and fail open on a cold start, so they trim abuse rather than
   // stopping it. Only this one actually protects the seat count.
-  if (row.outcome === 'phone_limit') {
+  if (outcome === 'phone_limit') {
     return NextResponse.json(
       {
         error: 'You already have tickets reserved. Complete that payment first, or wait a few minutes and try again.',

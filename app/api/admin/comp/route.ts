@@ -71,6 +71,14 @@ export async function POST(req: Request) {
       { status: 409 }
     );
   }
+  // A comp is all-zero money, which create_pending_order exempts from its
+  // price check. Reaching here means that exemption is missing from the
+  // deployed function — bail loudly rather than falling through to
+  // mark_order_paid on a reference that has no order row.
+  if (createdRow.outcome !== 'created') {
+    console.error('comp create returned unexpected outcome:', createdRow.outcome);
+    return NextResponse.json({ error: 'Could not issue ticket.' }, { status: 500 });
+  }
 
   const { error: paidError } = await supabase.rpc('mark_order_paid', {
     p_reference: reference,

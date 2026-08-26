@@ -20,6 +20,8 @@ import {
   ArrowUpDown,
   Lock,
   Unlock,
+  Mail,
+  DollarSign,
 } from 'lucide-react';
 import {
   getSalesSummary,
@@ -30,6 +32,12 @@ import {
   exportOrdersCsv,
   setSalesOpen,
   resendTicketEmail,
+  setTicketPrice,
+  previewCampaignRecipients,
+  sendCampaignTest,
+  createEmailCampaign,
+  listEmailCampaigns,
+  processEmailCampaign,
 } from '@/lib/data-access';
 import {
   Order,
@@ -39,6 +47,9 @@ import {
   koboToNaira,
   normaliseNgPhone,
   formatPhoneForDisplay,
+  EmailCampaign,
+  EmailCampaignKind,
+  EmailCampaignAudience,
 } from '@/types/ticketing';
 import { eventConfig } from '@/config/event.config';
 
@@ -156,6 +167,18 @@ export const AdminPage: React.FC = () => {
   const [voidReason, setVoidReason] = useState<string>('');
   /** Reference currently being emailed, so the button cannot be double-fired. */
   const [resendingRef, setResendingRef] = useState<string | null>(null);
+  const [priceNaira, setPriceNaira] = useState('');
+  const [pendingPriceKobo, setPendingPriceKobo] = useState<number | null>(null);
+  const [priceBusy, setPriceBusy] = useState(false);
+  const [campaignKind, setCampaignKind] = useState<EmailCampaignKind>('essential');
+  const [campaignAudience, setCampaignAudience] = useState<EmailCampaignAudience>('all_paid');
+  const [campaignSubject, setCampaignSubject] = useState('');
+  const [campaignMessage, setCampaignMessage] = useState('');
+  const [campaignCount, setCampaignCount] = useState<number | null>(null);
+  const [testEmail, setTestEmail] = useState('');
+  const [campaignBusy, setCampaignBusy] = useState(false);
+  const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
+  const [previewMobile, setPreviewMobile] = useState(false);
 
   /**
    * Guards against out-of-order responses. Typing "ade" fires three queries;
@@ -199,6 +222,20 @@ export const AdminPage: React.FC = () => {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    void listEmailCampaigns().then(setCampaigns).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void previewCampaignRecipients({ kind: campaignKind, audience: campaignAudience })
+        .then((count) => { if (!cancelled) setCampaignCount(count); })
+        .catch(() => { if (!cancelled) setCampaignCount(null); });
+    }, 250);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [campaignKind, campaignAudience]);
 
   // Settle the keystrokes before querying. Every one of these requests reads
   // ~400 people's names, emails and phone numbers, and the export route is
@@ -328,6 +365,65 @@ export const AdminPage: React.FC = () => {
     } catch {
       triggerNotice('Failed to export CSV.');
     }
+  };
+
+  const requestPriceChange = () => {
+    const value = Number(priceNaira);
+    const kobo = Math.round(value * 100);
+    if (!Number.isFinite(value) || kobo < 100 || kobo > 100_000_000 || Math.abs(value * 100 - kobo) > 0.001) {
+      triggerNotice('Enter a price from ₦1 to ₦1,000,000 with at most two decimals.');
+      return;
+    }
+    setPendingPriceKobo(kobo);
+  };
+
+  const confirmPriceChange = async () => {
+    if (pendingPriceKobo === null) return;
+    setPriceBusy(true);
+    try {
+      await setTicketPrice(pendingPriceKobo);
+      triggerNotice(`Ticket price changed to ${koboToNaira(pendingPriceKobo)}.`);
+      setPriceNaira(''); setPendingPriceKobo(null); await loadData();
+    } catch (err) { triggerNotice(err instanceof Error ? err.message : 'Could not update price.'); }
+    finally { setPriceBusy(false); }
+  };
+
+  const handleTestCampaign = async () => {
+    setCampaignBusy(true);
+    try {
+      await sendCampaignTest({ kind: campaignKind, subject: campaignSubject, message: campaignMessage, email: testEmail });
+      triggerNotice(`Test email sent to ${testEmail}.`);
+    } catch (err) { triggerNotice(err instanceof Error ? err.message : 'Test email failed.'); }
+    finally { setCampaignBusy(false); }
+  };
+
+  const handleSendCampaign = async () => {
+    if (!window.confirm(`Send this ${campaignKind} email to ${campaignCount ?? 0} unique recipients?`)) return;
+    setCampaignBusy(true);
+    try {
+      let campaign = await createEmailCampaign({ kind: campaignKind, audience: campaignAudience,
+        subject: campaignSubject, message: campaignMessage });
+      // Each call drains at most 100 persisted recipients; continue until terminal.
+      while (campaign.status === 'draft' || campaign.status === 'sending') {
+        campaign = await processEmailCampaign(campaign.id);
+      }
+      setCampaigns(await listEmailCampaigns());
+      setCampaignSubject(''); setCampaignMessage('');
+      triggerNotice(`Campaign finished: ${campaign.sentCount} sent, ${campaign.failedCount} failed.`);
+    } catch (err) { triggerNotice(err instanceof Error ? err.message : 'Campaign send failed. Resume it from history.');
+      void listEmailCampaigns().then(setCampaigns).catch(() => {}); }
+    finally { setCampaignBusy(false); }
+  };
+
+  const retryCampaign = async (id: string) => {
+    setCampaignBusy(true);
+    try {
+      let campaign = await processEmailCampaign(id, true);
+      while (campaign.status === 'sending') campaign = await processEmailCampaign(id);
+      setCampaigns(await listEmailCampaigns());
+      triggerNotice(`Retry finished: ${campaign.sentCount} sent, ${campaign.failedCount} failed.`);
+    } catch (err) { triggerNotice(err instanceof Error ? err.message : 'Could not resume campaign.'); }
+    finally { setCampaignBusy(false); }
   };
 
   // Real counts from summary.byChannel. This block used to be four hardcoded
@@ -528,6 +624,21 @@ export const AdminPage: React.FC = () => {
               )}
             </button>
           </div>
+          <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-200 shadow-sm col-span-2 sm:col-span-1">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+              <DollarSign className="h-3 w-3" /> Current Price
+            </span>
+            <div className="text-lg sm:text-xl font-bold font-mono text-gray-900 mt-1">
+              {summary ? koboToNaira(summary.currentPriceKobo) : '—'}
+            </div>
+            <div className="mt-2 flex gap-1.5">
+              <input aria-label="New ticket price in naira" inputMode="decimal" value={priceNaira}
+                onChange={(e) => setPriceNaira(e.target.value)} placeholder="New ₦ price"
+                className="min-w-0 w-full rounded border border-gray-300 px-2 py-1.5 text-xs" />
+              <button type="button" onClick={requestPriceChange} disabled={priceBusy}
+                className="rounded bg-gray-900 px-2.5 text-xs font-semibold text-white disabled:opacity-50">Change</button>
+            </div>
+          </div>
         </section>
 
         {/* ========================================================
@@ -620,6 +731,56 @@ export const AdminPage: React.FC = () => {
               </div>
             )}
           </div>
+        </section>
+
+        <section className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 shadow-sm" aria-labelledby="campaign-heading">
+          <div className="flex items-center justify-between gap-3">
+            <div><h2 id="campaign-heading" className="flex items-center gap-2 font-bold text-gray-900"><Mail className="h-4 w-4" /> Email Campaigns</h2>
+              <p className="text-xs text-gray-500">Compose, preview, test, and send to a snapshotted paid-buyer audience.</p></div>
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-mono font-bold text-gray-700">{campaignCount ?? '—'} recipients</span>
+          </div>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-xs font-semibold text-gray-700">Type
+                  <select value={campaignKind} onChange={(e) => setCampaignKind(e.target.value as EmailCampaignKind)} className="mt-1 w-full rounded border border-gray-300 p-2">
+                    <option value="essential">Essential event update</option><option value="marketing">Marketing (opted-in only)</option>
+                  </select></label>
+                <label className="text-xs font-semibold text-gray-700">Audience
+                  <select value={campaignAudience} onChange={(e) => setCampaignAudience(e.target.value as EmailCampaignAudience)} className="mt-1 w-full rounded border border-gray-300 p-2">
+                    <option value="all_paid">All paid buyers</option><option value="checked_in">Has checked in</option><option value="not_checked_in">Not checked in</option>
+                  </select></label>
+              </div>
+              {campaignKind === 'essential' && <p className="rounded bg-amber-50 p-2 text-xs text-amber-900">Use only for necessary information about this purchased event, not promotions.</p>}
+              <input value={campaignSubject} onChange={(e) => setCampaignSubject(e.target.value)} maxLength={150} placeholder="Email subject"
+                className="w-full rounded border border-gray-300 p-2.5 text-sm" />
+              <textarea value={campaignMessage} onChange={(e) => setCampaignMessage(e.target.value)} maxLength={10000} rows={8} placeholder="Write the message. Blank lines create paragraphs."
+                className="w-full rounded border border-gray-300 p-2.5 text-sm" />
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input type="email" value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="Test recipient email"
+                  className="min-h-10 min-w-0 flex-1 rounded border border-gray-300 px-2.5 text-sm" />
+                <button type="button" disabled={campaignBusy || !testEmail || !campaignSubject || !campaignMessage} onClick={handleTestCampaign}
+                  className="min-h-10 rounded border border-gray-300 px-3 text-xs font-semibold disabled:opacity-50">Send test</button>
+                <button type="button" disabled={campaignBusy || !campaignCount || !campaignSubject || !campaignMessage} onClick={handleSendCampaign}
+                  className="min-h-10 rounded bg-gray-900 px-4 text-xs font-bold text-white disabled:opacity-50">{campaignBusy ? 'Sending…' : 'Review & send'}</button>
+              </div>
+            </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-gray-500">Preview</span>
+                <button type="button" onClick={() => setPreviewMobile((v) => !v)} className="text-xs font-semibold text-blue-700">{previewMobile ? 'Desktop width' : 'Mobile width'}</button></div>
+              <div className={`mx-auto min-h-72 rounded border border-gray-200 bg-gray-50 p-4 transition-[max-width] ${previewMobile ? 'max-w-[320px]' : 'max-w-full'}`}>
+                <div className="rounded-lg bg-white shadow-sm overflow-hidden"><div className="bg-gray-950 p-4 text-xl font-bold text-amber-200">{eventConfig.event.tagline}</div>
+                  <div className="p-4 text-sm text-gray-700"><p className="font-bold text-gray-900">{campaignSubject || 'Your subject appears here'}</p>
+                    <p className="mt-4 whitespace-pre-wrap">Hi there,{`\n\n`}{campaignMessage || 'Your message preview appears here.'}</p>
+                    {campaignKind === 'marketing' && <p className="mt-5 text-xs text-gray-500 underline">Unsubscribe</p>}</div></div>
+              </div>
+            </div>
+          </div>
+          {campaigns.length > 0 && <div className="mt-5 border-t border-gray-200 pt-4"><h3 className="text-xs font-bold uppercase text-gray-500">Recent campaigns</h3>
+            <div className="mt-2 space-y-2">{campaigns.map((campaign) => <div key={campaign.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-gray-200 p-2.5 text-xs">
+              <div><strong className="text-gray-900">{campaign.subject}</strong><span className="ml-2 text-gray-500">{campaign.status} · {campaign.sentCount}/{campaign.targetedCount} sent · {campaign.failedCount} failed</span></div>
+              {(campaign.status === 'sending' || campaign.failedCount > 0) && <button type="button" disabled={campaignBusy} onClick={() => void retryCampaign(campaign.id)} className="font-semibold text-blue-700 disabled:opacity-50">Resume/retry</button>}
+            </div>)}</div></div>}
         </section>
 
         {/* ========================================================
@@ -1214,6 +1375,17 @@ export const AdminPage: React.FC = () => {
       {/* ========================================================
           MODAL: Void Ticket Confirmation
       ======================================================== */}
+      {pendingPriceKobo !== null && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="price-dialog-title">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 text-gray-900 shadow-xl">
+            <h2 id="price-dialog-title" className="text-lg font-bold">Confirm ticket price change</h2>
+            <p className="mt-3 text-sm text-gray-600">Future orders will change from <strong>{koboToNaira(summary?.currentPriceKobo ?? 0)}</strong> to <strong>{koboToNaira(pendingPriceKobo)}</strong>. Existing and pending orders keep their stored price.</p>
+            <div className="mt-5 flex justify-end gap-2"><button type="button" disabled={priceBusy} onClick={() => setPendingPriceKobo(null)} className="rounded border border-gray-300 px-4 py-2 text-sm">Cancel</button>
+              <button type="button" disabled={priceBusy} onClick={() => void confirmPriceChange()} className="rounded bg-gray-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{priceBusy ? 'Saving…' : 'Confirm change'}</button></div>
+          </div>
+        </div>
+      )}
+
       {isCloseSalesModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="w-full max-w-md rounded-2xl bg-white border border-gray-200 shadow-2xl p-5 sm:p-6 max-h-[90vh] overflow-y-auto my-auto">

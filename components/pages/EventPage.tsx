@@ -29,6 +29,7 @@ import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
 import { SectionHeading } from '@/components/SectionHeading';
 import { CookieNotice } from '@/components/CookieNotice';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { getPublicSalesCounter } from '@/lib/data-access';
 
 const defaultFaqs = [
   {
@@ -58,9 +59,23 @@ export const EventPage: React.FC = () => {
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
   const [showStickyBar, setShowStickyBar] = useState<boolean>(false);
+  const [currentPriceKobo, setCurrentPriceKobo] = useState<number>(eventConfig.ticketing.priceKobo);
   
   const heroCtaRef = useRef<HTMLDivElement | null>(null);
   const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    let cancelled = false;
+    getPublicSalesCounter()
+      .then((summary) => {
+        if (!cancelled && typeof summary.currentPriceKobo === 'number' && summary.currentPriceKobo > 0) {
+          setCurrentPriceKobo(summary.currentPriceKobo);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
 
   // Sticky mobile buy bar triggered via IntersectionObserver when hero CTA scrolls off
   useEffect(() => {
@@ -101,11 +116,11 @@ export const EventPage: React.FC = () => {
     }
   };
 
-  const unitPriceFormatted = koboToNaira(eventConfig.ticketing.priceKobo);
+  const unitPriceFormatted = koboToNaira(currentPriceKobo);
   
   const ticketTotals = computeOrderTotals({
     quantity: selectedQuantity,
-    unitPriceKobo: eventConfig.ticketing.priceKobo,
+    unitPriceKobo: currentPriceKobo,
     serviceChargeRate: eventConfig.ticketing.serviceChargeRate,
     passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
   });
@@ -724,4 +739,3 @@ export const EventPage: React.FC = () => {
     </div>
   );
 };
-

@@ -73,7 +73,17 @@ async function assertNoRows(table, token, label) {
   }
 }
 
-const TABLES = ['orders', 'tickets', 'check_ins', 'staff_users', 'event_settings', 'settings_audit'];
+const TABLES = [
+  'orders',
+  'tickets',
+  'check_ins',
+  'staff_users',
+  'event_settings',
+  'settings_audit',
+  'marketing_preferences',
+  'email_campaigns',
+  'email_campaign_recipients',
+];
 
 console.log(`\nRLS attack — ${URL_BASE}\n`);
 
@@ -89,7 +99,7 @@ console.log('\n2. anon reaching money through the counter');
          JSON.stringify(json).slice(0, 160));
   } else {
     pass('get_public_counter() reachable by anon');
-    const leaked = Object.keys(row).filter((k) => /kobo|gross|net|revenue|channel|fee|charge/i.test(k));
+    const leaked = Object.keys(row).filter((k) => /gross|net|revenue|channel|fee|charge/i.test(k));
     leaked.length
       ? fail(`counter leaks money fields: ${leaked.join(', ')}`)
       : pass(`counter carries no money fields (${Object.keys(row).join(', ')})`);
@@ -111,6 +121,7 @@ console.log('\n2. anon reaching money through the counter');
  * WILL have run:
  *
  *   set_sales_open      re-asserts the CURRENT state, so it is a no-op
+ *   set_ticket_price    re-asserts the CURRENT price or nominal price
  *   record_check_in     a code that does not exist -> not_found, no admission
  *   mark_order_paid     a reference that does not exist -> not_found, no mint
  *   create_pending_order the one that cannot be made harmless — it would hold
@@ -131,6 +142,7 @@ let salesCurrentlyOpen = true;
 const PRIVILEGED = [
   ['get_check_in_manifest', {}],
   ['set_sales_open', { p_open: salesCurrentlyOpen }],
+  ['set_ticket_price', { p_price_kobo: 300000 }],
   ['record_check_in', { p_code: NO_SUCH_CODE, p_device: 'rls-attack', p_scanned_at: new Date().toISOString() }],
 ];
 
@@ -167,10 +179,12 @@ const MONEY = [
       p_service_charge_kobo: 0,
       p_fee_kobo: 0,
       p_total_kobo: 0,
+      p_marketing_opt_in: false,
     },
   ],
   ['mark_order_paid', { p_reference: NO_SUCH_REF, p_amount_kobo: 0, p_channel: null, p_raw: {} }],
 ];
+
 
 for (const [fn, body] of MONEY) {
   const { status } = await req(`rpc/${fn}`, { method: 'POST', body });

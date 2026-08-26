@@ -57,6 +57,7 @@ export async function GET(req: Request) {
     salesClosed:
       !settings.sales_open ||
       (settings.sales_hard_stop !== null && Date.now() > new Date(settings.sales_hard_stop).getTime()),
+    currentPriceKobo: settings.current_price_kobo,
     byChannel,
     lastUpdatedAt: new Date().toISOString(),
   };

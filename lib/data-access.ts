@@ -5,7 +5,11 @@ import type {
   SalesSummary,
   PublicSalesCounter,
   StaffUser,
+  EmailCampaign,
+  EmailCampaignKind,
+  EmailCampaignAudience,
 } from '@/types/ticketing';
+import { eventConfig } from '@/config/event.config';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 // ============================================================
@@ -94,9 +98,15 @@ export async function getPublicSalesCounter(): Promise<PublicSalesCounter> {
     ticketsCheckedIn: row.tickets_checked_in,
     isSoldOut: row.is_sold_out,
     salesClosed: row.sales_closed,
+    currentPriceKobo:
+      typeof row.current_price_kobo === 'number' && Number.isFinite(row.current_price_kobo)
+        ? row.current_price_kobo
+        : eventConfig.ticketing.priceKobo,
     lastUpdatedAt: row.last_updated_at,
   };
 }
+
+
 
 /** Admin role only — enforced inside set_sales_open, which also audits the flip. */
 export async function setSalesOpen(open: boolean): Promise<void> {
@@ -117,11 +127,56 @@ export async function initiatePurchase(input: {
   buyerEmail: string;
   buyerPhone: string;
   quantity: number;
+  marketingOptIn?: boolean;
 }): Promise<{ authorizationUrl: string; reference: string }> {
   return apiJson<{ authorizationUrl: string; reference: string }>('/api/checkout', {
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+export async function setTicketPrice(priceKobo: number): Promise<void> {
+  await apiJson('/api/admin/price', {
+    method: 'POST',
+    body: JSON.stringify({ priceKobo }),
+  });
+}
+
+export async function previewCampaignRecipients(input: {
+  kind: EmailCampaignKind;
+  audience: EmailCampaignAudience;
+}): Promise<number> {
+  const result = await apiJson<{ count: number }>('/api/admin/campaigns/preview', {
+    method: 'POST', body: JSON.stringify(input),
+  });
+  return result.count;
+}
+
+export async function sendCampaignTest(input: {
+  kind: EmailCampaignKind; subject: string; message: string; email: string;
+}): Promise<void> {
+  await apiJson('/api/admin/campaigns/test', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function createEmailCampaign(input: {
+  kind: EmailCampaignKind; audience: EmailCampaignAudience; subject: string; message: string;
+}): Promise<EmailCampaign> {
+  const result = await apiJson<{ campaign: EmailCampaign }>('/api/admin/campaigns', {
+    method: 'POST', body: JSON.stringify(input),
+  });
+  return result.campaign;
+}
+
+export async function listEmailCampaigns(): Promise<EmailCampaign[]> {
+  const result = await apiJson<{ campaigns: EmailCampaign[] }>('/api/admin/campaigns');
+  return result.campaigns;
+}
+
+export async function processEmailCampaign(id: string, retryFailed = false): Promise<EmailCampaign> {
+  const result = await apiJson<{ campaign: EmailCampaign }>(`/api/admin/campaigns/${id}/process`, {
+    method: 'POST', body: JSON.stringify({ retryFailed }),
+  });
+  return result.campaign;
 }
 
 /**

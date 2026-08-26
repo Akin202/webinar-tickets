@@ -92,6 +92,7 @@ export interface SalesSummary {
   ordersPending: number;
   isSoldOut: boolean;
   salesClosed: boolean;
+  currentPriceKobo: number;
   byChannel: Record<string, number>;
   lastUpdatedAt: string;
 }
@@ -114,6 +115,7 @@ export interface PublicSalesCounter {
   ticketsCheckedIn: number;
   isSoldOut: boolean;
   salesClosed: boolean;
+  currentPriceKobo: number;
   lastUpdatedAt: string;
 }
 
@@ -275,4 +277,29 @@ export interface CheckoutValues {
   email: string;
   phone: string;
   quantity: number;
+  marketingOptIn: boolean;
+}
+
+export type EmailCampaignKind = 'essential' | 'marketing';
+export type EmailCampaignAudience = 'all_paid' | 'checked_in' | 'not_checked_in';
+export type EmailCampaignStatus =
+  | 'draft'
+  | 'sending'
+  | 'completed'
+  | 'completed_with_failures'
+  | 'failed';
+
+export interface EmailCampaign {
+  id: string;
+  kind: EmailCampaignKind;
+  audience: EmailCampaignAudience;
+  subject: string;
+  message: string;
+  status: EmailCampaignStatus;
+  targetedCount: number;
+  sentCount: number;
+  failedCount: number;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
 }

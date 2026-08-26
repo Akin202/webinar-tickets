@@ -43,6 +43,7 @@ export const CheckoutPage: React.FC = () => {
   // brief spinner. Becomes a server-side check in Session 1, at which point
   // this gate can go.
   const [availabilityChecked, setAvailabilityChecked] = useState<boolean>(false);
+  const [currentPriceKobo, setCurrentPriceKobo] = useState<number>(eventConfig.ticketing.priceKobo);
 
   // Whether the form can be shown at all. Without this the sales_closed and
   // sold_out screens existed but nothing ever reached them — the admin toggle
@@ -53,6 +54,9 @@ export const CheckoutPage: React.FC = () => {
       try {
         const summary = await getPublicSalesCounter();
         if (cancelled) return;
+        if (typeof summary.currentPriceKobo === 'number' && summary.currentPriceKobo > 0) {
+          setCurrentPriceKobo(summary.currentPriceKobo);
+        }
         if (summary.salesClosed) {
           setInternalState({ status: 'sales_closed' });
         } else if (summary.isSoldOut) {
@@ -88,6 +92,7 @@ export const CheckoutPage: React.FC = () => {
         buyerEmail: values.email,
         buyerPhone: values.phone,
         quantity: values.quantity,
+        marketingOptIn: values.marketingOptIn,
       });
 
       setActiveReference(res.reference);
@@ -469,6 +474,7 @@ export const CheckoutPage: React.FC = () => {
             <CheckoutForm
               onSubmit={handleFormSubmit}
               purchaseState={purchaseState}
+              unitPriceKobo={currentPriceKobo}
             />
           </div>
         )}

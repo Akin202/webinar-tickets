@@ -6,6 +6,7 @@ interface PriceTagProps {
   /** Quantity to price. Defaults to a single ticket. */
   quantity?: number;
   size?: 'sm' | 'md' | 'lg';
+  unitPriceKobo?: number;
 }
 
 /**
@@ -13,10 +14,14 @@ interface PriceTagProps {
  * charges added on top. Derives everything from computeOrderTotals so the
  * public page can never disagree with the checkout summary or the server.
  */
-export const PriceTag: React.FC<PriceTagProps> = ({ quantity = 1, size = 'md' }) => {
+export const PriceTag: React.FC<PriceTagProps> = ({
+  quantity = 1,
+  size = 'md',
+  unitPriceKobo = eventConfig.ticketing.priceKobo,
+}) => {
   const totals = computeOrderTotals({
     quantity,
-    unitPriceKobo: eventConfig.ticketing.priceKobo,
+    unitPriceKobo,
     serviceChargeRate: eventConfig.ticketing.serviceChargeRate,
     passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
   });

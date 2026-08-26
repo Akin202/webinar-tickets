@@ -20,6 +20,7 @@ export interface CheckoutFormProps {
   initialValues?: Partial<CheckoutValues>;
   purchaseState: PurchaseState; // controlled from outside
   onSubmit: (values: CheckoutValues) => void; // fire and forget
+  unitPriceKobo: number;
 }
 
 // Zod schema based on config rules
@@ -37,6 +38,7 @@ const checkoutSchema = z.object({
     .number()
     .min(1, 'Quantity must be at least 1')
     .max(eventConfig.ticketing.maxPerOrder, `Maximum ${eventConfig.ticketing.maxPerOrder} tickets per order`),
+  marketingOptIn: z.boolean(),
 });
 
 type FormSchema = z.infer<typeof checkoutSchema>;
@@ -45,6 +47,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
   initialValues,
   purchaseState,
   onSubmit,
+  unitPriceKobo,
 }) => {
   const prefersReducedMotion = useReducedMotion();
   const isValidating = purchaseState.status === 'validating';
@@ -64,11 +67,11 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       email: initialValues?.email || '',
       phone: initialValues?.phone ? normaliseNgPhone(initialValues.phone) : '',
       quantity: initialValues?.quantity || 1,
+      marketingOptIn: initialValues?.marketingOptIn || false,
     },
   });
 
   const quantity = watch('quantity') || 1;
-  const unitPriceKobo = eventConfig.ticketing.priceKobo;
   // Single source of truth for what an order costs — the server computes the
   // authoritative total with this same function.
   const totals = computeOrderTotals({
@@ -92,6 +95,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       email: data.email,
       phone: normaliseNgPhone(data.phone),
       quantity: data.quantity,
+      marketingOptIn: data.marketingOptIn,
     });
   };
 
@@ -197,6 +201,18 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
               </p>
             )}
           </div>
+          <label className="flex items-start gap-3 rounded-xl border border-brand-border bg-brand-subtle p-4 text-sm text-brand-muted">
+            <input
+              type="checkbox"
+              disabled={isDisabled}
+              {...register('marketingOptIn')}
+              className="mt-0.5 h-4 w-4 accent-current"
+            />
+            <span>
+              <strong className="block text-brand-text">Send me event news and future offers</strong>
+              Optional. Ticket and essential event emails are sent regardless of this choice.
+            </span>
+          </label>
         </div>
       </div>
 
