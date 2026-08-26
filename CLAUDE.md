@@ -210,8 +210,14 @@ Wired and verified against the live project:
 ### What is left
 
 **Blocked on the human, not on the agent:**
-1. **Resend is unverified.** `send.tickitid.online` has no DNS records, so the
-   backup delivery channel does not work.
+1. **Resend deliverability is degraded, not dead.** `send.tickitid.online` is
+   verified and DKIM resolves, so mail sends and passes DMARC on DKIM
+   alignment. But the SPF TXT and the feedback MX sit at
+   `send.send.tickitid.online` — entered at Namecheap with host `send`, which
+   the registrar expands against the apex. SES bounce and complaint feedback
+   is therefore not reaching Resend. Repoint both to `send.tickitid.online`.
+   The apex is not a Resend domain at all: `RESEND_FROM_EMAIL` must stay on
+   the subdomain or every send is refused as unverified.
 2. **Real-Android airplane-mode drill.** The offline shell is unproven on
    hardware — devtools offline mode is not the same thing. The service worker
    caches by asset hash, so this has to be redone after any deploy.
