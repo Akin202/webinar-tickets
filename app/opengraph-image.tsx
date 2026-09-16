@@ -5,8 +5,8 @@ import { eventConfig, doorsOpenIso } from '@/config/event.config';
  * The WhatsApp link preview, generated server-side at 1200x630.
  *
  * Generated rather than committed as a binary so it stays driven by
- * event.config.ts like every other instance-specific string — the next
- * faculty changes the config and the preview follows. Also keeps the repo
+ * event.config.ts like every other instance-specific string — change the
+ * config and the preview follows. Also keeps the repo
  * free of a large asset that would drift from the config.
  *
  * PNG here is well under WhatsApp's ~300KB preview ceiling because it is
@@ -53,26 +53,27 @@ export default async function OpengraphImage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div
             style={{
               display: 'flex',
-              fontSize: 128,
-              lineHeight: 1,
-              fontWeight: 900,
+              fontSize: 30,
+              letterSpacing: 4,
+              textTransform: 'uppercase',
               color: eventConfig.brand.primary,
-              letterSpacing: -3,
+              fontWeight: 700,
             }}
           >
-            {eventConfig.event.tagline.toUpperCase()}
+            {eventConfig.event.eyebrow}
           </div>
           <div
             style={{
               display: 'flex',
-              fontSize: 46,
-              fontWeight: 800,
+              fontSize: 112,
+              lineHeight: 1,
+              fontWeight: 900,
               color: eventConfig.brand.ink,
-              letterSpacing: -1,
+              letterSpacing: -3,
             }}
           >
             {eventConfig.event.name}
@@ -92,7 +93,7 @@ export default async function OpengraphImage() {
           }}
         >
           <div style={{ display: 'flex' }}>{doorsOpen}</div>
-          <div style={{ display: 'flex', opacity: 0.75 }}>{eventConfig.event.venueName}</div>
+          <div style={{ display: 'flex', opacity: 0.75 }}>{`${eventConfig.event.venueName}, ${eventConfig.event.venueArea}`}</div>
         </div>
       </div>
     ),

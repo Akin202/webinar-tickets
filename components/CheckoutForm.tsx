@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { Lock, ShieldCheck, User, Mail, Phone, GraduationCap, Building2, Loader2 } from 'lucide-react';
 import { eventConfig } from '@/config/event.config';
 import {
+  ATTENDEE_TYPES,
   CheckoutValues,
   PurchaseState,
   koboToNaira,
@@ -34,6 +35,7 @@ const checkoutSchema = z.object({
       const norm = normaliseNgPhone(val);
       return norm.startsWith('+234') && norm.length >= 13;
     }, 'Must be a valid Nigerian number (e.g. 08023456789 or +234...)'),
+  attendeeType: z.enum(ATTENDEE_TYPES, { message: 'Tell us which best describes you' }),
   quantity: z
     .number()
     .min(1, 'Quantity must be at least 1')
@@ -66,6 +68,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       fullName: initialValues?.fullName || '',
       email: initialValues?.email || '',
       phone: initialValues?.phone ? normaliseNgPhone(initialValues.phone) : '',
+      attendeeType: initialValues?.attendeeType,
       quantity: initialValues?.quantity || 1,
       marketingOptIn: initialValues?.marketingOptIn || false,
     },
@@ -94,6 +97,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       fullName: data.fullName,
       email: data.email,
       phone: normaliseNgPhone(data.phone),
+      attendeeType: data.attendeeType,
       quantity: data.quantity,
       marketingOptIn: data.marketingOptIn,
     });
@@ -201,6 +205,36 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
               </p>
             )}
           </div>
+          {/* Attendee type: required, and the only segmentation question we ask. */}
+          <div>
+            <label
+              htmlFor="attendeeType"
+              className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-1.5"
+            >
+              Which best describes you? <span className="text-brand-urgent">*</span>
+            </label>
+            <select
+              id="attendeeType"
+              disabled={isDisabled}
+              {...register('attendeeType')}
+              className={`w-full min-h-[48px] px-4 rounded-xl bg-brand-subtle border text-brand-text text-base focus:border-brand-primary transition-colors ${
+                errors.attendeeType ? 'border-brand-urgent' : 'border-brand-border'
+              } ${isDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+            >
+              <option value="">Choose one</option>
+              {eventConfig.attendeeTypes.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {errors.attendeeType && (
+              <p className="text-xs text-brand-urgent font-medium mt-1">
+                {errors.attendeeType.message}
+              </p>
+            )}
+          </div>
+
           <label className="flex items-start gap-3 rounded-xl border border-brand-border bg-brand-subtle p-4 text-sm text-brand-muted">
             <input
               type="checkbox"
@@ -225,7 +259,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
               <p className="text-xs text-brand-muted">{eventConfig.event.tagline || eventConfig.event.name}</p>
             </div>
             <span className="px-2.5 py-1 rounded-md bg-brand-subtle text-xs font-semibold text-brand-primary border border-brand-border">
-              Standard Pass
+              Summit Seat
             </span>
           </div>
 
@@ -233,10 +267,10 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
           <div className="flex items-center justify-between gap-4 py-2 border-b border-brand-border pb-6">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-0.5">
-                Number of Passes
+                Number of Seats
               </label>
               <p className="text-xs text-brand-dim">
-                Max {eventConfig.ticketing.maxPerOrder} passes per order
+                Max {eventConfig.ticketing.maxPerOrder} seats per order
               </p>
             </div>
             <Controller
@@ -262,7 +296,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
             </div>
 
             <div className="flex items-center justify-between text-brand-muted">
-              <span>Subtotal ({quantity} {quantity === 1 ? 'ticket' : 'tickets'})</span>
+              <span>Subtotal ({quantity} {quantity === 1 ? 'seat' : 'seats'})</span>
               <span className="font-mono text-brand-text">{koboToNaira(totals.baseKobo)}</span>
             </div>
 

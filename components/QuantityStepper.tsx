@@ -66,7 +66,7 @@ export const QuantityStepper: React.FC<QuantityStepperProps> = ({
           {value}
         </span>
         <span className="text-[9px] font-semibold uppercase tracking-wider text-brand-muted mt-0.5">
-          {value === 1 ? 'Pass' : 'Passes'}
+          {value === 1 ? 'Seat' : 'Seats'}
         </span>
       </div>
 

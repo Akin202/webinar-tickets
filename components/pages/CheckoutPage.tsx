@@ -11,7 +11,7 @@ import {
   Ticket as TicketIcon,
   CheckCircle2,
 } from 'lucide-react';
-import { eventConfig } from '@/config/event.config';
+import { eventConfig, doorsOpenIso } from '@/config/event.config';
 import { CheckoutValues, PurchaseState, Order, Ticket } from '@/types/ticketing';
 import { CheckoutForm } from '@/components/CheckoutForm';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
@@ -26,6 +26,10 @@ import {
 } from '@/lib/data-access';
 import { IS_DEV } from '@/lib/dev-mode';
 import { useDevState } from '@/components/dev/DevStateProvider';
+
+const EVENT_DATE_LINE = new Date(doorsOpenIso).toLocaleDateString('en-GB', {
+  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Lagos',
+});
 
 export const CheckoutPage: React.FC = () => {
   const { forcedPurchaseState: forcedState, setForcedPurchaseState } = useDevState();
@@ -44,12 +48,20 @@ export const CheckoutPage: React.FC = () => {
   // this gate can go.
   const [availabilityChecked, setAvailabilityChecked] = useState<boolean>(false);
   const [currentPriceKobo, setCurrentPriceKobo] = useState<number>(eventConfig.ticketing.priceKobo);
+  // Seat count chosen on the event page (?qty=). Read after mount: the form
+  // is not rendered until the availability check finishes, so there is no
+  // server/client mismatch to hydrate.
+  const [initialQuantity, setInitialQuantity] = useState<number>(1);
 
   // Whether the form can be shown at all. Without this the sales_closed and
   // sold_out screens existed but nothing ever reached them — the admin toggle
   // would have been invisible to buyers.
   useEffect(() => {
     let cancelled = false;
+    const requested = Number(new URLSearchParams(window.location.search).get('qty'));
+    if (Number.isInteger(requested) && requested >= 1) {
+      setInitialQuantity(Math.min(requested, eventConfig.ticketing.maxPerOrder));
+    }
     (async () => {
       try {
         const summary = await getPublicSalesCounter();
@@ -91,6 +103,7 @@ export const CheckoutPage: React.FC = () => {
         buyerName: values.fullName,
         buyerEmail: values.email,
         buyerPhone: values.phone,
+        attendeeType: values.attendeeType,
         quantity: values.quantity,
         marketingOptIn: values.marketingOptIn,
       });
@@ -275,7 +288,7 @@ export const CheckoutPage: React.FC = () => {
                 Payment Confirmed
               </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-text">
-                You're In! See You at The Final Lap!
+                You&apos;re in. See you at the Summit.
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
                 Your ticket order has been confirmed and registered for {eventConfig.event.name}.
@@ -335,23 +348,19 @@ export const CheckoutPage: React.FC = () => {
                 Tickets Are Sold Out!
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
-                All {eventConfig.ticketing.capacity} tickets for {eventConfig.event.name} have been claimed by graduating engineers.
+                All {eventConfig.ticketing.capacity} tickets for {eventConfig.event.name} are taken.
               </p>
             </div>
 
-            {/* There was a "cancellation waitlist" form here. It stored
-                nothing, notified nobody and had no table behind it — it
-                collected a phone number and dropped it. Someone who missed
-                out would have walked away believing they were on a list.
-                The WhatsApp desk below is a channel that actually reaches a
-                human, so it is the only offer made. */}
+            {/* Sold out is final: no waitlist, no released seats. The one
+                thing still on offer is the free livestream. */}
             <div className="p-6 rounded-2xl bg-brand-subtle border border-brand-border text-left space-y-2">
               <h3 className="text-sm font-bold uppercase tracking-wider text-brand-text">
-                If a spot opens up
+                You can still watch it live
               </h3>
               <p className="text-xs text-brand-muted leading-relaxed">
-                There is no automatic waitlist. Message the organisers on WhatsApp and
-                they will tell you directly whether any passes have come back.
+                There is no waitlist. The livestream is free and does not count against
+                the seats. <Link href="/#livestream" className="underline">Join the livestream</Link>.
               </p>
             </div>
 
@@ -381,8 +390,8 @@ export const CheckoutPage: React.FC = () => {
                 Ticket Sales Are Now Closed
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
-                Online ticket sales for {eventConfig.event.name} are closed. Passes may
-                still be available at the door &mdash; message the organisers to check.
+                Online ticket sales for {eventConfig.event.name} are closed. The livestream
+                is still free &mdash; <Link href="/#livestream" className="underline">join it here</Link>.
               </p>
             </div>
 
@@ -464,14 +473,15 @@ export const CheckoutPage: React.FC = () => {
                 Official Reservation Portal
               </span>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-brand-text mt-1">
-                Get Your Sign-Out Ticket
+                Get your Summit seat
               </h1>
               <p className="text-sm sm:text-base text-brand-muted mt-1">
-                {eventConfig.event.name} • {eventConfig.event.date}
+                {eventConfig.event.name} • {EVENT_DATE_LINE}
               </p>
             </div>
 
             <CheckoutForm
+              initialValues={{ quantity: initialQuantity }}
               onSubmit={handleFormSubmit}
               purchaseState={purchaseState}
               unitPriceKobo={currentPriceKobo}
@@ -482,7 +492,9 @@ export const CheckoutPage: React.FC = () => {
 
       {/* Same essential-cookies notice as the event page. This is the
           other path on which middleware stamps the anti-abuse cookie,
-          so it is the other path that owes a disclosure. */}
+          so it is the other path that owes a disclosure. The spacer lets
+          the form scroll clear of it. */}
+      <div aria-hidden="true" style={{ height: 'var(--cookie-notice-height, 0px)' }} />
       <CookieNotice />
     </main>
   );

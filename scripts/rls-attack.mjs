@@ -128,7 +128,7 @@ console.log('\n2. anon reaching money through the counter');
  *                       a seat. Marked RLSATTACK- so it is findable, and its
  *                       existence is itself the alarm.
  */
-const NO_SUCH_CODE = 'SGN-2345-6789';
+const NO_SUCH_CODE = 'FIQ-2345-6789';
 const NO_SUCH_REF = `RLSATTACK-${Date.now().toString(36).toUpperCase()}`;
 
 // Read the live gate first so the set_sales_open probe cannot change it.
@@ -216,7 +216,7 @@ for (const [fn, body] of MONEY) {
 
 console.log('\n4. ticket code enumeration');
 {
-  const guesses = ['SGN-AAAA-AAAA', 'SGN-2222-2222', 'SGN-2345-6789'];
+  const guesses = ['FIQ-AAAA-AAAA', 'FIQ-2222-2222', 'FIQ-2345-6789'];
   let exposed = 0;
   for (const code of guesses) {
     const { json } = await req(`tickets?code=eq.${code}&select=*`);

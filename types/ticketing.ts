@@ -16,6 +16,24 @@ export type TicketStatus =
   | "checked_in"   // scanned at the door
   | "void";        // manually revoked by an admin
 
+/**
+ * Who the buyer is. The Summit is a deliberately mixed room, and this is the
+ * segmentation that makes post-event follow-up worth anything. The tuple is
+ * the single definition: the zod schemas and the SQL enum are pinned to it
+ * (tests/migration-invariants.test.ts).
+ */
+export const ATTENDEE_TYPES = ['student', 'professional', 'founder'] as const;
+export type AttendeeType = (typeof ATTENDEE_TYPES)[number];
+
+/**
+ * Ticket code shape: PREFIX-XXXX-XXXX over an unambiguous alphabet (no 0/O/1/I),
+ * because codes get read aloud at the door. The SQL check constraint and
+ * private.generate_ticket_code() carry the same prefix; the invariant tests
+ * fail if they drift. Unanchored on purpose — a QR may hold a full ticket URL.
+ */
+export const TICKET_CODE_PREFIX = 'FIQ';
+export const TICKET_CODE_PATTERN = /FIQ-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}/;
+
 /** A purchase. One order may contain several tickets. */
 export interface Order {
   id: string;                    // uuid
@@ -23,6 +41,9 @@ export interface Order {
   buyerName: string;
   buyerEmail: string;
   buyerPhone: string;            // normalised to +234XXXXXXXXXX
+  /** Required for every paying buyer. Null only on an admin-issued
+   *  complimentary ticket (all money columns zero) — enforced by a CHECK. */
+  attendeeType: AttendeeType | null;
   quantity: number;
   unitPriceKobo: number;         // ALL money in kobo. Never floats.
   serviceChargeKobo: number;     // retained by FlagIQ. NOT a tax — see event.config.ts
@@ -38,7 +59,7 @@ export interface Order {
 export interface Ticket {
   id: string;                    // uuid
   orderId: string;
-  code: string;                  // human-readable, e.g. "SGN-7K2Q-9XM4". Goes in the QR.
+  code: string;                  // human-readable, e.g. "FIQ-7K2Q-9XM4". Goes in the QR.
   holderName: string;            // defaults to buyer, editable before the event
   /** The door's identity check. Denormalised from the order deliberately:
    *  the scanner caches Ticket rows in IndexedDB and never sees an Order,
@@ -276,6 +297,7 @@ export interface CheckoutValues {
   fullName: string;
   email: string;
   phone: string;
+  attendeeType: AttendeeType;
   quantity: number;
   marketingOptIn: boolean;
 }

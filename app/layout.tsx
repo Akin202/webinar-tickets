@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Bricolage_Grotesque, Inter, Space_Grotesk } from 'next/font/google';
+import { Fraunces, Instrument_Sans, JetBrains_Mono } from 'next/font/google';
 import { eventConfig } from '@/config/event.config';
 import { BrandThemeStyle } from '@/lib/theme';
 import { DevStateProvider } from '@/components/dev/DevStateProvider';
@@ -10,24 +10,29 @@ import './globals.css';
  * layout shift. The families are surfaced as CSS variables so that
  * event.config.ts stays the thing that decides which one is used where.
  */
-const bricolage = Bricolage_Grotesque({
+// Display face: one weight only (900) — it is used for headlines and prices,
+// never body copy, so every extra weight would be bytes on metered data.
+const fraunces = Fraunces({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-bricolage',
-  weight: ['700', '800'],
+  variable: '--font-fraunces',
+  weight: ['900'],
 });
 
-const inter = Inter({
+const instrumentSans = Instrument_Sans({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-inter',
-  weight: ['400', '500', '600', '700'],
+  variable: '--font-instrument',
+  weight: ['400', '500', '600'],
 });
 
-const spaceGrotesk = Space_Grotesk({
+// Codes, times and money. A third family by exception: ticket codes are read
+// aloud at the door, and a monospace face keeps 8/B and 5/S distinguishable.
+const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-space-grotesk',
+  variable: '--font-jetbrains',
+  weight: ['500', '700'],
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || eventConfig.seo.siteUrl;
@@ -71,7 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${bricolage.variable} ${inter.variable} ${spaceGrotesk.variable}`}
+      className={`${fraunces.variable} ${instrumentSans.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         {/* Brand custom properties, derived from event.config.ts. Rendered

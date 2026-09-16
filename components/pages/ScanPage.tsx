@@ -835,7 +835,7 @@ export const ScanPage: React.FC = () => {
                   id="scanner-manual-input"
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. SGN-7K2Q-9XM4"
+                  placeholder="e.g. FIQ-7K2Q-9XM4"
                   className="w-full min-h-[56px] px-4 rounded-xl bg-scan-raised border-2 border-slate-700 text-white font-mono text-center text-lg font-black tracking-wider focus:border-emerald-500 focus:outline-none uppercase"
                   autoFocus
                 />

@@ -31,10 +31,9 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 const DISMISSED_KEY = 'sot_cookie_notice_v1';
 
 /**
- * Read by the sticky mobile buy bar in EventPage, which offsets itself upward
- * by this much so the notice can never sit on top of the "Buy Pass" CTA. A
- * banner that covers the money path on a live sales page is worse than no
- * banner at all.
+ * Read by a bottom spacer on both buyer pages, so the page can always scroll
+ * far enough that the notice never sits on top of the Pay button. A banner
+ * that covers the money path on a live sales page is worse than no banner.
  */
 const HEIGHT_VAR = '--cookie-notice-height';
 

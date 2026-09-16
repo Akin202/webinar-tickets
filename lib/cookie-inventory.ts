@@ -47,7 +47,7 @@ export const SUPABASE_AUTH_COOKIE_PREFIX = 'sb-';
  * /cookies page is a static server component that has no business loading it.
  * tests/cookie-inventory.test.ts reads offline-db.ts and fails if the two drift.
  */
-export const DOOR_DEVICE_STORAGE_KEY = 'signout_scanner_device_id';
+export const DOOR_DEVICE_STORAGE_KEY = 'summit_scanner_device_id';
 
 export const storageInventory: readonly StorageEntry[] = [
   {

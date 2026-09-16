@@ -14,6 +14,7 @@ export function orderFromRow(row: any): Order {
     buyerName: row.buyer_name,
     buyerEmail: row.buyer_email,
     buyerPhone: row.buyer_phone,
+    attendeeType: row.attendee_type ?? null,
     quantity: row.quantity,
     unitPriceKobo: row.unit_price_kobo,
     serviceChargeKobo: row.service_charge_kobo,

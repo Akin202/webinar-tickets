@@ -5,7 +5,7 @@
 
    Three deliberately separate families:
 
-   1. --brand-*  The party. Base values are INJECTED from
+   1. --brand-*  The public event pages. Base values are INJECTED from
                  event.config.ts at runtime (see lib/theme.tsx); the
                  values here are only a fallback for a JS-less render.
                  The neutral scale is derived via color-mix so that
@@ -24,36 +24,38 @@
 
 :root {
   /* --- brand base: overridden by the injected block from config --- */
-  --brand-primary: #c8b88a;
-  --brand-accent: #e11d48;
-  --brand-surface: #070709;
-  --brand-text: #f5f5f4;
-  --font-heading: var(--font-bricolage), system-ui, -apple-system, sans-serif;
-  --font-body: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --brand-primary: #ca3a32;
+  --brand-accent: #e8502a;
+  --brand-surface: #f5f4f0;
+  --brand-text: #030617;
+  --font-heading: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-instrument), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
-  /* --- brand derived: follow whatever the config sets above --- */
-  --brand-primary-hover: #d8c9a3;
-  --brand-surface-raised: #111114;
-  --brand-surface-card: #111114;
-  --brand-surface-card-hover: #18181c;
-  --brand-surface-subtle: #1c1c21;
-  --brand-border: #232328;
-  --brand-border-strong: #33333b;
+  /* --- brand derived: light editorial ground (paper, ink, Flag Red) ---
+     Muted and dim text are both >= 4.5:1 on the paper surface. */
+  --brand-primary-hover: #b3312a;
+  --brand-surface-raised: #ffffff;
+  --brand-surface-card: #ffffff;
+  --brand-surface-card-hover: #fbfaf7;
+  --brand-surface-subtle: #eeece6;
+  --brand-border: #dfddd6;
+  --brand-border-strong: #030617;
   --brand-border-focus: var(--brand-primary);
   --brand-card-danger: color-mix(in oklab, var(--brand-surface) 88%, var(--brand-urgent));
-  --brand-text-muted: #a1a1aa;
-  --brand-text-dim: #71717a;
+  --brand-text-muted: #3a4050;
+  --brand-text-dim: #5e6576;
 
   /* --- brand status (public surfaces only) --- */
-  --brand-urgent: #ef4444;
-  --brand-urgent-bg: #450a0a;
-  --brand-urgent-border: #7f1d1d;
-  --brand-success: #22c55e;
-  --brand-success-bg: #052e16;
-  --brand-success-border: #15803d;
-  --brand-warning: #e4572e;
-  --brand-warning-bg: color-mix(in oklab, var(--brand-primary) 15%, black);
-  --brand-warning-border: color-mix(in oklab, var(--brand-primary) 35%, black);
+  --brand-urgent: #b42318;
+  --brand-urgent-bg: #fbede9;
+  --brand-urgent-border: #f2c4b8;
+  --brand-success: #1f7a52;
+  --brand-success-bg: #e7f3ed;
+  --brand-success-border: #a9d4bf;
+  --brand-warning: #a15c07;
+  --brand-warning-bg: #fdf3e1;
+  --brand-warning-border: #f1d29b;
 
   /* --- tool chrome: /admin, /scan/login --- */
   --tool-surface: #f8f9fa;
@@ -137,7 +139,7 @@
 }
 
 .font-mono-code {
-  font-family: var(--font-space-grotesk), ui-monospace, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
 }
 
 .ember-glow {

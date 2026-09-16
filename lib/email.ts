@@ -84,8 +84,8 @@ function buildHtml(input: TicketEmailInput, ticketUrl: string): string {
       } ready.
     </p>
     <p style="margin:0 0 22px;font-size:15px;color:#3f4654;line-height:1.6;">
-      Open the link below and save your pass to your phone before the night —
-      the hall has no usable network, so do not plan on loading it at the door.
+      Open the link below and save your pass to your phone before the day —
+      venue wifi is unreliable, so do not plan on loading it at the door.
     </p>
   </td></tr>
 
@@ -112,8 +112,8 @@ function buildHtml(input: TicketEmailInput, ticketUrl: string): string {
   <tr><td style="padding:0 24px 28px;">
     <p style="margin:0;font-size:13px;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:12px 14px;line-height:1.6;">
       <strong>One entry only.</strong> Each code works once — the first scan admits,
-      and a forwarded copy is refused. Door staff will confirm the phone number on
-      the pass, so bring the one you bought with.
+      and a forwarded copy is refused. Door staff may ask for the last four digits
+      of the phone number you bought with.
     </p>
   </td></tr>
 
@@ -121,8 +121,7 @@ function buildHtml(input: TicketEmailInput, ticketUrl: string): string {
     Questions? Message the organisers on WhatsApp:
     <a href="https://wa.me/${eventConfig.support.whatsappNumber.replace(/\D/g, '')}" style="color:#0b0c10;">
       ${escapeHtml(eventConfig.support.whatsappNumber)}
-    </a><br>
-    ${escapeHtml(eventConfig.event.policies.refundPolicy)}.
+    </a>
   </td></tr>
 
 </table>
@@ -145,11 +144,10 @@ function buildText(input: TicketEmailInput, ticketUrl: string): string {
     `Where: ${eventConfig.event.venueName}, ${eventConfig.event.venueAddress}`,
     '',
     'One entry only. Each code works once — the first scan admits, and a',
-    'forwarded copy is refused. Door staff will confirm the phone number on',
-    'the pass.',
+    'forwarded copy is refused. Door staff may ask for the last four digits',
+    'of the phone number you bought with.',
     '',
     `Help on WhatsApp: ${eventConfig.support.whatsappNumber}`,
-    eventConfig.event.policies.refundPolicy,
   ].join('\n');
 }
 

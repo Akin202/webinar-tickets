@@ -271,7 +271,7 @@ describe.skipIf(!ENABLED || !DOOR_JWT)('the door race', () => {
   it('reports an unknown code as not_found, never as admitted', async () => {
     const result = await rpc(
       'record_check_in',
-      { p_code: 'SGN-2345-6789', p_device: 'door-a', p_scanned_at: new Date().toISOString() },
+      { p_code: 'FIQ-2345-6789', p_device: 'door-a', p_scanned_at: new Date().toISOString() },
       DOOR_JWT
     );
     expect(result.row?.result).toBe('not_found');

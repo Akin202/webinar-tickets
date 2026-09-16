@@ -24,6 +24,7 @@ export function brandCssVars(): string {
     `--brand-text:${b.ink};`,
     `--font-heading:${b.fontHeading};`,
     `--font-body:${b.fontBody};`,
+    `--font-mono:${b.fontMono};`,
     '}',
   ].join('');
 }

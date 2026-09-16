@@ -42,27 +42,27 @@ describe('formatPhoneForDisplay', () => {
 
 describe('extractTicketCode', () => {
   it('accepts a bare code in either case', () => {
-    expect(extractTicketCode('SGN-2345-6789')).toBe('SGN-2345-6789');
-    expect(extractTicketCode('  sgn-2345-6789 ')).toBe('SGN-2345-6789');
+    expect(extractTicketCode('FIQ-2345-6789')).toBe('FIQ-2345-6789');
+    expect(extractTicketCode('  fiq-2345-6789 ')).toBe('FIQ-2345-6789');
   });
 
   it('pulls the code out of a full ticket URL', () => {
-    expect(extractTicketCode('https://lastdance.tickitid.online/ticket/SGN-2345-6789')).toBe(
-      'SGN-2345-6789'
+    expect(extractTicketCode('https://lastdance.tickitid.online/ticket/FIQ-2345-6789')).toBe(
+      'FIQ-2345-6789'
     );
   });
 
   it('pulls the code out of forwarded WhatsApp text', () => {
     expect(
-      extractTicketCode('hey use my pass SGN-ABCD-2345 see you there')
-    ).toBe('SGN-ABCD-2345');
+      extractTicketCode('hey use my pass FIQ-ABCD-2345 see you there')
+    ).toBe('FIQ-ABCD-2345');
   });
 
   it('fails closed on anything that is not a code', () => {
     // A partial entry must not match. The scanner used to do a two-way
-    // substring test, so typing "SGN" admitted whoever sat first in the
+    // substring test, so typing "FIQ" admitted whoever sat first in the
     // manifest — which at a door is the wrong person.
-    for (const junk of ['', 'SGN', 'SGN-234', 'hello', '1234-5678']) {
+    for (const junk of ['', 'FIQ', 'FIQ-234', 'hello', '1234-5678']) {
       expect(extractTicketCode(junk)).toBeNull();
     }
   });
@@ -70,13 +70,13 @@ describe('extractTicketCode', () => {
   it('rejects the lookalike characters the alphabet deliberately excludes', () => {
     // The ticket alphabet is [2-9A-HJ-NP-Z]: no 0/O and no 1/I, so a human
     // reading a code aloud at a door cannot produce a different valid one.
-    expect(extractTicketCode('SGN-0OI1-2345')).toBeNull();
-    expect(extractTicketCode('SGN-OOOO-2345')).toBeNull();
-    expect(extractTicketCode('SGN-IIII-2345')).toBeNull();
+    expect(extractTicketCode('FIQ-0OI1-2345')).toBeNull();
+    expect(extractTicketCode('FIQ-OOOO-2345')).toBeNull();
+    expect(extractTicketCode('FIQ-IIII-2345')).toBeNull();
     // L is not excluded by the ticket-code check constraint, so it must be
     // accepted here — the scanner's parser and the database's CHECK have to
     // agree on the alphabet or valid passes read as NOT FOUND at the door.
-    expect(extractTicketCode('SGN-LLLL-2345')).toBe('SGN-LLLL-2345');
+    expect(extractTicketCode('FIQ-LLLL-2345')).toBe('FIQ-LLLL-2345');
   });
 });
 

@@ -17,7 +17,7 @@ export default function Icon() {
       <div
         style={{
           fontSize: 20,
-          background: '#060709',
+          background: eventConfig.brand.ink,
           width: '100%',
           height: '100%',
           display: 'flex',

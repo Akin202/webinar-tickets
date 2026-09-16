@@ -66,7 +66,7 @@ describe('sendTicketEmail', () => {
     });
     const body = sentBody(fetchMock);
     expect(body.html).toContain('https://tickets.example.test/ticket/LD26-ABCDEFG-HJKMNPQ');
-    expect(body.html).not.toMatch(/SGN-[2-9A-HJ-NP-Z]{4}/);
+    expect(body.html).not.toMatch(/FIQ-[2-9A-HJ-NP-Z]{4}/);
     expect(body.text).toContain('https://tickets.example.test/ticket/LD26-ABCDEFG-HJKMNPQ');
   });
 

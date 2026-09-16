@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { computeOrderTotals, normaliseNgPhone } from '@/types/ticketing';
+import { ATTENDEE_TYPES, computeOrderTotals, normaliseNgPhone } from '@/types/ticketing';
 import { eventConfig } from '@/config/event.config';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { paystackInitialize } from '@/lib/api/paystack';
@@ -13,6 +13,7 @@ const checkoutSchema = z.object({
   buyerName: z.string().trim().min(2).max(120),
   buyerEmail: z.string().trim().email().max(254),
   buyerPhone: z.string().trim().min(7).max(20),
+  attendeeType: z.enum(ATTENDEE_TYPES),
   quantity: z.number().int().min(1).max(eventConfig.ticketing.maxPerOrder),
   marketingOptIn: z.boolean().optional().default(false),
 });
@@ -93,6 +94,7 @@ export async function POST(req: Request) {
       p_fee_kobo: totals.gatewayFeeKobo,
       p_total_kobo: totals.totalKobo,
       p_marketing_opt_in: parsed.marketingOptIn,
+      p_attendee_type: parsed.attendeeType,
     });
     createError = created.error;
     const createdRow = (Array.isArray(created.data) ? created.data[0] : created.data) as { outcome?: string } | null;
@@ -135,6 +137,7 @@ export async function POST(req: Request) {
         buyer_name: parsed.buyerName,
         buyer_phone: buyerPhone,
         quantity: parsed.quantity,
+        attendee_type: parsed.attendeeType,
         event: eventConfig.event.name,
       },
     });

@@ -30,7 +30,7 @@ export async function GET(req: Request) {
   const supabase = getSupabaseAdminClient();
   const { data, error } = await supabase
     .from('orders')
-    .select('reference, buyer_name, buyer_email, buyer_phone, quantity, total_kobo, status, created_at')
+    .select('reference, buyer_name, buyer_email, buyer_phone, attendee_type, quantity, total_kobo, status, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -45,9 +45,9 @@ export async function GET(req: Request) {
     new_value: `${data?.length ?? 0} rows`,
   });
 
-  const headers = ['Order Reference', 'Buyer Name', 'Email', 'Phone', 'Quantity', 'Total NGN', 'Status', 'Date'];
+  const headers = ['Order Reference', 'Buyer Name', 'Email', 'Phone', 'Attendee Type', 'Quantity', 'Total NGN', 'Status', 'Date'];
   const rows = (data ?? []).map((o) =>
-    [o.reference, o.buyer_name, o.buyer_email, o.buyer_phone, o.quantity, o.total_kobo / 100, o.status, o.created_at]
+    [o.reference, o.buyer_name, o.buyer_email, o.buyer_phone, o.attendee_type ?? '', o.quantity, o.total_kobo / 100, o.status, o.created_at]
       .map(csvField)
       .join(',')
   );

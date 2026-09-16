@@ -4,7 +4,7 @@
  */
 
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { Ticket } from '@/types/ticketing';
+import { Ticket, TICKET_CODE_PATTERN } from '@/types/ticketing';
 
 interface ScannerDB extends DBSchema {
   manifest: {
@@ -24,8 +24,8 @@ interface ScannerDB extends DBSchema {
   };
 }
 
-const DB_NAME = 'signout_scanner_manifest_db';
-const DEVICE_ID_KEY = 'signout_scanner_device_id';
+const DB_NAME = 'summit_scanner_manifest_db';
+const DEVICE_ID_KEY = 'summit_scanner_device_id';
 const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<ScannerDB>> | null = null;
@@ -132,9 +132,9 @@ export async function getCachedTicketsCount(): Promise<number> {
   }
 }
 
-/** The canonical code shape. A QR may carry a bare code or a full ticket
- *  URL, so pull the code out of whatever was scanned. */
-const CODE_PATTERN = /SGN-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}/;
+/** The canonical code shape, defined once in the contract. A QR may carry a
+ *  bare code or a full ticket URL, so pull the code out of whatever was scanned. */
+const CODE_PATTERN = TICKET_CODE_PATTERN;
 
 /**
  * Normalises a scanned payload to a ticket code, or null if it contains none.
@@ -149,7 +149,7 @@ export function extractTicketCode(rawCode: string): string | null {
  * Finds a ticket in the local cache.
  *
  * EXACT match on the extracted code — never a substring test. The previous
- * two-way `includes` meant a short manual entry ("SGN") matched whichever
+ * two-way `includes` meant a short manual entry ("FIQ") matched whichever
  * ticket happened to sit first in the manifest, which at a door admits the
  * wrong person. A partial code must fail closed.
  */

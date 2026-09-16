@@ -7,6 +7,7 @@ export const SAMPLE_ORDER: Order = {
   buyerName: 'Emeka Okafor',
   buyerEmail: 'emeka.okafor@example.com',
   buyerPhone: '+2348012345678',
+  attendeeType: 'professional',
   quantity: 2,
   unitPriceKobo: eventConfig.ticketing.priceKobo,
   serviceChargeKobo: Math.round(eventConfig.ticketing.priceKobo * 2 * eventConfig.ticketing.serviceChargeRate),
@@ -22,7 +23,7 @@ export const SAMPLE_TICKETS: Ticket[] = [
   {
     id: 'tkt_sample_01',
     orderId: 'ord_sample_882194',
-    code: 'SGN-7K2Q-9XM4',
+    code: 'FIQ-7K2Q-9XM4',
     holderName: 'Emeka Okafor',
     holderPhone: '+2348012345678',
     status: 'valid',
@@ -34,7 +35,7 @@ export const SAMPLE_TICKETS: Ticket[] = [
   {
     id: 'tkt_sample_02',
     orderId: 'ord_sample_882194',
-    code: 'SGN-8P4L-3YT9',
+    code: 'FIQ-8P4L-3YT9',
     holderName: 'Chiamaka Adeleke',
     holderPhone: '+2348098765432',
     status: 'valid',
@@ -46,7 +47,7 @@ export const SAMPLE_TICKETS: Ticket[] = [
   {
     id: 'tkt_sample_03',
     orderId: 'ord_sample_882194',
-    code: 'SGN-9M1X-2KD8',
+    code: 'FIQ-9M1X-2KD8',
     holderName: 'Tunde Bakare',
     holderPhone: '+2348033334444',
     status: 'void',
@@ -58,7 +59,7 @@ export const SAMPLE_TICKETS: Ticket[] = [
   {
     id: 'tkt_sample_04',
     orderId: 'ord_sample_882194',
-    code: 'SGN-4J7V-8RN1',
+    code: 'FIQ-4J7V-8RN1',
     holderName: 'Zainab Bello',
     holderPhone: '+2348055556666',
     status: 'valid',

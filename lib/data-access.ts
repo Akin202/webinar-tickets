@@ -8,6 +8,7 @@ import type {
   EmailCampaign,
   EmailCampaignKind,
   EmailCampaignAudience,
+  AttendeeType,
 } from '@/types/ticketing';
 import { eventConfig } from '@/config/event.config';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
@@ -122,10 +123,13 @@ export async function setSalesOpen(open: boolean): Promise<void> {
  * config — nothing money-shaped leaves this client. The returned
  * authorizationUrl is Paystack's hosted checkout; navigate to it.
  */
+// Signature changed on purpose for the Summit: attendeeType was added. Required
+// server-side — the checkout route rejects a paying order without it.
 export async function initiatePurchase(input: {
   buyerName: string;
   buyerEmail: string;
   buyerPhone: string;
+  attendeeType: AttendeeType;
   quantity: number;
   marketingOptIn?: boolean;
 }): Promise<{ authorizationUrl: string; reference: string }> {

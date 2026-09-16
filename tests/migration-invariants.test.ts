@@ -1,22 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { eventConfig } from '@/config/event.config';
+import { eventConfig, eventEndsIso } from '@/config/event.config';
+import { ATTENDEE_TYPES, TICKET_CODE_PATTERN, TICKET_CODE_PREFIX } from '@/types/ticketing';
 
 /**
- * Constants that exist in BOTH the config and the SQL, pinned against each
- * other.
+ * Constants that exist in BOTH the config/contract and the SQL, pinned against
+ * each other.
  *
  * The database is the enforcer — checkout reads event_settings and the guards
- * inside create_pending_order, not config/event.config.ts. So whenever a number
+ * inside create_pending_order, not config/event.config.ts. So whenever a value
  * is duplicated into SQL, the config becomes documentation that can quietly
- * stop being true. That already happened once: the event moved to 26 August,
- * salesHardStopAt moved to the 27th, and the live sales_hard_stop row stayed on
- * the 26th — which would have closed sales on the morning of the party with
- * most of the hall unsold. Nobody noticed because nothing compared them.
+ * stop being true. On the build this was forked from, the hard stop in config
+ * moved and the enforced row did not — it would have closed sales on the
+ * morning of the event with most of the room unsold.
  *
- * These run offline against the migration text, so they guard the intent at
- * commit time. tests/integration.test.ts checks the deployed row separately.
+ * These run offline against the migration text, so they guard intent at commit
+ * time. tests/integration.test.ts checks the deployed row separately.
  */
 
 const MIGRATIONS_DIR = resolve(import.meta.dirname, '../supabase/migrations');
@@ -31,15 +31,17 @@ function latestMigrationMatching(suffix: string): string {
   return readFileSync(resolve(MIGRATIONS_DIR, file), 'utf8');
 }
 
+const intervalsIn = (text: string) =>
+  [...text.matchAll(/interval '(\d+) minutes'/g)].map((m) => m[1]);
+
 const sql = latestMigrationMatching('_hold_window_and_phone_cap.sql');
 
 describe('hold window and phone cap migration', () => {
   it('uses one and the same hold window in both functions', () => {
-    const intervals = [...sql.matchAll(/interval '(\d+) minutes'/g)].map((m) => m[1]);
-
     // create_pending_order sweeps by it; get_public_counter filters by it. If
     // they disagree the page advertises seats checkout will refuse, or hides
     // seats it would have sold.
+    const intervals = intervalsIn(sql);
     expect(intervals.length).toBe(2);
     expect(new Set(intervals).size).toBe(1);
   });
@@ -49,42 +51,18 @@ describe('hold window and phone cap migration', () => {
     expect(match).not.toBeNull();
     expect(Number(match![1])).toBe(eventConfig.ticketing.maxPerOrder);
   });
-
-  it('writes the same hard stop the config advertises', () => {
-    const match = sql.match(/v_target constant timestamptz := timestamptz '([^']+)'/);
-    expect(match).not.toBeNull();
-
-    expect(new Date(match![1]).toISOString()).toBe(
-      new Date(eventConfig.ticketing.salesHardStopAt).toISOString()
-    );
-  });
-
-  it('leaves the hard stop after the event actually ends', () => {
-    // endsAt is the morning after doorsOpen, so the backstop must clear the
-    // whole night. This is the check that would have caught the original bug
-    // even without a config to compare against.
-    const { date, endsAt, utcOffset } = eventConfig.event;
-    const eventEnd = new Date(`${date}T${endsAt}:00${utcOffset}`);
-    const nextMorning = new Date(eventEnd.getTime() + 24 * 60 * 60 * 1000);
-
-    expect(new Date(eventConfig.ticketing.salesHardStopAt).getTime()).toBeGreaterThan(
-      nextMorning.getTime() - 24 * 60 * 60 * 1000
-    );
-  });
 });
 
 /**
  * The dynamic-pricing migration. These pin the two ways it could break the
- * money path, both found by reading it rather than by running it — it had
- * never been applied to any database when these were written.
+ * money path.
  */
 const pricingSql = latestMigrationMatching('_dynamic_pricing_and_email_campaigns.sql');
 
 describe('dynamic pricing migration', () => {
   it('drops get_public_counter before recreating it', () => {
     // It gains a current_price_kobo output column, and Postgres refuses to
-    // change an existing function's return type in place. CREATE OR REPLACE
-    // aborts the whole migration, so the DROP has to come first.
+    // change an existing function's return type in place.
     const dropAt = pricingSql.indexOf('drop function if exists public.get_public_counter()');
     const createAt = pricingSql.indexOf('create function public.get_public_counter()');
 
@@ -94,9 +72,6 @@ describe('dynamic pricing migration', () => {
   });
 
   it('exempts zero-money comps from the price equality check', () => {
-    // /api/admin/comp calls create_pending_order with p_unit_price_kobo 0, so
-    // without this every complimentary ticket returns price_changed and the
-    // route falls through to mark_order_paid on a reference with no order row.
     expect(pricingSql).toContain('p_unit_price_kobo = 0');
     expect(pricingSql).toContain('p_service_charge_kobo = 0');
     expect(pricingSql).toContain('p_fee_kobo = 0');
@@ -104,26 +79,85 @@ describe('dynamic pricing migration', () => {
   });
 
   it('requires every money column to be zero for that exemption', () => {
-    // A partially-zeroed call must NOT reach the exemption, or the price check
-    // becomes optional for anything that zeroes one column.
     const guard = pricingSql.match(
       /if not \(p_unit_price_kobo = 0[\s\S]*?\)\s*\n\s*and p_unit_price_kobo is distinct from/
     );
     expect(guard).not.toBeNull();
   });
 
-  it('seeds the price the config advertises', () => {
-    const match = pricingSql.match(/add column current_price_kobo integer not null default (\d+)/);
-    expect(match).not.toBeNull();
-    expect(Number(match![1])).toBe(eventConfig.ticketing.priceKobo);
-  });
-
   it('keeps the hold window identical in both functions it rewrites', () => {
-    // Same invariant as the previous migration: create_pending_order sweeps by
-    // this interval and get_public_counter filters by it.
-    const intervals = [...pricingSql.matchAll(/interval '(\d+) minutes'/g)].map((m) => m[1]);
-
+    const intervals = intervalsIn(pricingSql);
     expect(intervals.length).toBe(2);
     expect(new Set(intervals).size).toBe(1);
+  });
+});
+
+/**
+ * The Summit migration: the latest definition of create_pending_order, the
+ * ticket code shape, attendee type, and the enforced event_settings row.
+ */
+const summitSql = latestMigrationMatching('_summit_codes_attendee_type_and_settings.sql');
+
+describe('summit migration', () => {
+  it("sweeps holds by the same window get_public_counter still filters by", () => {
+    // Only create_pending_order is redefined here; the counter it must agree
+    // with is still the one from the pricing migration.
+    const summitIntervals = intervalsIn(summitSql);
+    expect(summitIntervals.length).toBe(1);
+    expect(new Set([...summitIntervals, ...intervalsIn(pricingSql)]).size).toBe(1);
+  });
+
+  it('caps per-phone holds at exactly maxPerOrder', () => {
+    const match = summitSql.match(/if v_phone_held \+ p_quantity > (\d+) then/);
+    expect(match).not.toBeNull();
+    expect(Number(match![1])).toBe(eventConfig.ticketing.maxPerOrder);
+  });
+
+  it('keeps the all-zero comp exemption on the price check', () => {
+    expect(
+      summitSql.match(
+        /if not \(p_unit_price_kobo = 0 and p_service_charge_kobo = 0\s*\n\s*and p_fee_kobo = 0 and p_total_kobo = 0\)\s*\n\s*and p_unit_price_kobo is distinct from/
+      )
+    ).not.toBeNull();
+  });
+
+  it('uses the contract ticket code prefix in the constraint AND the generator', () => {
+    // Changing one without the other means the first paid order mints a code
+    // its own table rejects — after Paystack has taken the money.
+    expect(summitSql).toContain(
+      `check (code ~ '^${TICKET_CODE_PREFIX}-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}$')`
+    );
+    expect(summitSql).toContain(`return '${TICKET_CODE_PREFIX}-' || substr(chars, 1, 4)`);
+    expect(TICKET_CODE_PATTERN.source).toBe(`${TICKET_CODE_PREFIX}-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}`);
+  });
+
+  it('declares exactly the attendee types the contract lists', () => {
+    const match = summitSql.match(/create type public\.attendee_type as enum \(([^)]+)\)/);
+    expect(match).not.toBeNull();
+    const values = match![1].split(',').map((v) => v.trim().replace(/'/g, ''));
+    expect(values).toEqual([...ATTENDEE_TYPES]);
+    expect(eventConfig.attendeeTypes.map((t) => t.value)).toEqual([...ATTENDEE_TYPES]);
+  });
+
+  it('lets only a zero-money order skip attendee type', () => {
+    expect(summitSql).toContain('check (attendee_type is not null or total_kobo = 0)');
+  });
+
+  it('seeds the capacity, price and hard stop the config advertises', () => {
+    const capacity = summitSql.match(/v_capacity\s+constant integer\s+:= (\d+);/);
+    const price = summitSql.match(/v_price\s+constant integer\s+:= (\d+);/);
+    const hardStop = summitSql.match(/v_hard_stop constant timestamptz := timestamptz '([^']+)'/);
+
+    expect(Number(capacity![1])).toBe(eventConfig.ticketing.capacity);
+    expect(Number(price![1])).toBe(eventConfig.ticketing.priceKobo);
+    expect(new Date(hardStop![1]).toISOString()).toBe(
+      new Date(eventConfig.ticketing.salesHardStopAt).toISOString()
+    );
+  });
+
+  it('stops sales no later than the event ends', () => {
+    expect(new Date(eventConfig.ticketing.salesHardStopAt).getTime()).toBeLessThanOrEqual(
+      new Date(eventEndsIso).getTime()
+    );
   });
 });
