@@ -34,7 +34,7 @@ vi.mock('next/server', async () => {
 
 const { POST } = await import('@/app/api/webhooks/paystack/route');
 
-function chargeSuccess(reference = 'LD26-ABCDEFG-HJKMNPQ', amountKobo = 322_500) {
+function chargeSuccess(reference = 'FIQ26-ABCDEFG-HJKMNPQ', amountKobo = 322_500) {
   return JSON.stringify({
     event: 'charge.success',
     data: { reference, amount: amountKobo, channel: 'card' },
@@ -65,7 +65,7 @@ describe('paystack webhook signature gate', () => {
     const res = await POST(request(body, sign(body)));
     expect(res.status).toBe(200);
     expect(rpc).toHaveBeenCalledWith('mark_order_paid', expect.objectContaining({
-      p_reference: 'LD26-ABCDEFG-HJKMNPQ',
+      p_reference: 'FIQ26-ABCDEFG-HJKMNPQ',
       p_amount_kobo: 322_500,
     }));
   });
@@ -85,9 +85,9 @@ describe('paystack webhook signature gate', () => {
   it('refuses a body tampered with after signing', async () => {
     // The attack this exists to stop: take a real ₦3,375 webhook, keep its
     // signature, and swap the reference for someone else's order.
-    const original = chargeSuccess('LD26-ABCDEFG-HJKMNPQ');
+    const original = chargeSuccess('FIQ26-ABCDEFG-HJKMNPQ');
     const signature = sign(original);
-    const tampered = chargeSuccess('LD26-2222222-3333333');
+    const tampered = chargeSuccess('FIQ26-2222222-3333333');
     const res = await POST(request(tampered, signature));
     expect(res.status).toBe(401);
     expect(rpc).not.toHaveBeenCalled();
@@ -134,7 +134,7 @@ describe('paystack webhook signature gate', () => {
     // rejection happens on size alone, before the signature is ever checked.
     const body = JSON.stringify({
       event: 'charge.success',
-      data: { reference: 'LD26-ABCDEFG-HJKMNPQ', amount: 322_500, pad: 'x'.repeat(70_000) },
+      data: { reference: 'FIQ26-ABCDEFG-HJKMNPQ', amount: 322_500, pad: 'x'.repeat(70_000) },
     });
     const res = await POST(request(body, sign(body)));
     expect(res.status).toBe(413);

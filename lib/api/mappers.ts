@@ -1,4 +1,4 @@
-import type { Order, Ticket } from '@/types/ticketing';
+import { phoneLast4, type Order, type Ticket } from '@/types/ticketing';
 
 /**
  * snake_case database rows -> camelCase contract types. The contract in
@@ -35,6 +35,7 @@ export function ticketFromRow(row: any): Ticket {
     code: row.code,
     holderName: row.holder_name,
     holderPhone: row.holder_phone,
+    holderPhoneLast4: phoneLast4(row.holder_phone),
     status: row.status,
     issuedAt: row.issued_at,
     checkedInAt: row.checked_in_at,

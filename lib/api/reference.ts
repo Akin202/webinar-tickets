@@ -49,5 +49,5 @@ function randomChars(count: number): string {
  */
 export function generateReference(): string {
   const chars = randomChars(14);
-  return `LD26-${chars.slice(0, 7)}-${chars.slice(7)}`;
+  return `FIQ26-${chars.slice(0, 7)}-${chars.slice(7)}`;
 }

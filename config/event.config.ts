@@ -28,7 +28,7 @@ export const eventConfig = {
     venueName: "AI UniPod",
     venueArea: "University of Lagos",
     venueAddress: "AI UniPod, University of Lagos, Akoka, Lagos",
-    venueMapUrl: "TODO(summit): Google Maps link to the AI UniPod",
+    venueMapUrl: "https://maps.app.goo.gl/xAkVBRoRgQfqvSn99",
   },
 
   ticketing: {
@@ -236,14 +236,14 @@ export const eventConfig = {
     // The door terminal's Supabase Auth identity; the 6-digit gate PIN is its
     // password. Never receives mail. Must be final BEFORE seed-staff.mjs runs —
     // changing it afterwards orphans the door account.
-    scannerEmail: "scanner@summit-domain.invalid",
+    scannerEmail: "admin@flagiq.org",
   },
 
   support: {
-    whatsappNumber: "TODO(summit): +234 support WhatsApp number",
+    whatsappNumber: "+2348139927805",
     whatsappMessage: "Hi, I need help with my AI Summit ticket",
     // Must be a real inbox. A host that is a CNAME to Vercel cannot hold MX.
-    email: "support@summit-domain.invalid",
+    email: "admin@flagiq.org",
     organiserName: "FlagIQ",
   },
 

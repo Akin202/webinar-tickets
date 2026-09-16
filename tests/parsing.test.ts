@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normaliseNgPhone, formatPhoneForDisplay } from '@/types/ticketing';
+import { normaliseNgPhone, formatPhoneForDisplay, phoneLast4 } from '@/types/ticketing';
 import { extractTicketCode } from '@/lib/offline-db';
 import { csvField } from '@/lib/api/csv';
 import { generateReference } from '@/lib/api/reference';
@@ -37,6 +37,20 @@ describe('formatPhoneForDisplay', () => {
   it('passes anything unrecognised through untouched rather than mangling it', () => {
     expect(formatPhoneForDisplay('+1 415 555 0100')).toBe('+1 415 555 0100');
     expect(formatPhoneForDisplay('')).toBe('');
+  });
+});
+
+describe('phoneLast4', () => {
+  // Door devices get the last four digits and nothing more. The SQL is the
+  // real enforcement; this keeps the admin-side mapper in the same shape.
+  it('keeps only the last four digits of a normalised number', () => {
+    expect(phoneLast4('+2348139927805')).toBe('7805');
+  });
+
+  it('returns null when there is nothing usable to show', () => {
+    expect(phoneLast4(null)).toBeNull();
+    expect(phoneLast4('')).toBeNull();
+    expect(phoneLast4('+23')).toBeNull();
   });
 });
 
@@ -129,7 +143,7 @@ describe('generateReference', () => {
     // L, so this asserts the 31-character set the generator actually uses
     // rather than the 32-character one tickets use.
     expect(generateReference()).toMatch(
-      /^LD26-[2-9A-HJKMNP-Z]{7}-[2-9A-HJKMNP-Z]{7}$/
+      /^FIQ26-[2-9A-HJKMNP-Z]{7}-[2-9A-HJKMNP-Z]{7}$/
     );
   });
 
@@ -147,7 +161,7 @@ describe('generateReference', () => {
     // distribution flat; a badly skewed one shows up well outside this band.
     const counts = new Map<string, number>();
     for (let i = 0; i < 20_000; i++) {
-      for (const ch of generateReference().slice(5).replace('-', '')) {
+      for (const ch of generateReference().split('-').slice(1).join('')) {
         counts.set(ch, (counts.get(ch) ?? 0) + 1);
       }
     }

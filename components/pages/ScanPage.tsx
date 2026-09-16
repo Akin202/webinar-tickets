@@ -47,7 +47,7 @@ import {
 import { useDevState } from '@/components/dev/DevStateProvider';
 import { useOfflineShell } from '@/hooks/useOfflineShell';
 import { fireScanFeedback, getFeedbackCapabilities } from '@/lib/scanner-feedback';
-import { CheckInResult, formatPhoneForDisplay, StaffUser } from '@/types/ticketing';
+import { CheckInResult, StaffUser } from '@/types/ticketing';
 import { getCurrentStaffUser } from '@/lib/data-access';
 import { eventConfig } from '@/config/event.config';
 
@@ -984,8 +984,8 @@ export const ScanPage: React.FC = () => {
                   {currentResult.ticket.holderName}
                 </h2>
                 <div className="text-2xl sm:text-3xl font-mono font-black text-emerald-100">
-                  {currentResult.ticket.holderPhone
-                    ? formatPhoneForDisplay(currentResult.ticket.holderPhone)
+                  {currentResult.ticket.holderPhoneLast4
+                    ? `PHONE ENDS ${currentResult.ticket.holderPhoneLast4}`
                     : 'NO PHONE ON FILE'}
                 </div>
                 <div className="pt-2 font-mono text-xs opacity-80">
@@ -1006,8 +1006,8 @@ export const ScanPage: React.FC = () => {
                     {currentResult.ticket.holderName}
                   </h2>
                   <p className="text-lg font-mono font-bold text-red-100">
-                    {currentResult.ticket.holderPhone
-                      ? formatPhoneForDisplay(currentResult.ticket.holderPhone)
+                    {currentResult.ticket.holderPhoneLast4
+                      ? `PHONE ENDS ${currentResult.ticket.holderPhoneLast4}`
                       : 'NO PHONE ON FILE'}
                   </p>
                 </div>

@@ -56,8 +56,8 @@ Resend · Vercel
 - **Check-in is first scan wins**, one conditional UPDATE in `record_check_in`.
   Never read-then-write.
 - **Door identity check: holder name + last 4 digits of the phone.** Door
-  devices must not cache full numbers. (Planned; the scanner still shows the
-  full number until the door phase lands.)
+  devices must not cache full numbers: `get_check_in_manifest` and
+  `record_check_in` return only `holder_phone_last4` (2026-09-16).
 - **RLS forced on every table**, all grants revoked from anon/authenticated.
   Ticket codes are generated in SQL from `gen_random_bytes`.
 - **No refund copy, no waitlist, no manual bank-transfer entry.** Owner's call:

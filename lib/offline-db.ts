@@ -4,7 +4,7 @@
  */
 
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { Ticket, TICKET_CODE_PATTERN } from '@/types/ticketing';
+import { phoneLast4, Ticket, TICKET_CODE_PATTERN } from '@/types/ticketing';
 
 interface ScannerDB extends DBSchema {
   manifest: {
@@ -26,20 +26,38 @@ interface ScannerDB extends DBSchema {
 
 const DB_NAME = 'summit_scanner_manifest_db';
 const DEVICE_ID_KEY = 'summit_scanner_device_id';
-const DB_VERSION = 2;
+// v3: scrub full phone numbers cached by earlier builds. Door rows now carry
+// only the last four digits, and a lost door phone must leak nothing more.
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase<ScannerDB>> | null = null;
 
 function getDB(): Promise<IDBPDatabase<ScannerDB>> {
   if (!dbPromise) {
     dbPromise = openDB<ScannerDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
+      async upgrade(db, oldVersion, _newVersion, tx) {
         if (!db.objectStoreNames.contains('manifest')) {
           const manifestStore = db.createObjectStore('manifest', { keyPath: 'id' });
           manifestStore.createIndex('by-code', 'code', { unique: false });
         }
         if (!db.objectStoreNames.contains('queuedCheckIns')) {
           db.createObjectStore('queuedCheckIns', { keyPath: 'id', autoIncrement: true });
+        }
+        // Rewrite in place rather than clear(): clearing would resurrect
+        // passes this phone already admitted.
+        if (oldVersion > 0 && oldVersion < 3) {
+          let cursor = await tx.objectStore('manifest').openCursor();
+          while (cursor) {
+            const t = cursor.value;
+            if (t.holderPhone) {
+              await cursor.update({
+                ...t,
+                holderPhone: null,
+                holderPhoneLast4: t.holderPhoneLast4 ?? phoneLast4(t.holderPhone),
+              });
+            }
+            cursor = await cursor.continue();
+          }
         }
       },
     });

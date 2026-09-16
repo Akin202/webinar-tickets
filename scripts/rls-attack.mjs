@@ -248,11 +248,16 @@ if (!DOOR_JWT) {
   if (status !== 200) {
     fail(`door cannot read its own manifest (HTTP ${status}) — the scanner needs this`);
   } else if (row) {
-    const allowed = ['id', 'code', 'holder_name', 'holder_phone', 'status'];
+    const allowed = ['id', 'code', 'holder_name', 'holder_phone_last4', 'status'];
     const extra = Object.keys(row).filter((k) => !allowed.includes(k));
-    extra.length
-      ? fail(`manifest exposes extra columns to door: ${extra.join(', ')}`)
-      : pass('door manifest carries exactly the five permitted columns');
+    const last4 = row.holder_phone_last4;
+    if (extra.length) {
+      fail(`manifest exposes extra columns to door: ${extra.join(', ')}`);
+    } else if (last4 != null && !/^[0-9]{4}$/.test(last4)) {
+      fail('DOOR MANIFEST LEAKS MORE THAN THE LAST 4 PHONE DIGITS');
+    } else {
+      pass('door manifest carries exactly the five permitted columns, last 4 digits only');
+    }
   } else {
     pass('door manifest reachable (no tickets issued yet)');
   }

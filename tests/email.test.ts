@@ -44,7 +44,7 @@ describe('sendTicketEmail', () => {
   it('escapes a buyer name carrying markup', async () => {
     const fetchMock = stubResend();
     await sendTicketEmail({
-      reference: 'LD26-ABCDEFG-HJKMNPQ',
+      reference: 'FIQ26-ABCDEFG-HJKMNPQ',
       buyerName: '<img src=x onerror=alert(1)>',
       buyerEmail: 'buyer@example.test',
       quantity: 1,
@@ -59,34 +59,34 @@ describe('sendTicketEmail', () => {
     // credential that sits in an inbox forever and cannot show a status.
     const fetchMock = stubResend();
     await sendTicketEmail({
-      reference: 'LD26-ABCDEFG-HJKMNPQ',
+      reference: 'FIQ26-ABCDEFG-HJKMNPQ',
       buyerName: 'Ade Bello',
       buyerEmail: 'buyer@example.test',
       quantity: 2,
     });
     const body = sentBody(fetchMock);
-    expect(body.html).toContain('https://tickets.example.test/ticket/LD26-ABCDEFG-HJKMNPQ');
+    expect(body.html).toContain('https://tickets.example.test/ticket/FIQ26-ABCDEFG-HJKMNPQ');
     expect(body.html).not.toMatch(/FIQ-[2-9A-HJ-NP-Z]{4}/);
-    expect(body.text).toContain('https://tickets.example.test/ticket/LD26-ABCDEFG-HJKMNPQ');
+    expect(body.text).toContain('https://tickets.example.test/ticket/FIQ26-ABCDEFG-HJKMNPQ');
   });
 
   it('sends a plain-text alternative as well as HTML', async () => {
     const fetchMock = stubResend();
     await sendTicketEmail({
-      reference: 'LD26-ABCDEFG-HJKMNPQ',
+      reference: 'FIQ26-ABCDEFG-HJKMNPQ',
       buyerName: 'Ade Bello',
       buyerEmail: 'buyer@example.test',
       quantity: 1,
     });
     const body = sentBody(fetchMock);
     expect(body.text.length).toBeGreaterThan(80);
-    expect(body.subject).toContain('LD26-ABCDEFG-HJKMNPQ');
+    expect(body.subject).toContain('FIQ26-ABCDEFG-HJKMNPQ');
   });
 
   it('reports a provider failure instead of pretending it sent', async () => {
     const fetchMock = stubResend(422, { message: 'domain not verified' });
     const result = await sendTicketEmail({
-      reference: 'LD26-ABCDEFG-HJKMNPQ',
+      reference: 'FIQ26-ABCDEFG-HJKMNPQ',
       buyerName: 'Ade Bello',
       buyerEmail: 'buyer@example.test',
       quantity: 1,
@@ -99,7 +99,7 @@ describe('sendTicketEmail', () => {
     delete process.env.RESEND_API_KEY;
     const fetchMock = stubResend();
     const result = await sendTicketEmail({
-      reference: 'LD26-ABCDEFG-HJKMNPQ',
+      reference: 'FIQ26-ABCDEFG-HJKMNPQ',
       buyerName: 'Ade Bello',
       buyerEmail: 'buyer@example.test',
       quantity: 1,
@@ -114,7 +114,7 @@ describe('deliverTicketEmail', () => {
     const fetchMock = stubResend();
     maybeSingle.mockResolvedValue({
       data: {
-        reference: 'LD26-ABCDEFG-HJKMNPQ',
+        reference: 'FIQ26-ABCDEFG-HJKMNPQ',
         buyer_name: 'Ade Bello',
         buyer_email: 'buyer@example.test',
         quantity: 1,
@@ -122,7 +122,7 @@ describe('deliverTicketEmail', () => {
       },
       error: null,
     });
-    const result = await deliverTicketEmail('LD26-ABCDEFG-HJKMNPQ');
+    const result = await deliverTicketEmail('FIQ26-ABCDEFG-HJKMNPQ');
     expect(result.ok).toBe(true);
     expect(fetchMock).toHaveBeenCalledOnce();
   });
@@ -133,7 +133,7 @@ describe('deliverTicketEmail', () => {
       const fetchMock = stubResend();
       maybeSingle.mockResolvedValue({
         data: {
-          reference: 'LD26-ABCDEFG-HJKMNPQ',
+          reference: 'FIQ26-ABCDEFG-HJKMNPQ',
           buyer_name: 'Ade Bello',
           buyer_email: 'buyer@example.test',
           quantity: 1,
@@ -141,7 +141,7 @@ describe('deliverTicketEmail', () => {
         },
         error: null,
       });
-      const result = await deliverTicketEmail('LD26-ABCDEFG-HJKMNPQ');
+      const result = await deliverTicketEmail('FIQ26-ABCDEFG-HJKMNPQ');
       expect(result.ok).toBe(false);
       expect(fetchMock).not.toHaveBeenCalled();
     }
@@ -151,7 +151,7 @@ describe('deliverTicketEmail', () => {
     const fetchMock = stubResend();
     maybeSingle.mockResolvedValue({
       data: {
-        reference: 'LD26-ABCDEFG-HJKMNPQ',
+        reference: 'FIQ26-ABCDEFG-HJKMNPQ',
         buyer_name: 'Guest',
         buyer_email: 'comp@invalid.local',
         quantity: 1,
@@ -159,7 +159,7 @@ describe('deliverTicketEmail', () => {
       },
       error: null,
     });
-    const result = await deliverTicketEmail('LD26-ABCDEFG-HJKMNPQ');
+    const result = await deliverTicketEmail('FIQ26-ABCDEFG-HJKMNPQ');
     expect(result.ok).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -167,7 +167,7 @@ describe('deliverTicketEmail', () => {
   it('reports a missing order rather than throwing into the webhook', async () => {
     stubResend();
     maybeSingle.mockResolvedValue({ data: null, error: null });
-    const result = await deliverTicketEmail('LD26-NOSUCH-REFERENCE');
+    const result = await deliverTicketEmail('FIQ26-NOSUCH-REFERENCE');
     expect(result).toEqual({ ok: false, reason: 'Order not found.' });
   });
 });

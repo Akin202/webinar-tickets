@@ -58,7 +58,7 @@ async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
 /**
  * The manifest RPC deliberately returns five columns and nothing else, but
  * the Ticket contract carries more. The scanner reads only what the manifest
- * ships (code, holder, phone, status); the rest is inert filler so the
+ * ships (code, holder, last 4 phone digits, status); the rest is inert filler so the
  * signature — and the IndexedDB cache shape — stay stable.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,7 +68,9 @@ function ticketFromManifestRow(row: any): Ticket {
     orderId: '',
     code: row.code,
     holderName: row.holder_name,
-    holderPhone: row.holder_phone,
+    // Door rows never carry a full number; see holderPhoneLast4 in the type.
+    holderPhone: null,
+    holderPhoneLast4: row.holder_phone_last4 ?? null,
     status: row.status,
     issuedAt: '',
     checkedInAt: null,
@@ -236,7 +238,7 @@ export async function renameTicketHolder(
 // ---- Door / scanner ----
 
 /**
- * The MINIMAL manifest — code, holder_name, holder_phone, status. Requires a
+ * The MINIMAL manifest — code, holder_name, holder_phone_last4, status. Requires a
  * signed-in staff session; the RPC returns zero rows to anyone else.
  */
 export async function getCheckInManifest(): Promise<Ticket[]> {
@@ -255,7 +257,8 @@ function checkInResultFromRow(row: any, scannedCode: string): CheckInResult {
     orderId: '',
     code: row.code ?? scannedCode,
     holderName: row.holder_name ?? '',
-    holderPhone: row.holder_phone ?? null,
+    holderPhone: null,
+    holderPhoneLast4: row.holder_phone_last4 ?? null,
     status:
       row.result === 'admitted' || row.result === 'already_used'
         ? 'checked_in'

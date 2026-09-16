@@ -66,6 +66,10 @@ export interface Ticket {
    *  so this has to live here or /scan goes blind offline. Not holder-
    *  editable — a renameable identity check is not an identity check. */
   holderPhone: string | null;
+  /** All the door ever gets. The manifest and check-in RPCs return only these
+   *  four digits, so door rows carry holderPhone: null and a lost or stolen
+   *  door phone leaks no numbers. The check is holder name + these digits. */
+  holderPhoneLast4: string | null;
   status: TicketStatus;
   issuedAt: string;
   checkedInAt: string | null;
@@ -291,6 +295,12 @@ export function formatPhoneForDisplay(phone: string): string {
   const match = phone.match(/^\+234(\d{3})(\d{3})(\d{4})$/);
   if (!match) return phone;
   return `+234 ${match[1]} ${match[2]} ${match[3]}`;
+}
+
+/** "+2348139927805" -> "7805". Null when there are not four digits to show. */
+export function phoneLast4(phone: string | null): string | null {
+  const digits = (phone ?? '').replace(/\D/g, '');
+  return digits.length >= 4 ? digits.slice(-4) : null;
 }
 
 export interface CheckoutValues {
