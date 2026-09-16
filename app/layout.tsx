@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Fraunces, Instrument_Sans, JetBrains_Mono } from 'next/font/google';
 import { eventConfig } from '@/config/event.config';
+import { getSiteUrl } from '@/lib/site-url';
 import { BrandThemeStyle } from '@/lib/theme';
 import { DevStateProvider } from '@/components/dev/DevStateProvider';
 import './globals.css';
@@ -35,7 +36,7 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ['500', '700'],
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || eventConfig.seo.siteUrl;
+const siteUrl = getSiteUrl();
 
 /**
  * Server-rendered so WhatsApp's crawler — which does not execute JavaScript —

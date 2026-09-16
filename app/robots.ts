@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { eventConfig } from '@/config/event.config';
+import { getSiteUrl } from '@/lib/site-url';
 
 /**
  * The public event page is meant to be found. Nothing else here is.
@@ -14,7 +14,7 @@ import { eventConfig } from '@/config/event.config';
  * event is worth attacking.
  */
 export default function robots(): MetadataRoute.Robots {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || eventConfig.seo.siteUrl;
+  const siteUrl = getSiteUrl();
 
   return {
     rules: {

@@ -5,7 +5,7 @@ import type { AttendeeType } from '@/types/ticketing';
 // Nothing event-specific may be hardcoded in a component: swapping this file
 // is what turns the build into a different event.
 //
-// Placeholders are spelled TODO(summit) or *.invalid ON PURPOSE:
+// Placeholders use a TODO marker or the reserved invalid TLD ON PURPOSE:
 // tests/config.test.ts fails while any survive, so a forgotten value breaks
 // `npm test` instead of reaching a paying attendee.
 // ============================================================
@@ -258,7 +258,7 @@ export const eventConfig = {
   seo: {
     // Also the fallback when NEXT_PUBLIC_SITE_URL is unset — it decides where
     // Paystack sends buyers back to. Must always name a host we control.
-    siteUrl: "https://summit-domain.invalid",
+    siteUrl: "https://webinar.flagiq.org",
     title: "FlagIQ AI Summit '26 — 3 October, AI UniPod",
     description:
       "One room, one day, 100 seats. Where AI actually is right now and what to do with it on Monday. In person at the AI UniPod, University of Lagos, or free on the livestream.",

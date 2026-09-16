@@ -1,6 +1,7 @@
 import 'server-only';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { eventConfig } from '@/config/event.config';
+import { getSiteUrl } from '@/lib/site-url';
 import type { EmailCampaignKind } from '@/types/ticketing';
 
 const RESEND_BATCH_ENDPOINT = 'https://api.resend.com/emails/batch';
@@ -66,7 +67,7 @@ export function campaignContent(input: {
   const paragraphs = input.message.split(/\n{2,}/).map((part) =>
     `<p style="margin:0 0 16px;line-height:1.65">${escapeEmailHtml(part).replace(/\n/g, '<br>')}</p>`
   ).join('');
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || eventConfig.seo.siteUrl).replace(/\/$/, '');
+  const site = getSiteUrl();
   const unsub = input.kind === 'marketing'
     ? `${site}/unsubscribe?token=${encodeURIComponent(unsubscribeToken(input.email))}` : null;
   const footer = unsub

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { eventConfig, doorsOpenIso } from '@/config/event.config';
+import { getSiteUrl } from '@/lib/site-url';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 
 /**
@@ -39,7 +40,7 @@ function escapeHtml(value: string): string {
 }
 
 function siteUrl(): string {
-  return (process.env.NEXT_PUBLIC_SITE_URL || eventConfig.seo.siteUrl).replace(/\/$/, '');
+  return getSiteUrl();
 }
 
 function doorsOpenLine(): string {

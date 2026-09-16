@@ -8,6 +8,7 @@ import { rateLimit, clientIp } from '@/lib/api/rate-limit';
 import { generateReference } from '@/lib/api/reference';
 import { readCappedJson, cappedBodyError } from '@/lib/api/body-limit';
 import { readDeviceId, isDeviceIdConfigured } from '@/lib/api/device-id';
+import { getSiteUrl } from '@/lib/site-url';
 
 const checkoutSchema = z.object({
   buyerName: z.string().trim().min(2).max(120),
@@ -61,6 +62,19 @@ export async function POST(req: Request) {
   }
   if (!rateLimit(`checkout:phone:${buyerPhone}`, 3, 10 * 60_000)) {
     return NextResponse.json({ error: 'Too many orders for this phone number. Please wait.' }, { status: 429 });
+  }
+
+  // Resolved before any seat is held: a misconfigured deploy must refuse the
+  // sale, not take the money and send the buyer back to a dead domain.
+  let siteUrl: string;
+  try {
+    siteUrl = getSiteUrl();
+  } catch (err) {
+    console.error('checkout: site URL misconfigured', err);
+    return NextResponse.json(
+      { error: 'Checkout is temporarily unavailable. Please try again shortly.' },
+      { status: 503 }
+    );
   }
 
   const reference = generateReference();
@@ -124,8 +138,6 @@ export async function POST(req: Request) {
       { status: 429 }
     );
   }
-
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || eventConfig.seo.siteUrl;
 
   try {
     const init = await paystackInitialize({

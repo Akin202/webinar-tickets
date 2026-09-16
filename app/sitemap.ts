@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { eventConfig } from '@/config/event.config';
+import { getSiteUrl } from '@/lib/site-url';
 
 /**
  * One entry, deliberately.
@@ -19,7 +19,7 @@ import { eventConfig } from '@/config/event.config';
  * its own, which is the whole point of publishing one.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || eventConfig.seo.siteUrl;
+  const siteUrl = getSiteUrl();
 
   return [
     {
