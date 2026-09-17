@@ -25,6 +25,7 @@ import {
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
 import { renameTicketHolder } from '@/lib/data-access';
 import { exportTicketPass } from '@/lib/pass-export';
+import { DATE_LONG, EVENT_NAME } from '@/components/pages/event/event-format';
 
 /**
  * QR contrast is FUNCTIONAL, not decorative — do not wire these to the
@@ -169,22 +170,22 @@ export const TicketCard: React.FC<TicketCardProps> = ({
       {/* Main Ticket Container - Screen capture friendly */}
       <div
         id={`ticket-card-${ticket.code}`}
-        className={`relative overflow-hidden rounded-3xl border transition-all shadow-2xl ${
+        className={`relative overflow-hidden rounded-2xl border transition-all shadow-[0_28px_60px_-32px_rgba(0,0,0,0.7)] ${
           activeStatus === 'valid'
-            ? 'bg-brand-card border-brand-primary/40 shadow-brand-primary/10'
+            ? 'bg-brand-card border-brand-border-strong'
             : activeStatus === 'checked_in'
-            ? 'bg-brand-card-hover border-brand-muted/30 shadow-black/40'
-            : 'bg-brand-card-danger border-brand-urgent/40 shadow-brand-urgent/10'
+            ? 'bg-brand-card-hover border-brand-border'
+            : 'bg-brand-card-danger border-brand-urgent-border'
         }`}
       >
         {/* Top Metallic / Glow Accent Strip */}
         <div
           className={`h-2 w-full ${
             activeStatus === 'valid'
-              ? 'bg-brand-primary shadow-[0_0_12px_var(--brand-primary)]'
+              ? 'bg-brand-primary'
               : activeStatus === 'checked_in'
-              ? 'bg-slate-700'
-              : 'bg-rose-500'
+              ? 'bg-brand-border-strong'
+              : 'bg-brand-urgent'
           }`}
         />
 
@@ -192,33 +193,30 @@ export const TicketCard: React.FC<TicketCardProps> = ({
         <div className="p-6 pb-4 border-b border-brand-border">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <span className="text-[11px] font-extrabold uppercase tracking-widest text-brand-primary font-mono-code">
-                Official Admission Pass
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-brand-text tracking-tight uppercase mt-0.5 font-display">
-                {eventConfig.event.name}
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight [text-wrap:balance]">
+                {EVENT_NAME}
               </h2>
-              <p className="text-xs text-brand-muted font-bold uppercase tracking-wider mt-0.5 font-mono-code">
-                {eventConfig.event.tagline} • {eventConfig.event.hostedBy}
+              <p className="text-sm text-brand-muted mt-1">
+                {DATE_LONG} · {eventConfig.event.venueName}
               </p>
             </div>
 
             {/* Status Pill */}
             <div>
               {activeStatus === 'valid' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-primary/15 text-brand-primary text-xs font-black uppercase tracking-wider border border-brand-primary/40">
-                  <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-success-bg text-brand-success text-xs font-bold uppercase tracking-wider border border-brand-success-border">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Valid</span>
                 </span>
               )}
               {activeStatus === 'checked_in' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-card-hover text-slate-400 text-xs font-black uppercase tracking-wider border border-brand-border-strong">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-card-hover text-brand-muted text-xs font-bold uppercase tracking-wider border border-brand-border-strong">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Checked In</span>
                 </span>
               )}
               {activeStatus === 'void' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-950/60 text-rose-400 text-xs font-black uppercase tracking-wider border border-rose-800">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-urgent-bg text-brand-urgent text-xs font-bold uppercase tracking-wider border border-brand-urgent-border">
                   <XCircle className="w-3.5 h-3.5" />
                   <span>Void</span>
                 </span>
@@ -286,18 +284,19 @@ export const TicketCard: React.FC<TicketCardProps> = ({
 
           {/* Ticket Code & Quick Copy */}
           <div className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-dim">
-              Security Ticket Code
+            <span className="text-xs font-semibold text-brand-dim">
+              Ticket code
             </span>
             <div className="flex items-center justify-center gap-2">
-              <span className="font-mono text-xl sm:text-2xl font-black text-brand-primary tracking-wider select-all">
+              <span className="font-mono text-xl sm:text-2xl font-bold text-white tracking-wider select-all">
                 {ticket.code}
               </span>
               <button
                 type="button"
                 onClick={handleCopyCode}
                 title="Copy ticket code"
-                className="p-1.5 rounded-lg bg-brand-subtle text-brand-muted hover:text-brand-text hover:bg-brand-card transition-colors"
+                aria-label="Copy ticket code"
+                className="p-3 rounded-lg bg-brand-subtle text-brand-muted hover:text-brand-text hover:bg-brand-card transition-colors"
               >
                 {copied ? <Check className="w-4 h-4 text-brand-success" /> : <Copy className="w-4 h-4" />}
               </button>
@@ -305,14 +304,14 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           </div>
 
           {/* Attendee Details Card */}
-          <div className="p-4 rounded-2xl bg-brand-subtle/80 border border-brand-border/70 text-left space-y-2.5">
+          <div className="pt-4 border-t border-brand-border text-left space-y-2.5">
             <div className="flex items-center justify-between border-b border-brand-border/60 pb-2">
-              <span className="text-[11px] font-bold uppercase text-brand-dim">Holder Name</span>
+              <span className="text-xs font-semibold text-brand-dim">Name on this ticket</span>
               {eventConfig.featureFlags.allowNameChange && activeStatus === 'valid' && (
                 <button
                   type="button"
                   onClick={() => setIsRenameOpen(true)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-brand-accent hover:underline"
+                  className="inline-flex items-center gap-1 min-h-[40px] px-2 -mr-2 text-sm font-semibold text-white underline underline-offset-4"
                 >
                   <Edit3 className="w-3 h-3" />
                   <span>Rename</span>
@@ -320,7 +319,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               )}
             </div>
 
-            <p className="text-base font-extrabold text-brand-text uppercase tracking-tight">
+            <p className="text-lg font-bold text-white">
               {ticket.holderName}
             </p>
 
@@ -331,13 +330,13 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                 editable: a renameable identity check is not a check. */}
             {ticket.holderPhone && (
               <div className="pt-2 border-t border-brand-border/60">
-                <span className="text-[11px] font-bold uppercase text-brand-dim block">
-                  Phone on this pass
+                <span className="text-xs font-semibold text-brand-dim block">
+                  Phone on this ticket
                 </span>
                 <p className="text-sm font-bold text-brand-text font-mono-code tracking-wide">
                   {formatPhoneForDisplay(ticket.holderPhone)}
                 </p>
-                <p className="text-[11px] text-brand-dim mt-1 leading-snug">
+                <p className="text-xs text-brand-dim mt-1 leading-snug">
                   Door staff may ask you to say this number aloud.
                 </p>
               </div>
@@ -345,30 +344,30 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           </div>
 
           {/* Event Schedule & Location */}
-          <div className="grid grid-cols-2 gap-2 text-left text-xs bg-brand-card/40 p-3.5 rounded-xl border border-brand-border/40">
+          <div className="grid grid-cols-2 gap-2 text-left text-sm pt-4 border-t border-brand-border">
             <div className="space-y-1">
-              <div className="flex items-center gap-1.5 text-brand-dim font-bold uppercase text-[10px]">
-                <Calendar className="w-3 h-3 text-brand-primary" />
+              <div className="flex items-center gap-1.5 text-brand-dim font-semibold text-xs">
+                <Calendar className="w-3.5 h-3.5" />
                 <span>Date</span>
               </div>
-              <p className="font-semibold text-brand-text">{eventConfig.event.date}</p>
+              <p className="font-semibold text-brand-text">{DATE_LONG}</p>
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center gap-1.5 text-brand-dim font-bold uppercase text-[10px]">
-                <Clock className="w-3 h-3 text-brand-accent" />
-                <span>Doors Open</span>
+              <div className="flex items-center gap-1.5 text-brand-dim font-semibold text-xs">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Doors open</span>
               </div>
               <p className="font-semibold text-brand-text">{eventConfig.event.doorsOpen}</p>
             </div>
 
             <div className="col-span-2 pt-2 border-t border-brand-border/40 space-y-0.5">
-              <div className="flex items-center gap-1.5 text-brand-dim font-bold uppercase text-[10px]">
-                <MapPin className="w-3 h-3 text-brand-primary" />
+              <div className="flex items-center gap-1.5 text-brand-dim font-semibold text-xs">
+                <MapPin className="w-3.5 h-3.5" />
                 <span>Venue</span>
               </div>
               <p className="font-semibold text-brand-text">{eventConfig.event.venueName}</p>
-              <p className="text-[11px] text-brand-dim truncate">{eventConfig.event.venueAddress}</p>
+              <p className="text-xs text-brand-dim">{eventConfig.event.venueAddress}</p>
             </div>
           </div>
 
@@ -376,7 +375,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           <div className="p-3 rounded-xl bg-brand-warning/10 border border-brand-warning/30 flex items-start gap-2.5 text-left text-xs text-brand-warning">
             <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <div className="leading-snug">
-              <strong className="block text-brand-text">ONE ENTRY ONLY</strong>
+              <strong className="block text-brand-text">One entry only</strong>
               {/* Was "uniquely encrypted", which is not true — the code is a
                   random single-use token, not ciphertext. The accurate
                   sentence is also the more useful warning. */}
@@ -402,10 +401,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               type="button"
               onClick={() => void handleSavePass()}
               disabled={isSavingPass}
-              className="min-h-[44px] px-3 py-2 rounded-xl bg-brand-card hover:bg-brand-card-hover border border-brand-border text-brand-text text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60"
+              className="min-h-[48px] px-3 py-2 rounded-xl bg-brand-card hover:bg-brand-card-hover border border-brand-border-strong text-brand-text text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60"
             >
-              <Download className="w-3.5 h-3.5 text-brand-primary" />
-              <span>{isSavingPass ? 'Saving…' : 'Save Pass'}</span>
+              <Download className="w-4 h-4" />
+              <span>{isSavingPass ? 'Saving…' : 'Save ticket'}</span>
             </button>
 
             {/* Add to Calendar */}
@@ -413,10 +412,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               href={getGoogleCalendarUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="min-h-[44px] px-3 py-2 rounded-xl bg-brand-card hover:bg-brand-card-hover border border-brand-border text-brand-text text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+              className="min-h-[48px] px-3 py-2 rounded-xl bg-brand-card hover:bg-brand-card-hover border border-brand-border-strong text-brand-text text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors"
             >
-              <CalendarPlus className="w-3.5 h-3.5 text-brand-accent" />
-              <span>Add to Calendar</span>
+              <CalendarPlus className="w-4 h-4" />
+              <span>Add to calendar</span>
             </a>
           </div>
 
@@ -434,16 +433,13 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in"
         >
-          <div className="w-full max-w-sm rounded-3xl bg-brand-card border border-brand-border p-6 shadow-2xl space-y-4">
+          <div className="public-page w-full max-w-sm rounded-2xl bg-brand-card border border-brand-border-strong p-6 shadow-2xl space-y-4">
             <div>
-              <span className="text-xs font-bold uppercase text-brand-primary tracking-widest">
-                Ticket Name Update
-              </span>
-              <h3 className="text-lg font-black text-brand-text mt-1">
-                Rename Ticket Holder
+              <h3 className="text-xl font-extrabold text-white">
+                Change the name on this ticket
               </h3>
-              <p className="text-xs text-brand-muted mt-1 leading-relaxed">
-                Update the official name displayed on this pass and registered for gate admission.
+              <p className="text-sm text-brand-muted mt-1 leading-relaxed">
+                This is the name door staff will see when they scan it.
               </p>
             </div>
 
@@ -451,9 +447,9 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               <div>
                 <label
                   htmlFor="rename-name-input"
-                  className="block text-xs font-bold uppercase text-brand-muted mb-1"
+                  className="block text-sm font-semibold text-brand-text mb-1.5"
                 >
-                  Full Official Name
+                  Full name
                 </label>
                 <input
                   id="rename-name-input"
@@ -461,7 +457,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                   value={tempName}
                   onChange={(e) => setTempName(e.target.value)}
                   placeholder="e.g. Babatunde Folarin Adeyemi"
-                  className="w-full min-h-[48px] px-4 rounded-xl bg-brand-subtle border border-brand-border text-brand-text text-sm focus:border-brand-primary"
+                  className="w-full min-h-[48px] px-4 rounded-xl bg-brand-subtle border border-brand-border text-brand-text text-base focus:border-brand-accent"
                   autoFocus
                 />
               </div>
@@ -479,16 +475,16 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsRenameOpen(false)}
-                  className="min-h-[44px] flex-1 px-4 py-2 rounded-xl bg-brand-subtle text-brand-muted hover:text-brand-text font-bold text-xs transition-colors"
+                  className="min-h-[48px] flex-1 px-4 py-2 rounded-xl border border-brand-border-strong text-brand-text font-semibold text-sm transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isRenaming || !tempName.trim()}
-                  className="min-h-[44px] flex-1 px-4 py-2 rounded-xl bg-brand-primary text-brand-surface font-bold text-xs hover:bg-brand-primary-hover transition-colors disabled:opacity-60"
+                  className="min-h-[48px] flex-1 px-4 py-2 rounded-xl bg-brand-primary text-white font-semibold text-sm hover:bg-brand-primary-hover transition-colors disabled:opacity-60"
                 >
-                  {isRenaming ? 'Saving…' : 'Save Changes'}
+                  {isRenaming ? 'Saving…' : 'Save name'}
                 </button>
               </div>
             </form>

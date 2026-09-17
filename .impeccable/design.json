@@ -1,0 +1,538 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-17T09:00:48.409021+00:00",
+  "title": "Design System: FlagIQ AI Summit '26",
+  "extensions": {
+    "colorMeta": {
+      "signal-red": {
+        "role": "primary",
+        "displayName": "Signal Red",
+        "canonical": "#E3173E",
+        "tonalRamp": [
+          "#38060F",
+          "#660A1C",
+          "#990F2A",
+          "#D01539",
+          "#EB385A",
+          "#F06F88",
+          "#F6A7B6",
+          "#FCDFE4"
+        ]
+      },
+      "signal-red-deep": {
+        "role": "primary",
+        "displayName": "Signal Red Deep",
+        "canonical": "#C8102F",
+        "tonalRamp": [
+          "#39050D",
+          "#680818",
+          "#9C0C25",
+          "#D41132",
+          "#EF3453",
+          "#F36D83",
+          "#F8A5B3",
+          "#FCDEE3"
+        ]
+      },
+      "focus-rose": {
+        "role": "secondary",
+        "displayName": "Focus Rose",
+        "canonical": "#FF5C7A",
+        "tonalRamp": [
+          "#3D000B",
+          "#700015",
+          "#A8001F",
+          "#E6002A",
+          "#FF244C",
+          "#FF617E",
+          "#FF9EB0",
+          "#FFDBE2"
+        ]
+      },
+      "summit-navy": {
+        "role": "neutral",
+        "displayName": "Summit Navy",
+        "canonical": "#081028",
+        "tonalRamp": [
+          "#0A1433",
+          "#13255E",
+          "#1C388C",
+          "#264CBF",
+          "#486DDA",
+          "#7B96E5",
+          "#AEBEEF",
+          "#E1E7F9"
+        ]
+      },
+      "navy-panel": {
+        "role": "neutral",
+        "displayName": "Navy Panel",
+        "canonical": "#0E1833",
+        "tonalRamp": [
+          "#0D1730",
+          "#182958",
+          "#243E84",
+          "#3155B4",
+          "#5375D0",
+          "#839BDD",
+          "#B3C2EA",
+          "#E3E8F7"
+        ]
+      },
+      "navy-card": {
+        "role": "neutral",
+        "displayName": "Navy Card",
+        "canonical": "#111B38",
+        "tonalRamp": [
+          "#0E172F",
+          "#1A2956",
+          "#273E81",
+          "#3555B0",
+          "#5775CC",
+          "#869BDA",
+          "#B5C2E8",
+          "#E4E9F7"
+        ]
+      },
+      "navy-card-hover": {
+        "role": "neutral",
+        "displayName": "Navy Card Hover",
+        "canonical": "#16213F",
+        "tonalRamp": [
+          "#10182D",
+          "#1D2C53",
+          "#2C417D",
+          "#3B59AA",
+          "#5C79C6",
+          "#8A9ED6",
+          "#B7C4E6",
+          "#E5E9F6"
+        ]
+      },
+      "navy-subtle": {
+        "role": "neutral",
+        "displayName": "Navy Subtle",
+        "canonical": "#0C1530",
+        "tonalRamp": [
+          "#0C1531",
+          "#16275A",
+          "#223B87",
+          "#2E50B8",
+          "#5070D3",
+          "#8198DF",
+          "#B1C0EC",
+          "#E2E8F8"
+        ]
+      },
+      "navy-line": {
+        "role": "neutral",
+        "displayName": "Navy Line",
+        "canonical": "#1D2A4B",
+        "tonalRamp": [
+          "#11192C",
+          "#1F2D51",
+          "#2F4479",
+          "#405DA6",
+          "#617CC2",
+          "#8DA1D3",
+          "#B9C5E4",
+          "#E5EAF5"
+        ]
+      },
+      "navy-line-strong": {
+        "role": "neutral",
+        "displayName": "Navy Line Strong",
+        "canonical": "#3A4A70",
+        "tonalRamp": [
+          "#151B28",
+          "#26314A",
+          "#39496F",
+          "#4E6497",
+          "#6F83B4",
+          "#97A6C9",
+          "#BFC8DE",
+          "#E7EBF3"
+        ]
+      },
+      "agenda-rule": {
+        "role": "neutral",
+        "displayName": "Agenda Rule",
+        "canonical": "#253B64",
+        "tonalRamp": [
+          "#111A2D",
+          "#1E3052",
+          "#2D487B",
+          "#3E63A8",
+          "#5F82C4",
+          "#8CA5D4",
+          "#B8C8E5",
+          "#E5EBF5"
+        ]
+      },
+      "snow-text": {
+        "role": "neutral",
+        "displayName": "Snow Text",
+        "canonical": "#F5F7FA",
+        "tonalRamp": [
+          "#141D29",
+          "#25344B",
+          "#384F70",
+          "#4D6B99",
+          "#6D8AB6",
+          "#96ABCA",
+          "#BECBDF",
+          "#E7ECF3"
+        ]
+      },
+      "mist-muted": {
+        "role": "neutral",
+        "displayName": "Mist Muted",
+        "canonical": "#B8C1D4",
+        "tonalRamp": [
+          "#171C26",
+          "#2A3346",
+          "#3F4D69",
+          "#57698F",
+          "#7688AC",
+          "#9DA9C3",
+          "#C3CADA",
+          "#E9ECF2"
+        ]
+      },
+      "slate-dim": {
+        "role": "neutral",
+        "displayName": "Slate Dim",
+        "canonical": "#8F9FBC",
+        "tonalRamp": [
+          "#171C26",
+          "#2A3446",
+          "#3F4E69",
+          "#566A90",
+          "#7689AD",
+          "#9CAAC4",
+          "#C2CBDB",
+          "#E9ECF2"
+        ]
+      },
+      "time-grey": {
+        "role": "neutral",
+        "displayName": "Time Grey",
+        "canonical": "#D7DCE6",
+        "tonalRamp": [
+          "#181C26",
+          "#2B3445",
+          "#414E68",
+          "#586A8D",
+          "#7889AB",
+          "#9EAAC2",
+          "#C3CBDA",
+          "#E9ECF1"
+        ]
+      },
+      "topbar-paper": {
+        "role": "neutral",
+        "displayName": "Topbar Paper",
+        "canonical": "#F6F7F8",
+        "tonalRamp": [
+          "#1B1F22",
+          "#31383F",
+          "#4A545F",
+          "#647381",
+          "#84919F",
+          "#A6B0BA",
+          "#C8CFD5",
+          "#EBEDEF"
+        ]
+      },
+      "logo-chip": {
+        "role": "neutral",
+        "displayName": "Logo Chip",
+        "canonical": "#E9EDF2",
+        "tonalRamp": [
+          "#171E26",
+          "#2A3647",
+          "#3F526A",
+          "#556F90",
+          "#758EAE",
+          "#9CAEC4",
+          "#C2CDDB",
+          "#E9EDF2"
+        ]
+      },
+      "status-urgent": {
+        "role": "status",
+        "displayName": "Status Urgent",
+        "canonical": "#FF8A8A",
+        "tonalRamp": [
+          "#3D0000",
+          "#700000",
+          "#A80000",
+          "#E60000",
+          "#FF2424",
+          "#FF6161",
+          "#FF9E9E",
+          "#FFDBDB"
+        ]
+      },
+      "status-urgent-bg": {
+        "role": "status",
+        "displayName": "Status Urgent Ground",
+        "canonical": "#2A1224",
+        "tonalRamp": [
+          "#2B1225",
+          "#4F2243",
+          "#763265",
+          "#A1458A",
+          "#BD65A7",
+          "#D090C0",
+          "#E2BBD8",
+          "#F4E6F1"
+        ]
+      },
+      "status-success": {
+        "role": "status",
+        "displayName": "Status Success",
+        "canonical": "#5EE0A0",
+        "tonalRamp": [
+          "#0A331F",
+          "#125E39",
+          "#1B8D55",
+          "#25C074",
+          "#47DC92",
+          "#7AE5B1",
+          "#AEEFCF",
+          "#E1F9ED"
+        ]
+      },
+      "status-success-bg": {
+        "role": "status",
+        "displayName": "Status Success Ground",
+        "canonical": "#0D2A2A",
+        "tonalRamp": [
+          "#0E2F2F",
+          "#1B5656",
+          "#288181",
+          "#36AFAF",
+          "#58CBCB",
+          "#86DADA",
+          "#B5E8E8",
+          "#E4F7F7"
+        ]
+      },
+      "status-warning": {
+        "role": "status",
+        "displayName": "Status Warning",
+        "canonical": "#F7C35C",
+        "tonalRamp": [
+          "#3A2803",
+          "#6B4905",
+          "#A06D08",
+          "#DB950B",
+          "#F5B22E",
+          "#F8C868",
+          "#FADDA3",
+          "#FDF2DD"
+        ]
+      },
+      "status-warning-bg": {
+        "role": "status",
+        "displayName": "Status Warning Ground",
+        "canonical": "#2A2314",
+        "tonalRamp": [
+          "#292314",
+          "#4C3F24",
+          "#725F36",
+          "#9B824A",
+          "#B89F6A",
+          "#CCBA94",
+          "#E0D5BD",
+          "#F3EFE7"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero title and closer only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section heads; checkout and ticket page titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Speaker names, ticket-type names, audience items."
+      },
+      "row": {
+        "displayName": "Row",
+        "purpose": "Agenda and programme titles, FAQ questions."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Intros and answers in Mist Muted, 58-62ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Date pill, section rule label, meta chips; uppercase tracked."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Times, codes, quantities and money only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "seat-lift",
+        "value": "0 28px 60px -32px rgba(0,0,0,0.7)",
+        "purpose": "The in-person seat panel only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-expo-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "All public state transitions."
+      },
+      {
+        "name": "duration-state",
+        "value": "180ms",
+        "purpose": "Button background, border and press."
+      },
+      {
+        "name": "duration-disclosure",
+        "value": "250ms",
+        "purpose": "FAQ plus-icon rotation."
+      },
+      {
+        "name": "duration-meter",
+        "value": "1100ms (150ms delay)",
+        "purpose": "Seat meter scaleX fill."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "max-width: 359px"
+      },
+      {
+        "name": "md",
+        "value": "880px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one red action: Get a seat, Continue to checkout.",
+      "html": "<div class=\"ds-stage\"><button class=\"ds-btn ds-btn-primary\">Get a seat</button></div>",
+      "css": ":host{--brand-primary:#E3173E;--brand-primary-hover:#C8102F;--brand-accent:#FF5C7A;--brand-surface:#081028;--brand-text:#F5F7FA;} .ds-stage{background:#081028;padding:24px} .ds-btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border:1.5px solid transparent;border-radius:8px;font-family:Figtree,system-ui,sans-serif;font-size:17px;font-weight:700;line-height:1;cursor:pointer;transition:background-color .18s cubic-bezier(0.16,1,0.3,1),transform .18s cubic-bezier(0.16,1,0.3,1)} .ds-btn-primary{background:#E3173E;color:#fff} .ds-btn-primary:hover{background:#C8102F} .ds-btn:active{transform:translateY(1px)} .ds-btn:focus-visible{outline:2px solid #FF5C7A;outline-offset:3px}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary way in: Livestream, Help on WhatsApp.",
+      "html": "<div class=\"ds-stage\"><button class=\"ds-btn ds-btn-outline\">Livestream</button></div>",
+      "css": ".ds-stage{background:#081028;padding:24px} .ds-btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:8px;font-family:Figtree,system-ui,sans-serif;font-size:17px;font-weight:700;line-height:1;cursor:pointer;transition:background-color .18s cubic-bezier(0.16,1,0.3,1)} .ds-btn-outline{background:transparent;border:1px solid rgba(255,255,255,.92);color:#fff} .ds-btn-outline:hover{background:rgba(255,255,255,.08)} .ds-btn:focus-visible{outline:2px solid #FF5C7A;outline-offset:3px}"
+    },
+    {
+      "name": "Date Pill and Meta Chip",
+      "kind": "chip",
+      "refersTo": "pill-date",
+      "description": "Tracked-caps pills carrying real facts: date and time, attendance mode.",
+      "html": "<div class=\"ds-stage\"><span class=\"ds-pill\">SATURDAY 3 OCTOBER 2026 · 10:00–18:00</span> <span class=\"ds-chip\">In person · Lagos</span></div>",
+      "css": ".ds-stage{background:#081028;padding:24px;display:flex;gap:12px;flex-wrap:wrap;font-family:Figtree,system-ui,sans-serif} .ds-pill{display:inline-flex;align-items:center;height:25px;padding:0 10px;border:1px solid #1D3157;border-radius:999px;background:#0B1733;color:#E6EAF0;font-size:11px;font-weight:600;letter-spacing:.14em;white-space:nowrap} .ds-chip{display:inline-flex;align-items:center;height:24px;padding:0 9px;border:1px solid #2A3A66;border-radius:999px;color:#B8C1D4;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}"
+    },
+    {
+      "name": "Seat Panel with Meter",
+      "kind": "card",
+      "refersTo": "panel-seat",
+      "description": "The one raised panel: price, seat meter, order.",
+      "html": "<div class=\"ds-stage\"><div class=\"ds-panel\"><h3>Summit seat</h3><p class=\"ds-price\"><b>₦10,000</b> <small>per person, all in</small></p><div class=\"ds-row\"><span><b>98</b> of 100 seats left</span><span>Sales open</span></div><div class=\"ds-track\"><div class=\"ds-fill\"></div></div></div></div>",
+      "css": ".ds-stage{background:#081028;padding:24px;font-family:Figtree,system-ui,sans-serif;color:#F5F7FA} .ds-panel{max-width:420px;padding:22px 20px;background:#0E1833;border:1px solid #26365E;border-radius:16px;box-shadow:0 28px 60px -32px rgba(0,0,0,.7)} .ds-panel h3{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em} .ds-price{margin:10px 0 0} .ds-price b{font-size:42px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums} .ds-price small{font-size:14.5px;color:#B8C1D4} .ds-row{display:flex;justify-content:space-between;margin-top:20px;font-size:14.5px;color:#B8C1D4} .ds-row b{color:#fff} .ds-track{height:6px;margin-top:9px;border-radius:999px;background:#1C284B;overflow:hidden} .ds-fill{height:100%;background:#E3173E;transform:scaleX(.02);transform-origin:left center}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Checkout field in a navy well.",
+      "html": "<div class=\"ds-stage\"><label class=\"ds-label\">Full name<input class=\"ds-input\" placeholder=\"As it should appear on the ticket\"></label></div>",
+      "css": ".ds-stage{background:#111B38;padding:24px;font-family:Figtree,system-ui,sans-serif} .ds-label{display:grid;gap:6px;font-size:14px;font-weight:600;color:#F5F7FA} .ds-input{min-height:48px;padding:0 16px;border-radius:12px;background:#0C1530;border:1px solid #1D2A4B;color:#F5F7FA;font:inherit;font-size:16px;font-weight:400;transition:border-color .18s} .ds-input::placeholder{color:#8F9FBC} .ds-input:focus{outline:none;border-color:#FF5C7A}"
+    },
+    {
+      "name": "Top Bar",
+      "kind": "nav",
+      "refersTo": "top-bar",
+      "description": "The one light strip: logo chip left, links or menu right.",
+      "html": "<header class=\"ds-top\"><span class=\"ds-logo\">FlagIQ</span><nav class=\"ds-links\"><a href=\"#\">Tickets</a><a href=\"#\">Programme</a><a href=\"#\">FAQ</a></nav></header>",
+      "css": ".ds-top{display:flex;align-items:center;justify-content:space-between;height:63px;padding:0 24px;background:#F6F7F8;color:#081028;border-bottom:1px solid #DFE3EA;font-family:Figtree,system-ui,sans-serif} .ds-logo{display:inline-flex;align-items:center;height:45px;padding:0 12px;border-radius:12px;background:#E9EDF2;font-weight:800} .ds-links{display:flex;gap:32px;font-weight:600;font-size:15px} .ds-links a{color:inherit;text-decoration:none} .ds-links a:hover{text-decoration:underline} .ds-links a:focus-visible{outline:2px solid #E3173E;outline-offset:3px;border-radius:4px}"
+    },
+    {
+      "name": "Agenda Rows with Launch Marker",
+      "kind": "custom",
+      "refersTo": "row",
+      "description": "Mono times, ruled rows; the launch slot takes the red bar and tag.",
+      "html": "<div class=\"ds-stage\"><ol class=\"ds-list\"><li class=\"ds-r\"><time>13:20</time><span>Michael Pepper</span></li><li class=\"ds-r ds-launch\"><time>14:40</time><span class=\"ds-t\"><em>Launch</em>Product launch</span></li><li class=\"ds-r\"><time>15:10</time><span>Open networking</span></li></ol></div>",
+      "css": ".ds-stage{background:#081028;padding:24px;font-family:Figtree,system-ui,sans-serif;color:#F5F7FA} .ds-list{margin:0;padding:0;list-style:none;border-top:1px solid #253B64} .ds-r{position:relative;display:grid;grid-template-columns:64px 1fr;align-items:baseline;gap:12px;padding:13px 0;border-bottom:1px solid #253B64;font-size:15.5px;font-weight:600} .ds-r time{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13.5px;font-weight:400;color:#D7DCE6;font-variant-numeric:tabular-nums} .ds-launch{align-items:center;padding-left:14px;background:linear-gradient(90deg,rgba(227,23,62,.12),transparent 70%)} .ds-launch::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:#E3173E} .ds-t{display:grid;justify-items:start;gap:4px;font-size:17px} .ds-t em{font-style:normal;padding:1px 6px;border-radius:4px;background:#E3173E;color:#fff;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Programme Board",
+    "overview": "The public pages are a dark conference board: deep navy end to end, white bold geometric headlines, and a real agenda set in rows with mono times. It is the category-standard conference look (the Vercel Ship / AI Engineer Summit / TechCabal Moonshot register), chosen for this event's build only; it is not a standing FlagIQ brand preference. Its craft sits in the details, not in novelty: tight headline tracking, tabular times and money, hairline rules, one red action.\n\nDensity is phone-first. The first 390px viewport carries what, when, where, how much, both ways in and the day at a glance. Sections below are hairline-ruled bands rather than cards, with one raised navy panel for the seat purchase. Depth is quiet: a navy step, a single soft drop under the seat panel, and wave linework blended into the hero and closer.\n\nScope: every public page (event, checkout, ticket, unsubscribe, cookies, not-found, error, OG image). `/admin` and `/scan` are excluded; they keep their own `--tool-*` and `--scan-*` systems and must not be restyled toward this one.",
+    "keyCharacteristics": [
+      "Navy ground, one light top strip, white headlines.",
+      "Signal red only for the primary action, the seat meter fill and the launch marker.",
+      "Figtree for every public line; JetBrains Mono only for times, codes and money.",
+      "Hairline-ruled rows instead of card grids.",
+      "48px minimum touch targets everywhere."
+    ],
+    "rules": [
+      {
+        "name": "The One Red Rule",
+        "body": "Signal Red marks the thing to do and the moment to see: the primary action, seats sold, the launch. It never tints headings, links or decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Config Is The Palette Rule",
+        "body": "Brand base colours come from `brand` in `config/event.config.ts` through `lib/theme.tsx` into `--brand-*`. Components read tokens, never hardcode event colours.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono Means Numbers Rule",
+        "body": "JetBrains Mono is for times, codes, quantities and money only; never for headings or labels.",
+        "section": "typography"
+      },
+      {
+        "name": "The Naira Fallback Rule",
+        "body": "Figtree has no ₦ glyph. Pages let the system font render it; the OG image loads Noto Sans (from `assets/fonts`) as a named fallback. Do not swap the display face to fix one glyph.",
+        "section": "typography"
+      },
+      {
+        "name": "The Navy Step Rule",
+        "body": "Depth comes from moving one step up the navy scale plus a hairline border, not from glows or stacked shadows.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep every public page on Summit Navy with the light top bar and the logo chip.",
+      "**Do** set times, codes, quantities and money in JetBrains Mono with tabular figures.",
+      "**Do** keep touch targets at least 48px and text contrast at least 4.5:1 on the navy.",
+      "**Do** animate only transform and opacity, on the expo-out ease `cubic-bezier(0.16, 1, 0.3, 1)`, and let reduced motion kill it.",
+      "**Do** use the FlagIQ logo as the supplied raster (`public/assets/flagiq-logo-trim.png`), never redrawn or recoloured.",
+      "**Do** mark the launch slot with the red left bar and tag wherever the programme appears."
+    ],
+    "donts": [
+      "**Don't** use Signal Red for headings, links, borders or decoration.",
+      "**Don't** apply this system to `/admin` or `/scan`; their `--tool-*` and `--scan-*` colours are separate, and scanner colours are fixed safety signals.",
+      "**Don't** hardcode event colours in components; read `--brand-*` tokens fed by config.",
+      "**Don't** replace hairline-ruled rows with card grids.",
+      "**Don't** set tag text below 10px; the 8.5px mobile LAUNCH tag is a defect, not a size to reuse."
+    ]
+  }
+}

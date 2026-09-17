@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "components/pages/event-page.css"
+        ],
+        "createdAt": "2026-09-17T08:55:35.922Z",
+        "reason": "Builder decision: the red launch-row bar is drawn in the user-approved comp .impeccable/mocks/comp-3.png (row-launch region) and the direction contract names Flag Red for the launch marker; finish reviewer judged it earned."
+      }
+    ]
+  }
+}

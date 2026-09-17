@@ -110,7 +110,7 @@ export const CookieNotice: React.FC = () => {
     >
       <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
         <Cookie
-          className="w-5 h-5 text-brand-primary flex-shrink-0 hidden sm:block"
+          className="w-5 h-5 text-brand-dim flex-shrink-0 hidden sm:block"
           aria-hidden="true"
         />
 
@@ -121,7 +121,7 @@ export const CookieNotice: React.FC = () => {
           advertising, no tracking, no analytics.{' '}
           <Link
             href="/cookies"
-            className="text-brand-primary underline underline-offset-2 hover:text-brand-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface rounded"
+            className="text-white font-semibold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface rounded"
           >
             What we store
           </Link>
@@ -130,7 +130,7 @@ export const CookieNotice: React.FC = () => {
         <button
           type="button"
           onClick={dismiss}
-          className="min-h-[44px] px-6 rounded-xl bg-brand-primary text-brand-surface font-extrabold text-sm uppercase tracking-wide flex-shrink-0 self-stretch sm:self-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface"
+          className="min-h-[48px] px-6 rounded-[10px] bg-brand-primary hover:bg-brand-primary-hover text-white font-semibold text-sm flex-shrink-0 self-stretch sm:self-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-brand-surface"
         >
           Got it
         </button>

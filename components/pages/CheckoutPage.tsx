@@ -26,6 +26,8 @@ import {
 } from '@/lib/data-access';
 import { IS_DEV } from '@/lib/dev-mode';
 import { useDevState } from '@/components/dev/DevStateProvider';
+import { EventTopBar } from '@/components/pages/event/EventTopBar';
+import { EVENT_NAME } from '@/components/pages/event/event-format';
 
 const EVENT_DATE_LINE = new Date(doorsOpenIso).toLocaleDateString('en-GB', {
   weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Lagos',
@@ -163,21 +165,20 @@ export const CheckoutPage: React.FC = () => {
   };
 
   return (
-    <main className="min-h-screen bg-brand-surface text-brand-text py-8 sm:py-12 px-4 sm:px-6">
+    <div className="public-page min-h-screen bg-brand-surface text-brand-text">
+    <EventTopBar linkBase="/" />
+    <main className="py-6 sm:py-10 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto">
         {/* Top navigation */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-4">
           <Link
             href="/"
             id="checkout-back-link"
-            className="inline-flex items-center gap-2 min-h-[48px] px-3 py-2 text-sm font-semibold text-brand-muted hover:text-brand-text transition-colors"
+            className="-ml-3 inline-flex items-center gap-2 min-h-[48px] px-3 py-2 text-sm font-semibold text-brand-muted hover:text-brand-text transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Event Details</span>
+            <span>Back to the event</span>
           </Link>
-          <span className="text-xs font-mono font-semibold text-brand-primary uppercase">
-            Step 1 of 2 • Reservation
-          </span>
         </div>
 
         {/* ========================================================
@@ -186,27 +187,23 @@ export const CheckoutPage: React.FC = () => {
         {purchaseState.status === 'redirecting' && (
           <div
             id="state-redirecting-interstitial"
-            className="max-w-xl mx-auto my-12 p-8 sm:p-12 rounded-3xl bg-brand-card border border-brand-border text-center shadow-2xl space-y-6"
+            className="max-w-xl mx-auto my-12 p-8 sm:p-12 rounded-2xl bg-brand-card border border-brand-border text-center space-y-6"
           >
             <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-subtle text-brand-primary flex items-center justify-center">
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
 
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-accent mb-2 inline-block">
-                Paystack Secure Transfer
-              </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-text">
-                Taking you to Paystack...
+                Taking you to Paystack&hellip;
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
-                We are securing your ticket reservation and transferring you to Paystack's encrypted payment page.
+                Your seats are held while you pay on Paystack’s page.
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-brand-subtle border border-brand-border text-xs text-brand-dim space-y-1">
-              <p className="font-semibold text-brand-text">Please do not refresh or close this tab.</p>
-              <p>Your session is protected with 256-bit SSL encryption.</p>
+            <div className="pt-5 border-t border-brand-border text-sm text-brand-text font-semibold">
+              <p>Please don’t refresh or close this tab.</p>
             </div>
 
             <div className="pt-2 flex flex-col gap-3">
@@ -218,7 +215,7 @@ export const CheckoutPage: React.FC = () => {
                     setPurchaseState({ status: 'confirming' });
                     setTimeout(simulatePaymentSuccess, 1000);
                   }}
-                  className="min-h-[48px] px-6 py-3 rounded-xl bg-brand-primary text-brand-surface font-bold text-sm hover:bg-brand-primary-hover transition-colors"
+                  className="min-h-[48px] px-6 py-3 rounded-xl bg-brand-primary text-white font-bold text-sm hover:bg-brand-primary-hover transition-colors"
                 >
                   Simulate Payment Complete → (dev)
                 </button>
@@ -234,27 +231,23 @@ export const CheckoutPage: React.FC = () => {
         {purchaseState.status === 'confirming' && (
           <div
             id="state-confirming-interstitial"
-            className="max-w-xl mx-auto my-12 p-8 sm:p-12 rounded-3xl bg-brand-card border border-brand-border text-center shadow-2xl space-y-6"
+            className="max-w-xl mx-auto my-12 p-8 sm:p-12 rounded-2xl bg-brand-card border border-brand-border text-center space-y-6"
           >
             <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-subtle text-brand-accent flex items-center justify-center">
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
 
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-primary mb-2 inline-block">
-                Finalizing Order
-              </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-text">
-                Confirming your payment...
+                Confirming your payment&hellip;
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
-                Verifying transaction status with your bank and minting your digital passes.
+                Checking with Paystack and issuing your tickets.
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-brand-subtle border border-brand-border text-xs text-brand-dim space-y-1">
-              <p className="font-semibold text-brand-urgent">Please DO NOT close or reload this tab.</p>
-              <p>Your tickets are being finalized and registered.</p>
+            <div className="pt-5 border-t border-brand-border text-sm text-brand-text font-semibold">
+              <p>Please don’t close or reload this tab.</p>
             </div>
 
             {IS_DEV && (
@@ -277,27 +270,24 @@ export const CheckoutPage: React.FC = () => {
         {purchaseState.status === 'success' && (
           <div
             id="state-success-view"
-            className="max-w-xl mx-auto my-8 p-8 sm:p-10 rounded-3xl bg-brand-card border border-brand-border text-center shadow-2xl space-y-6"
+            className="max-w-xl mx-auto my-8 p-8 sm:p-10 rounded-2xl bg-brand-card border border-brand-border text-center space-y-6"
           >
             <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-success-bg text-brand-success flex items-center justify-center border border-brand-success-border">
               <CheckCircle2 className="w-9 h-9" />
             </div>
 
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-success mb-2 inline-block">
-                Payment Confirmed
-              </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-text">
-                You&apos;re in. See you at the Summit.
+                You’re in. See you at the Summit.
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
-                Your ticket order has been confirmed and registered for {eventConfig.event.name}.
+                Your ticket order has been confirmed and registered for {EVENT_NAME}.
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-brand-subtle border border-brand-border text-sm space-y-1">
-              <span className="text-xs uppercase font-bold text-brand-muted">Order Reference</span>
-              <p className="font-mono text-lg font-bold text-brand-primary">
+            <div className="pt-5 border-t border-brand-border text-sm space-y-1">
+              <span className="text-sm font-semibold text-brand-muted">Order reference</span>
+              <p className="font-mono text-lg font-bold text-brand-text">
                 {purchaseState.order.reference}
               </p>
               {/* Email is now genuinely sent, but it is the backup channel and
@@ -314,10 +304,10 @@ export const CheckoutPage: React.FC = () => {
               <Link
                 href={`/ticket/${purchaseState.order.reference}`}
                 id="view-ticket-btn"
-                className="min-h-[52px] px-6 py-3.5 rounded-xl bg-brand-primary text-brand-surface font-extrabold text-base flex items-center justify-center gap-2 hover:bg-brand-primary-hover transition-colors shadow-lg shadow-brand-primary/20"
+                className="min-h-[52px] px-6 py-3.5 rounded-xl bg-brand-primary text-white font-bold text-base flex items-center justify-center gap-2 hover:bg-brand-primary-hover transition-colors"
               >
                 <TicketIcon className="w-5 h-5" />
-                <span>View {purchaseState.tickets.length} Digital Pass{purchaseState.tickets.length > 1 ? 'es' : ''} →</span>
+                <span>View your {purchaseState.tickets.length > 1 ? `${purchaseState.tickets.length} tickets` : 'ticket'}</span>
               </Link>
 
               <WhatsAppSupportButton
@@ -334,31 +324,28 @@ export const CheckoutPage: React.FC = () => {
         {purchaseState.status === 'sold_out' && (
           <div
             id="state-sold-out-view"
-            className="max-w-xl mx-auto my-8 p-8 sm:p-10 rounded-3xl bg-brand-card border border-brand-border text-center shadow-2xl space-y-6"
+            className="max-w-xl mx-auto my-8 p-8 sm:p-10 rounded-2xl bg-brand-card border border-brand-border text-center space-y-6"
           >
             <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-urgent-bg text-brand-urgent flex items-center justify-center border border-brand-urgent-border">
               <AlertCircle className="w-9 h-9" />
             </div>
 
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-urgent mb-2 inline-block">
-                Capacity Reached
-              </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-text">
-                Tickets Are Sold Out!
+                Sold out.
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
-                All {eventConfig.ticketing.capacity} tickets for {eventConfig.event.name} are taken.
+                All {eventConfig.ticketing.capacity} tickets for {EVENT_NAME} are taken.
               </p>
             </div>
 
             {/* Sold out is final: no waitlist, no released seats. The one
                 thing still on offer is the free livestream. */}
-            <div className="p-6 rounded-2xl bg-brand-subtle border border-brand-border text-left space-y-2">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-brand-text">
+            <div className="pt-5 border-t border-brand-border text-left space-y-2">
+              <h2 className="text-base font-bold text-brand-text">
                 You can still watch it live
-              </h3>
-              <p className="text-xs text-brand-muted leading-relaxed">
+              </h2>
+              <p className="text-sm text-brand-muted leading-relaxed">
                 There is no waitlist. The livestream is free and does not count against
                 the seats. <Link href="/#livestream" className="underline">Join the livestream</Link>.
               </p>
@@ -376,31 +363,28 @@ export const CheckoutPage: React.FC = () => {
         {purchaseState.status === 'sales_closed' && (
           <div
             id="state-sales-closed-view"
-            className="max-w-xl mx-auto my-8 p-8 sm:p-10 rounded-3xl bg-brand-card border border-brand-border text-center shadow-2xl space-y-6"
+            className="max-w-xl mx-auto my-8 p-8 sm:p-10 rounded-2xl bg-brand-card border border-brand-border text-center space-y-6"
           >
             <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-subtle text-brand-muted flex items-center justify-center border border-brand-border">
               <Clock className="w-9 h-9" />
             </div>
 
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-muted mb-2 inline-block">
-                Registration Ended
-              </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-text">
-                Ticket Sales Are Now Closed
+                Ticket sales are closed.
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
-                Online ticket sales for {eventConfig.event.name} are closed. The livestream
+                Online ticket sales for {EVENT_NAME} are closed. The livestream
                 is still free &mdash; <Link href="/#livestream" className="underline">join it here</Link>.
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-brand-subtle border border-brand-border text-xs text-brand-dim">
-              <p>For urgent gate inquiries or already-purchased pass lookup:</p>
+            <div className="pt-5 border-t border-brand-border text-sm text-brand-muted">
+              <p>Already paid and can’t find your ticket? Message us.</p>
             </div>
 
             <div className="pt-2">
-              <WhatsAppSupportButton label="WhatsApp Organizers Gate Support" />
+              <WhatsAppSupportButton label="Message us on WhatsApp" />
             </div>
           </div>
         )}
@@ -411,30 +395,26 @@ export const CheckoutPage: React.FC = () => {
         {purchaseState.status === 'error' && (
           <div
             id="state-error-view"
-            className="max-w-xl mx-auto my-8 p-8 sm:p-10 rounded-3xl bg-brand-card border border-brand-urgent-border text-center shadow-2xl space-y-6"
+            className="max-w-xl mx-auto my-8 p-8 sm:p-10 rounded-2xl bg-brand-card border border-brand-urgent-border text-center space-y-6"
           >
             <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-urgent-bg text-brand-urgent flex items-center justify-center border border-brand-urgent-border">
               <AlertCircle className="w-9 h-9" />
             </div>
 
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-urgent mb-2 inline-block">
-                Payment Interrupted
-              </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-text">
-                Transaction Could Not Complete
+                Payment didn’t go through.
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
                 {purchaseState.message || 'Your bank did not authorize the charge or the connection timed out.'}
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-brand-subtle border border-brand-border text-xs text-brand-dim text-left space-y-1.5">
-              <p className="font-semibold text-brand-text">What to do next:</p>
+            <div className="pt-5 border-t border-brand-border text-sm text-left space-y-1.5">
+              <p className="font-semibold text-brand-text">What to do next</p>
               <ul className="list-disc list-inside space-y-1 text-brand-muted">
-                <li>Check your account balance and retry payment.</li>
-                <li>Try selecting "Pay with Bank Transfer" or USSD on Paystack.</li>
-                <li>Your selected ticket allocation has not been lost.</li>
+                <li>Check your balance and try again.</li>
+                <li>Try bank transfer or USSD on the Paystack page.</li>
               </ul>
             </div>
 
@@ -443,11 +423,11 @@ export const CheckoutPage: React.FC = () => {
                 type="button"
                 id="error-retry-btn"
                 onClick={handleRetry}
-                className="flex-1 min-h-[48px] px-6 py-3 rounded-xl bg-brand-primary text-brand-surface font-bold text-sm hover:bg-brand-primary-hover transition-colors"
+                className="flex-1 min-h-[48px] px-6 py-3 rounded-xl bg-brand-primary text-white font-bold text-sm hover:bg-brand-primary-hover transition-colors"
               >
-                Retry Checkout
+                Try again
               </button>
-              <WhatsAppSupportButton label="Get Help on WhatsApp" />
+              <WhatsAppSupportButton label="Get help on WhatsApp" />
             </div>
           </div>
         )}
@@ -458,7 +438,7 @@ export const CheckoutPage: React.FC = () => {
         {!availabilityChecked && purchaseState.status === 'idle' && !forcedState && (
           <div
             id="checkout-availability-check"
-            className="max-w-xl mx-auto my-12 p-8 rounded-3xl bg-brand-card border border-brand-border text-center space-y-4"
+            className="max-w-xl mx-auto my-12 p-8 rounded-2xl bg-brand-card border border-brand-border text-center space-y-4"
           >
             <Loader2 className="w-8 h-8 mx-auto animate-spin text-brand-primary" />
             <p className="text-sm text-brand-muted">Checking ticket availability&hellip;</p>
@@ -468,15 +448,12 @@ export const CheckoutPage: React.FC = () => {
         {(availabilityChecked || forcedState) &&
           (purchaseState.status === 'idle' || purchaseState.status === 'validating') && (
           <div>
-            <div className="mb-8 text-center sm:text-left">
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-primary">
-                Official Reservation Portal
-              </span>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-brand-text mt-1">
+            <div className="mb-8">
+              <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.02] text-white">
                 Get your Summit seat
               </h1>
-              <p className="text-sm sm:text-base text-brand-muted mt-1">
-                {eventConfig.event.name} • {EVENT_DATE_LINE}
+              <p className="text-base sm:text-lg text-brand-muted mt-2">
+                {EVENT_NAME} · {EVENT_DATE_LINE}
               </p>
             </div>
 
@@ -497,5 +474,6 @@ export const CheckoutPage: React.FC = () => {
       <div aria-hidden="true" style={{ height: 'var(--cookie-notice-height, 0px)' }} />
       <CookieNotice />
     </main>
+    </div>
   );
 };

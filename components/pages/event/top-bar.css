@@ -1,0 +1,120 @@
+/* ============================================================
+   The light top strip shared by every public page: logo chip, section
+   links on wide screens, a menu on phones. Global --brand-* tokens only,
+   so it works outside the event page's .sp-root.
+   ============================================================ */
+
+/* ---------- top bar ---------- */
+.sp-top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--brand-topbar);
+  color: var(--brand-topbar-ink);
+  border-bottom: 1px solid #dfe3ea;
+}
+.sp-top__in {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 63px;
+}
+.sp-top__logo {
+  display: inline-flex;
+  align-items: center;
+  height: 45px;
+  padding-inline: 12px;
+  border-radius: 12px;
+  background: var(--brand-chip);
+}
+.sp-top__logo img {
+  display: block;
+  width: auto;
+  height: 37px;
+}
+.sp-top__wide {
+  display: none;
+}
+.sp-top__menu {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-right: -6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--brand-topbar-ink);
+  cursor: pointer;
+}
+.sp-top__menu svg {
+  width: 27px;
+  height: 18px;
+}
+.sp-menu {
+  border-top: 1px solid #dfe3ea;
+  background: var(--brand-topbar);
+}
+.sp-menu[hidden] {
+  display: none;
+}
+.sp-menu .sp-shell {
+  display: grid;
+  padding-block: 0.5rem 1rem;
+}
+.sp-menu a {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  color: var(--brand-topbar-ink);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid #e3e7ee;
+}
+.sp-menu a:last-child {
+  border-bottom: 0;
+}
+
+@media (min-width: 880px) {
+  .sp-top__wide {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .sp-top__wide a {
+    text-decoration: none;
+  }
+  .sp-top__wide a:hover {
+    text-decoration: underline;
+  }
+  .sp-top__menu,
+  .sp-menu {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .sp-top__in {
+    height: 72px;
+  }
+  .sp-top__logo {
+    height: 54px;
+  }
+  .sp-top__logo img {
+    height: 44px;
+  }
+}
+
+.sp-top :where(a, button):focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.sp-top .sp-shell {
+  width: min(1180px, 100%);
+  margin-inline: auto;
+  padding-inline: clamp(17px, 4.5vw, 32px);
+  box-sizing: border-box;
+}

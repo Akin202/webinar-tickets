@@ -21,3 +21,10 @@ skills-lock.json
 # project-scope MCP config (equivalent to `claude mcp add --scope project`),
 # so the Supabase connection travels with the repo. It holds no secrets —
 # the project ref is already public via NEXT_PUBLIC_SUPABASE_URL.
+
+# Impeccable working files (comps, captures, build state) and playwright-cli sessions
+.impeccable/mocks/
+.impeccable/review/
+.impeccable/build/
+.impeccable/config.local.json
+.playwright-cli/

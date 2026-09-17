@@ -94,6 +94,22 @@ export const eventConfig = {
   },
 
   copy: {
+    hero: {
+      // The venue-and-price line under the headline reads
+      // "AI UniPod, University of Lagos. 100 seats, ₦10,000 all in."
+      seatsWord: "seats",
+      priceSuffix: "all in",
+      seatCta: "Get a seat",
+      livestreamCta: "Livestream",
+      menuLabel: "Menu",
+      helpLabel: "Help on WhatsApp",
+    },
+    dayPreview: {
+      // The hero's agenda preview: doors, each named speaker, the launch.
+      heading: "The day",
+      launchTag: "Launch",
+      fullProgrammeLink: "See the full programme",
+    },
     tickets: {
       eyebrow: "Two ways in",
       heading: "Be in the room, or watch it live.",
@@ -165,7 +181,7 @@ export const eventConfig = {
     { time: "13:20", title: "Michael Pepper", durationMins: 30, speakerId: "michael-pepper" },
     { time: "13:50", title: "To be announced", durationMins: 25, speakerId: "tba" },
     { time: "14:15", title: "Saheed Niyi", durationMins: 25, speakerId: "saheed-niyi" },
-    { time: "14:40", title: "Product launch", durationMins: 30 },
+    { time: "14:40", title: "Product launch", durationMins: 30, isLaunch: true },
     { time: "15:10", title: "Open networking", durationMins: 50 },
     { time: "16:00", title: "Close", durationMins: null },
   ] as ReadonlyArray<{
@@ -174,6 +190,8 @@ export const eventConfig = {
     durationMins: number | null;
     speakerId?: string;
     isBreak?: boolean;
+    /** The day's marked moment: highlighted in the hero's agenda preview. */
+    isLaunch?: boolean;
   }>,
 
   audiences: [
@@ -218,16 +236,18 @@ export const eventConfig = {
   ],
 
   brand: {
-    primary: "#CA3A32",   // Flag Red
-    accent: "#E8502A",    // signal orange, hover/focus
-    ink: "#030617",
-    surface: "#F5F4F0",   // paper
+    primary: "#E3173E",   // signal red: primary actions and the launch marker (white on it 4.7:1)
+    accent: "#FF5C7A",    // focus rings and hover on the dark ground
+    ink: "#F5F7FA",       // text on the navy ground (18:1)
+    surface: "#081028",   // public pages are dark navy end to end
     // No photo on the LCP path: the hero is an inline SVG. Swap in a venue
     // photo here (self-hosted under /public/assets) when one is chosen.
     heroImageUrl: null as string | null,
     // next/font self-hosts these under generated family names, exposed as
     // CSS variables from app/layout.tsx.
-    fontHeading: "var(--font-fraunces), Georgia, serif",
+    // Public pages set every line in the heading family (Figtree). fontBody
+    // stays the /admin and /scan workhorse so the tools never change.
+    fontHeading: "var(--font-figtree), system-ui, sans-serif",
     fontBody: "var(--font-instrument), system-ui, sans-serif",
     fontMono: "var(--font-jetbrains), ui-monospace, monospace",
   },

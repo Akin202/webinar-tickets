@@ -24,38 +24,43 @@
 
 :root {
   /* --- brand base: overridden by the injected block from config --- */
-  --brand-primary: #ca3a32;
-  --brand-accent: #e8502a;
-  --brand-surface: #f5f4f0;
-  --brand-text: #030617;
-  --font-heading: var(--font-fraunces), Georgia, serif;
+  --brand-primary: #e3173e;
+  --brand-accent: #ff5c7a;
+  --brand-surface: #081028;
+  --brand-text: #f5f7fa;
+  --font-heading: var(--font-figtree), system-ui, sans-serif;
   --font-body: var(--font-instrument), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
-  /* --- brand derived: light editorial ground (paper, ink, Flag Red) ---
-     Muted and dim text are both >= 4.5:1 on the paper surface. */
-  --brand-primary-hover: #b3312a;
-  --brand-surface-raised: #ffffff;
-  --brand-surface-card: #ffffff;
-  --brand-surface-card-hover: #fbfaf7;
-  --brand-surface-subtle: #eeece6;
-  --brand-border: #dfddd6;
-  --brand-border-strong: #030617;
-  --brand-border-focus: var(--brand-primary);
-  --brand-card-danger: color-mix(in oklab, var(--brand-surface) 88%, var(--brand-urgent));
-  --brand-text-muted: #3a4050;
-  --brand-text-dim: #5e6576;
+  /* --- brand derived: dark conference ground (navy, white, signal red) ---
+     Text on the navy surface: muted 10.6:1, dim 6.9:1. White on the
+     primary button 4.7:1. The topbar is the one light strip. */
+  --brand-primary-hover: #c8102f;
+  --brand-surface-raised: #0e1833;
+  --brand-surface-card: #111b38;
+  --brand-surface-card-hover: #16213f;
+  --brand-surface-subtle: #0c1530;
+  --brand-border: #1d2a4b;
+  --brand-border-strong: #3a4a70;
+  --brand-border-focus: var(--brand-accent);
+  --brand-card-danger: color-mix(in oklab, var(--brand-surface) 80%, var(--brand-urgent));
+  --brand-text-muted: #b8c1d4;
+  --brand-text-dim: #8f9fbc;
+  --brand-rule: #253b64;
+  --brand-topbar: #f6f7f8;
+  --brand-topbar-ink: #081028;
+  --brand-chip: #e9edf2;
 
-  /* --- brand status (public surfaces only) --- */
-  --brand-urgent: #b42318;
-  --brand-urgent-bg: #fbede9;
-  --brand-urgent-border: #f2c4b8;
-  --brand-success: #1f7a52;
-  --brand-success-bg: #e7f3ed;
-  --brand-success-border: #a9d4bf;
-  --brand-warning: #a15c07;
-  --brand-warning-bg: #fdf3e1;
-  --brand-warning-border: #f1d29b;
+  /* --- brand status (public surfaces only), tuned for the navy ground --- */
+  --brand-urgent: #ff8a8a;
+  --brand-urgent-bg: #2a1224;
+  --brand-urgent-border: #5c2536;
+  --brand-success: #5ee0a0;
+  --brand-success-bg: #0d2a2a;
+  --brand-success-border: #1f5a4b;
+  --brand-warning: #f7c35c;
+  --brand-warning-bg: #2a2314;
+  --brand-warning-border: #5a4722;
 
   /* --- tool chrome: /admin, /scan/login --- */
   --tool-surface: #f8f9fa;
@@ -138,6 +143,12 @@
   letter-spacing: -0.03em;
 }
 
+/* Every public page sets its text in the brand family. /admin and /scan
+   keep --font-body, so the tools never change. */
+.public-page {
+  font-family: var(--font-heading);
+}
+
 .font-mono-code {
   font-family: var(--font-mono), ui-monospace, monospace;
 }
@@ -195,7 +206,7 @@ button, a, input, select {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--brand-primary);
+  outline: 2px solid var(--brand-accent);
   outline-offset: 2px;
 }
 

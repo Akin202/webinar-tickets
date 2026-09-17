@@ -35,7 +35,7 @@ export const WhatsAppSupportButton: React.FC<WhatsAppSupportButtonProps> = ({
         return 'bg-brand-card hover:bg-brand-card-hover border-brand-border text-brand-text font-semibold rounded-full hover:border-brand-border-strong';
       case 'outline':
       default:
-        return 'bg-brand-surface hover:bg-brand-card-hover border-brand-border text-brand-text font-semibold hover:border-brand-primary/40';
+        return 'bg-brand-surface hover:bg-brand-card-hover border-brand-border text-brand-text font-semibold hover:border-brand-border-strong';
     }
   };
 
@@ -45,7 +45,7 @@ export const WhatsAppSupportButton: React.FC<WhatsAppSupportButtonProps> = ({
       href={waUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className={`min-h-[44px] px-4 py-2.5 rounded-xl border inline-flex items-center justify-center gap-2 text-sm transition-all active:scale-98 ${getVariantStyles()} ${className}`}
+      className={`min-h-[48px] px-4 py-2.5 rounded-[10px] border inline-flex items-center justify-center gap-2 text-sm transition-all active:scale-98 ${getVariantStyles()} ${className}`}
       style={{
         transition: prefersReducedMotion ? 'none' : 'transform 0.15s ease, opacity 0.15s ease',
       }}

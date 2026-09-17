@@ -33,12 +33,12 @@ const lastUpdated = new Date(
 
 export default function CookiesPage() {
   return (
-    <main className="min-h-screen bg-brand-surface text-brand-text px-5 py-14 sm:px-6 sm:py-20">
+    <main className="public-page min-h-screen bg-brand-surface text-brand-text px-5 py-14 sm:px-6 sm:py-20">
       <div className="max-w-3xl mx-auto">
-        <p className="font-mono-code text-xs uppercase tracking-widest text-brand-primary mb-3">
+        <p className="text-sm font-semibold text-brand-muted mb-3">
           {eventConfig.event.name}
         </p>
-        <h1 className="font-display text-4xl sm:text-6xl uppercase leading-[0.95] tracking-tight mb-3">
+        <h1 className="text-4xl sm:text-6xl font-extrabold leading-[1] tracking-tight text-white mb-3">
           Cookies &amp; Privacy
         </h1>
         <p className="text-sm text-brand-dim font-mono-code mb-12">
@@ -48,7 +48,7 @@ export default function CookiesPage() {
         <section aria-labelledby="summary-heading" className="mb-12">
           <h2
             id="summary-heading"
-            className="font-display text-2xl uppercase tracking-tight text-brand-primary mb-4"
+            className="text-2xl font-bold tracking-tight text-white mb-4"
           >
             The short version
           </h2>
@@ -94,7 +94,7 @@ export default function CookiesPage() {
         <section aria-labelledby="inventory-heading" className="mb-12">
           <h2
             id="inventory-heading"
-            className="font-display text-2xl uppercase tracking-tight text-brand-primary mb-4"
+            className="text-2xl font-bold tracking-tight text-white mb-4"
           >
             Everything we store
           </h2>
@@ -139,7 +139,7 @@ export default function CookiesPage() {
                   >
                     <th
                       scope="row"
-                      className="px-4 py-4 font-mono-code text-xs text-brand-primary font-normal text-left whitespace-nowrap"
+                      className="px-4 py-4 font-mono-code text-xs text-brand-text font-normal text-left whitespace-nowrap"
                     >
                       {entry.name}
                     </th>
@@ -165,7 +165,7 @@ export default function CookiesPage() {
         <section aria-labelledby="payment-heading" className="mb-12">
           <h2
             id="payment-heading"
-            className="font-display text-2xl uppercase tracking-tight text-brand-primary mb-4"
+            className="text-2xl font-bold tracking-tight text-white mb-4"
           >
             Paying for a ticket
           </h2>
@@ -192,7 +192,7 @@ export default function CookiesPage() {
         <section aria-labelledby="control-heading" className="mb-12">
           <h2
             id="control-heading"
-            className="font-display text-2xl uppercase tracking-tight text-brand-primary mb-4"
+            className="text-2xl font-bold tracking-tight text-white mb-4"
           >
             Clearing what is stored
           </h2>
@@ -213,7 +213,7 @@ export default function CookiesPage() {
         <section aria-labelledby="contact-heading" className="mb-14">
           <h2
             id="contact-heading"
-            className="font-display text-2xl uppercase tracking-tight text-brand-primary mb-4"
+            className="text-2xl font-bold tracking-tight text-white mb-4"
           >
             Who to ask
           </h2>
@@ -226,7 +226,7 @@ export default function CookiesPage() {
             event, email{' '}
             <a
               href={`mailto:${eventConfig.support.email}`}
-              className="text-brand-primary underline underline-offset-2 font-mono-code text-sm"
+              className="text-white underline underline-offset-4 font-semibold text-sm"
             >
               {eventConfig.support.email}
             </a>
@@ -236,7 +236,7 @@ export default function CookiesPage() {
 
         <Link
           href="/"
-          className="min-h-[48px] px-8 py-3 rounded-2xl bg-brand-primary text-brand-surface font-black uppercase tracking-wider inline-flex items-center"
+          className="min-h-[48px] px-6 py-3 rounded-[10px] bg-brand-primary hover:bg-brand-primary-hover text-white font-semibold inline-flex items-center"
         >
           ← Back to {eventConfig.event.tagline}
         </Link>

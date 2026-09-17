@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { eventConfig } from '@/config/event.config';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
+import { typographic } from '@/components/pages/event/event-format';
 
 /**
  * The route-segment error boundary.
@@ -30,23 +31,20 @@ export default function Error({
   }, [error]);
 
   return (
-    <main className="min-h-screen bg-brand-surface text-brand-text flex flex-col items-center justify-center px-6 text-center gap-6">
-      <p className="font-mono-code text-sm uppercase tracking-widest text-brand-primary">
-        Something broke
-      </p>
-      <h1 className="font-display text-5xl sm:text-7xl uppercase leading-[0.9] text-brand-text">
-        That didn&apos;t work
+    <main className="public-page min-h-screen bg-brand-surface text-brand-text flex flex-col items-start justify-center px-6 sm:px-12 gap-6 max-w-3xl mx-auto">
+      <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight leading-[0.95] text-white">
+        That didn’t work.
       </h1>
       <p className="text-base text-brand-muted max-w-md">
         Something on our side failed. <strong>If you were paying, do not pay
         again</strong> — message us and we will check whether it went through.
       </p>
 
-      <div className="flex flex-col sm:flex-row gap-3 items-center">
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
         <button
           type="button"
           onClick={reset}
-          className="min-h-[48px] px-8 py-3 rounded-2xl bg-brand-primary text-brand-surface font-black uppercase tracking-wider inline-flex items-center"
+          className="min-h-[48px] px-6 py-3 rounded-[10px] bg-brand-primary hover:bg-brand-primary-hover text-white font-semibold inline-flex items-center justify-center transition-colors"
         >
           Try again
         </button>
@@ -54,7 +52,7 @@ export default function Error({
       </div>
 
       <Link href="/" className="text-sm text-brand-muted underline underline-offset-4">
-        Back to {eventConfig.event.name}
+        Back to {typographic(eventConfig.event.name)}
       </Link>
 
       {error.digest ? (

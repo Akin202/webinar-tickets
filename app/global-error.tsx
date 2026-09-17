@@ -43,13 +43,13 @@ export default function GlobalError({
           gap: '1.25rem',
           padding: '1.5rem',
           textAlign: 'center',
-          background: '#0b0b0c',
-          color: '#f5f5f4',
+          background: '#081028',
+          color: '#f5f7fa',
           fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
         }}
       >
-        <h1 style={{ fontSize: '1.75rem', margin: 0, textTransform: 'uppercase' }}>
-          Something went badly wrong
+        <h1 style={{ fontSize: '2.25rem', margin: 0, fontWeight: 800, letterSpacing: '-0.02em' }}>
+          The page couldn&apos;t load.
         </h1>
         <p style={{ maxWidth: '32rem', lineHeight: 1.5, margin: 0, opacity: 0.85 }}>
           The page could not load at all. <strong>If you were paying, do not pay
@@ -63,13 +63,12 @@ export default function GlobalError({
             style={{
               minHeight: 48,
               padding: '0 2rem',
-              borderRadius: 16,
+              borderRadius: 10,
               border: 0,
-              background: '#f5f5f4',
-              color: '#0b0b0c',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
+              background: '#e3173e',
+              color: '#ffffff',
+              fontWeight: 600,
+              fontSize: '1rem',
               cursor: 'pointer',
             }}
           >
@@ -84,13 +83,11 @@ export default function GlobalError({
               display: 'inline-flex',
               alignItems: 'center',
               padding: '0 2rem',
-              borderRadius: 16,
-              border: '1px solid #f5f5f4',
-              color: '#f5f5f4',
+              borderRadius: 10,
+              border: '1px solid #f5f7fa',
+              color: '#f5f7fa',
               textDecoration: 'none',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
+              fontWeight: 600,
             }}
           >
             Get help on WhatsApp

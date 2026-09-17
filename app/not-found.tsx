@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { eventConfig } from '@/config/event.config';
+import { typographic } from '@/components/pages/event/event-format';
 
 /**
  * Replaces the Vite router's <Navigate to="/"> catch-all. A silent redirect
@@ -8,22 +9,19 @@ import { eventConfig } from '@/config/event.config';
  */
 export default function NotFound() {
   return (
-    <main className="min-h-screen bg-brand-surface text-brand-text flex flex-col items-center justify-center px-6 text-center gap-6">
-      <p className="font-mono-code text-sm uppercase tracking-widest text-brand-primary">
-        404
-      </p>
-      <h1 className="font-display text-5xl sm:text-7xl uppercase leading-[0.9] text-brand-text">
-        Page not found
+    <main className="public-page min-h-screen bg-brand-surface text-brand-text flex flex-col items-start justify-center px-6 sm:px-12 gap-6 max-w-3xl mx-auto">
+      <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight leading-[0.95] text-white">
+        That page isn’t here.
       </h1>
       <p className="text-base text-brand-muted max-w-md">
-        That link doesn&apos;t exist. If you were sent here with a ticket link,
+        That link doesn’t exist. If you were sent here with a ticket link,
         check it was copied in full.
       </p>
       <Link
         href="/"
-        className="min-h-[48px] px-8 py-3 rounded-2xl bg-brand-primary text-brand-surface font-black uppercase tracking-wider inline-flex items-center"
+        className="min-h-[48px] px-6 py-3 rounded-[10px] bg-brand-primary hover:bg-brand-primary-hover text-white font-semibold inline-flex items-center transition-colors"
       >
-        Back to {eventConfig.event.name}
+        Back to {typographic(eventConfig.event.name)}
       </Link>
     </main>
   );

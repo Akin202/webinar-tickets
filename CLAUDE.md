@@ -64,18 +64,32 @@ Resend · Vercel
   when seat 100 sells, that is it.
 
 ## Design
-- Public pages are light editorial: paper `#F5F4F0`, ink `#030617`, Flag Red
-  `#CA3A32`; Fraunces 900 display, Instrument Sans body, JetBrains Mono for
-  codes, times and money. Colours come from `brand` in config via
-  `lib/theme.tsx` and the `--brand-*` tokens in `app/globals.css`. The event
-  page's own styles are in `components/pages/event-page.css` (`sp-` prefix).
+- Public pages are a dark conference world (redesigned 2026-09-17, comp-led
+  via Impeccable; DESIGN.md and `.impeccable/surfaces/` hold the system and
+  the direction contract): deep navy ground `#081028`, one light top strip
+  with the real stacked FlagIQ logo on a `#E9EDF2` chip, white Figtree 800
+  headlines, Figtree body, JetBrains Mono only for times and money, signal red
+  `#E3173E` only for primary actions and the 14:40 launch marker. Colours come
+  from `brand` in config via `lib/theme.tsx` and the `--brand-*` tokens in
+  `app/globals.css` (`brand.ink` is the TEXT colour, `brand.surface` the
+  ground). Public roots carry `.public-page` so they use Figtree; `--font-body`
+  stays Instrument Sans for the tools.
+- The event page is split into `components/pages/event/` (top bar, hero, day
+  preview, tickets, speakers, programme, reading sections) with styles in
+  `components/pages/event-page.css` (`sp-` prefix) and the shared top bar in
+  `event/top-bar.css`, which checkout and the ticket page also render.
+- Figtree has no ₦ glyph: pages get it from the system font; the OG image
+  loads Noto Sans from `assets/fonts/` as a fallback. Keep the OG image under
+  300KB (currently ~48KB). Display apostrophes go through `typographic()`;
+  config strings stay ASCII.
 - `/admin` and `/scan` are tools with their own dense, high-contrast look
   (`--tool-*`, `--scan-*`). Do not restyle them toward the public page.
   Scanner result colours are fixed safety signals.
 - Animate only `transform`/`opacity`, gated on reduced motion. `/scan` has no
-  animation. Text contrast is at least 4.5:1, and scanner states must be
-  distinguishable without colour.
-- OG tags are server-rendered (WhatsApp's crawler runs no JS). OG image under 300KB.
+  animation. The event page's one motion moment is the seat meter filling on
+  scroll. Text contrast is at least 4.5:1 (white on the red button is 4.7:1),
+  and scanner states must be distinguishable without colour.
+- OG tags are server-rendered (WhatsApp's crawler runs no JS).
 
 ## Lessons inherited from the sign-out (each one cost something)
 - **Vercel firewall:** Attack Challenge Mode over `/api/webhooks/paystack`

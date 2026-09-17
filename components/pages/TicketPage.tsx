@@ -14,6 +14,7 @@ import { Order, Ticket, TicketStatus } from '@/types/ticketing';
 import { TicketCard } from '@/components/TicketCard';
 import { WhatsAppSupportButton } from '@/components/WhatsAppSupportButton';
 import { useDevState } from '@/components/dev/DevStateProvider';
+import { EventTopBar } from '@/components/pages/event/EventTopBar';
 
 interface TicketPageProps {
   /** Route segment, resolved by the server component and passed down. */
@@ -103,10 +104,10 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-brand-surface text-brand-text flex items-center justify-center p-6">
+      <main className="public-page min-h-screen bg-brand-surface text-brand-text flex items-center justify-center p-6">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
-          <p className="text-xs font-mono text-brand-muted">Fetching Ticket Details...</p>
+          <p className="text-sm text-brand-muted">Loading your ticket&hellip;</p>
         </div>
       </main>
     );
@@ -117,7 +118,7 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
   // invalid, and it must always offer a way to reach a person.
   if (loadFailed) {
     return (
-      <main className="min-h-screen bg-brand-surface text-brand-text py-12 px-4 sm:px-6">
+      <main className="public-page min-h-screen bg-brand-surface text-brand-text py-12 px-4 sm:px-6">
         <div className="max-w-md mx-auto text-center space-y-4">
           <div className="p-4 rounded-2xl bg-brand-urgent-bg text-brand-urgent inline-block">
             <AlertCircle className="w-8 h-8" />
@@ -133,11 +134,11 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
             <button
               type="button"
               onClick={() => setReloadKey((k) => k + 1)}
-              className="inline-flex min-h-[44px] px-4 py-2 rounded-xl bg-brand-primary text-brand-surface font-bold text-sm items-center justify-center"
+              className="inline-flex min-h-[48px] px-5 py-2 rounded-xl bg-brand-primary text-white font-semibold text-sm items-center justify-center"
             >
-              Try Again
+              Try again
             </button>
-            <WhatsAppSupportButton label="Get Help on WhatsApp" orderRef={reference} />
+            <WhatsAppSupportButton label="Get help on WhatsApp" orderRef={reference} />
           </div>
         </div>
       </main>
@@ -146,21 +147,25 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
 
   if (!order || ticketsList.length === 0) {
     return (
-      <main className="min-h-screen bg-brand-surface text-brand-text py-12 px-4 sm:px-6">
+      <main className="public-page min-h-screen bg-brand-surface text-brand-text py-12 px-4 sm:px-6">
         <div className="max-w-md mx-auto text-center space-y-4">
           <div className="p-4 rounded-2xl bg-brand-urgent-bg text-brand-urgent inline-block">
             <AlertCircle className="w-8 h-8" />
           </div>
-          <h1 className="text-xl font-bold">Ticket Not Found</h1>
+          <h1 className="text-2xl font-extrabold">We can&apos;t find that ticket</h1>
           <p className="text-sm text-brand-muted">
-            We could not find an issued ticket matching reference "{reference}".
+            No issued ticket matches &ldquo;{reference}&rdquo;. If you&apos;ve just paid, give it a
+            minute and refresh. Still nothing? Message us.
           </p>
           <Link
             href="/"
-            className="inline-flex min-h-[44px] px-4 py-2 rounded-xl bg-brand-primary text-brand-surface font-bold text-sm items-center justify-center"
+            className="inline-flex min-h-[48px] px-5 py-2 rounded-xl bg-brand-primary text-white font-semibold text-sm items-center justify-center"
           >
-            Return to Event Page
+            Back to the event
           </Link>
+          <div className="flex justify-center">
+            <WhatsAppSupportButton label="Message us on WhatsApp" orderRef={reference} />
+          </div>
         </div>
       </main>
     );
@@ -169,7 +174,9 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
   const activeTicket = ticketsList[selectedTicketIndex] || ticketsList[0];
 
   return (
-    <main className="min-h-screen bg-brand-surface text-brand-text py-8 sm:py-12 px-4 sm:px-6">
+    <div className="public-page min-h-screen bg-brand-surface text-brand-text">
+    <EventTopBar linkBase="/" />
+    <main className="py-6 sm:py-10 px-4 sm:px-6">
       <div className="max-w-xl mx-auto space-y-6">
         {/* Navigation & Header */}
         <div className="flex items-center justify-between">
@@ -179,9 +186,9 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
             className="inline-flex items-center gap-2 min-h-[48px] px-3 py-2 text-sm font-semibold text-brand-muted hover:text-brand-text transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Event</span>
+            <span>Back to the event</span>
           </Link>
-          <span className="text-xs font-mono font-bold text-brand-primary bg-brand-subtle px-2.5 py-1 rounded-md border border-brand-border">
+          <span className="text-xs font-mono font-bold text-brand-text bg-brand-subtle px-2.5 py-1 rounded-md border border-brand-border">
             {order.reference}
           </span>
         </div>
@@ -190,11 +197,11 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
         {ticketsList.length > 1 && (
           <div className="p-3 rounded-2xl bg-brand-card border border-brand-border space-y-2">
             <div className="flex items-center justify-between px-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-brand-muted">
-                Order Passes ({ticketsList.length})
+              <span className="text-sm font-semibold text-brand-text">
+                {ticketsList.length} tickets in this order
               </span>
               <span className="text-xs text-brand-dim">
-                Select pass to view QR
+                Pick one to show its QR
               </span>
             </div>
 
@@ -206,12 +213,12 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
                   onClick={() => setSelectedTicketIndex(idx)}
                   className={`min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
                     selectedTicketIndex === idx
-                      ? 'bg-brand-primary text-brand-surface shadow-md'
+                      ? 'bg-white text-brand-surface'
                       : 'bg-brand-subtle text-brand-muted hover:text-brand-text border border-brand-border'
                   }`}
                 >
                   <TicketIcon className="w-3.5 h-3.5" />
-                  <span>Pass #{idx + 1}: {t.holderName.split(' ')[0]}</span>
+                  <span>Ticket {idx + 1}: {t.holderName.split(' ')[0]}</span>
                 </button>
               ))}
             </div>
@@ -228,9 +235,10 @@ export const TicketPage: React.FC<TicketPageProps> = ({ reference }) => {
         {/* Order Meta Footer */}
         <div className="text-center space-y-1 text-xs text-brand-dim pt-4">
           <p>Purchased by <span className="text-brand-muted font-medium">{order.buyerName}</span> ({order.buyerEmail})</p>
-          <p>Order Reference: <span className="font-mono text-brand-muted">{order.reference}</span></p>
+          <p>Order reference: <span className="font-mono text-brand-muted">{order.reference}</span></p>
         </div>
       </div>
     </main>
+    </div>
   );
 };

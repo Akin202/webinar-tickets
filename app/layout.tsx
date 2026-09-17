@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Fraunces, Instrument_Sans, JetBrains_Mono } from 'next/font/google';
+import { Figtree, Instrument_Sans, JetBrains_Mono } from 'next/font/google';
 import { eventConfig } from '@/config/event.config';
 import { getSiteUrl } from '@/lib/site-url';
 import { BrandThemeStyle } from '@/lib/theme';
@@ -11,15 +11,17 @@ import './globals.css';
  * layout shift. The families are surfaced as CSS variables so that
  * event.config.ts stays the thing that decides which one is used where.
  */
-// Display face: one weight only (900) — it is used for headlines and prices,
-// never body copy, so every extra weight would be bytes on metered data.
-const fraunces = Fraunces({
+// The public pages' only text family, loaded as the single variable-weight
+// file: one request covers every weight the pages ask for (400 body through
+// 800 headlines) and is smaller than three static weights.
+const figtree = Figtree({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-fraunces',
-  weight: ['900'],
+  variable: '--font-figtree',
 });
 
+// /admin and /scan only. next/font downloads a face only where it is used,
+// so the public pages never fetch it.
 const instrumentSans = Instrument_Sans({
   subsets: ['latin'],
   display: 'swap',
@@ -77,7 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${instrumentSans.variable} ${jetbrainsMono.variable}`}
+      className={`${figtree.variable} ${instrumentSans.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         {/* Brand custom properties, derived from event.config.ts. Rendered
