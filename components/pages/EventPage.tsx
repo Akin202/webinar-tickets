@@ -23,7 +23,7 @@ import './event-page.css';
  * root layout on the server, so nothing here affects the link preview.
  */
 
-const { ticketing } = eventConfig;
+const { ticketing, featureFlags } = eventConfig;
 
 export const EventPage: React.FC = () => {
   const [counter, setCounter] = useState<PublicSalesCounter | null>(null);
@@ -62,16 +62,21 @@ export const EventPage: React.FC = () => {
 
   const price = koboToNaira(priceKobo);
   const soldFraction = capacity > 0 ? Math.min(1, Math.max(0, (capacity - remaining) / capacity)) : 0;
+  // No number reaches the page while the counter is off: not the seats left,
+  // not the capacity, not "only N left". Scarcity is stated in words.
+  const showsCounts = featureFlags.showLiveSalesCounter;
   const seatStatus = isSoldOut
     ? 'Sold out'
     : isClosed
       ? 'Sales closed'
-      : remaining <= ticketing.lowStockThreshold
+      : showsCounts && remaining <= ticketing.lowStockThreshold
         ? `Only ${remaining} left`
-        : 'Sales open';
+        : showsCounts
+          ? 'Sales open'
+          : 'Limited seats available';
 
   const unavailableNote = isSoldOut
-    ? `All ${capacity} seats are taken. There is no waitlist — the livestream is still free.`
+    ? `Every seat is taken. There is no waitlist — the livestream is still free.`
     : 'Online sales are closed. The livestream is still free.';
 
   const seatState: SeatState = {

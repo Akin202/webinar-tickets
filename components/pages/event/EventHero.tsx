@@ -41,7 +41,7 @@ export function EventHero({ price }: EventHeroProps) {
             {event.venueName}, {event.venueArea}.
           </span>{' '}
           <span>
-            {ticketing.capacity} {copy.hero.seatsWord}, {price} {copy.hero.priceSuffix}.
+            {copy.hero.seatsPhrase}, {price} {copy.hero.priceSuffix}.
           </span>
         </p>
         <div className="sp-hero__actions">

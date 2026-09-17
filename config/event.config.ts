@@ -15,7 +15,7 @@ export const eventConfig = {
     name: "FlagIQ AI Summit '26",
     nameHighlight: "AI Summit",   // set in Flag Red inside the hero headline
     shortName: "AI Summit '26",
-    eyebrow: "One room · One day · 100 seats",
+    eyebrow: "One room · One day · limited seats",
     lede:
       "A full day on where AI actually is right now, what it means for your work, and what you can do with it on Monday morning. Live at the AI UniPod, University of Lagos.",
     tagline: "AI Summit '26",
@@ -34,9 +34,14 @@ export const eventConfig = {
   ticketing: {
     priceKobo: 1_000_000,           // ₦10,000 — the seed; /admin can change the live price
     currency: "NGN" as const,
-    capacity: 100,                  // the room. No overbooking, no waitlist.
+    // The real room size. ENFORCED but never displayed: the owner's call
+    // (2026-09-17) is that buyers see scarcity, not arithmetic. No count, no
+    // "N left", no meter — see featureFlags.showLiveSalesCounter.
+    capacity: 100,
     maxPerOrder: 5,
-    lowStockThreshold: 15,          // show "only N left" below this
+    // Kept for the day the counter is switched back on; nothing reads it
+    // while showLiveSalesCounter is false.
+    lowStockThreshold: 15,
 
     // The buyer pays the seat, a flat service charge per seat, and Paystack's
     // gateway fee on top — so ₦10,000 per seat reaches FlagIQ intact
@@ -85,8 +90,6 @@ export const eventConfig = {
   },
 
   livestream: {
-    // Until in-app registration ships, the card shows comingSoonLabel
-    // instead of a button that goes nowhere.
     tag: "Online · Free",
     title: "Livestream",
     priceNote: "no card needed",
@@ -97,15 +100,40 @@ export const eventConfig = {
       "The recording, sent to you afterwards",
     ],
     microcopy:
-      "Name, email and phone number. We send you the link the day before and a reminder an hour ahead. Livestream registrations do not count against the 100 seats.",
-    comingSoonLabel: "Registration opens this week",
+      "Name, email and phone number. We send you the link the day before and a reminder an hour ahead. Livestream registrations do not take a seat in the room.",
+
+    /** The registration form. No payment, no QR — an email address on a list. */
+    form: {
+      openLabel: "Register for the livestream",
+      submitLabel: "Register free",
+      submittingLabel: "Registering…",
+      nameLabel: "Full name",
+      emailLabel: "Email",
+      phoneLabel: "Phone number",
+      phoneHint: "Nigerian number, e.g. 0801 234 5678",
+      attendeeTypeLabel: "Which sounds most like you?",
+      attendeeTypePlaceholder: "Choose one",
+      marketingLabel: "Send me occasional updates from FlagIQ",
+      // Shown after a first-time registration and a repeat one. Both are a
+      // success: a repeat must never read as an error, or people register
+      // again and again.
+      successHeading: "You're on the list",
+      successBody:
+        "Check your email for the confirmation. We send the stream link the day before, and a reminder an hour before we start.",
+      alreadyHeading: "You're already registered",
+      alreadyBody:
+        "That email is on the list. We've sent the confirmation again, and the stream link follows the day before.",
+      errorFallback:
+        "Something went wrong and you are not registered yet. Please try again, or message us on WhatsApp.",
+    },
   },
 
   copy: {
     hero: {
       // The venue-and-price line under the headline reads
-      // "AI UniPod, University of Lagos. 100 seats, ₦10,000 plus fees."
-      seatsWord: "seats",
+      // "AI UniPod, University of Lagos. Limited seats, ₦10,000 plus fees."
+      // Deliberately no number: see ticketing.capacity.
+      seatsPhrase: "Limited seats",
       priceSuffix: "plus fees",
       seatCta: "Get a seat",
       livestreamCta: "Livestream",
@@ -122,7 +150,7 @@ export const eventConfig = {
       eyebrow: "Two ways in",
       heading: "Be in the room, or watch it live.",
       body:
-        "The room is capped at 100 and it's the only place the networking, the workshops and the Cohort 2 discount happen. The livestream is free and always will be.",
+        "Seats are limited, and the room is the only place the networking, the workshops and the Cohort 2 discount happen. The livestream is free and always will be.",
     },
     speakers: {
       eyebrow: "Speaking",
@@ -145,7 +173,7 @@ export const eventConfig = {
       heading: "The questions we'll get anyway.",
     },
     closer: {
-      heading: "100 seats. One Saturday.",
+      heading: "One room. One Saturday.",
       body: "Everyone leaves with something they can use on Monday. That's the whole promise.",
     },
   },
@@ -153,6 +181,7 @@ export const eventConfig = {
   // photoUrl null renders an initials placeholder. announced:false is the
   // "one more to come" card — flipping it is the second announcement moment.
   speakers: [
+    { id: "solarin-akintunde", name: "Solarin Akintunde", role: null, photoUrl: null, announced: true },
     { id: "michael-pepper", name: "Michael Pepper", role: null, photoUrl: null, announced: true },
     {
       id: "chika-yinka-banjo",
@@ -179,11 +208,11 @@ export const eventConfig = {
 
   programme: [
     { time: "10:00", title: "Doors open, registration and coffee", durationMins: 30 },
-    { time: "10:30", title: "Opening — and how FlagIQ started", durationMins: 25 },
-    { time: "10:55", title: "A talk on AI", durationMins: 20 },
+    { time: "10:30", title: "Opening — and how FlagIQ started", durationMins: 25, speakerId: "solarin-akintunde" },
+    { time: "10:55", title: "A talk on AI", durationMins: 20, speakerId: "solarin-akintunde" },
     { time: "11:15", title: "Prof. Chika Yinka-Banjo", durationMins: 25, speakerId: "chika-yinka-banjo" },
-    { time: "11:40", title: "Where we are now", durationMins: 20 },
-    { time: "12:00", title: "What you can do with it", durationMins: 25 },
+    { time: "11:40", title: "Where we are now", durationMins: 20, speakerId: "solarin-akintunde" },
+    { time: "12:00", title: "What you can do with it", durationMins: 25, speakerId: "solarin-akintunde" },
     { time: "12:25", title: "Testimonials from the community", durationMins: 15 },
     { time: "12:40", title: "Break — lunch and networking", durationMins: 40, isBreak: true },
     { time: "13:20", title: "Michael Pepper", durationMins: 30, speakerId: "michael-pepper" },
@@ -244,7 +273,7 @@ export const eventConfig = {
     {
       question: "What if it sells out?",
       answer:
-        "100 seats and no overbooking. When the last seat is sold, that's it — there is no waitlist. The livestream stays free.",
+        "Seats are limited and there is no overbooking. When the last one sells, that's it — there is no waitlist. The livestream stays free.",
     },
   ],
 
@@ -294,14 +323,16 @@ export const eventConfig = {
     siteUrl: "https://webinar.flagiq.org",
     title: "FlagIQ AI Summit '26 — 3 October, AI UniPod",
     description:
-      "One room, one day, 100 seats. Where AI actually is right now and what to do with it on Monday. In person at the AI UniPod, University of Lagos, or free on the livestream.",
+      "One room, one day, limited seats. Where AI actually is right now and what to do with it on Monday. In person at the AI UniPod, University of Lagos, or free on the livestream.",
   },
 
   featureFlags: {
     // The buyer can change the name printed on a ticket from their ticket
     // link until doors open. The QR stays the same; the phone stays the buyer's.
     allowNameChange: true,
-    showLiveSalesCounter: true,  // the seat meter on the ticket card
+    // OFF at the owner's request (2026-09-17): no seat count, no "N left"
+    // and no meter anywhere public. The card shows scarcity in words instead.
+    showLiveSalesCounter: false,
   },
 } as const;
 

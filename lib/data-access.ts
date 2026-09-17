@@ -9,6 +9,7 @@ import type {
   EmailCampaignKind,
   EmailCampaignAudience,
   AttendeeType,
+  LivestreamRegistrationOutcome,
 } from '@/types/ticketing';
 import { eventConfig } from '@/config/event.config';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
@@ -136,6 +137,25 @@ export async function initiatePurchase(input: {
   marketingOptIn?: boolean;
 }): Promise<{ authorizationUrl: string; reference: string }> {
   return apiJson<{ authorizationUrl: string; reference: string }>('/api/checkout', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Free livestream sign-up. Takes no money and mints no ticket, so it shares
+ * nothing with initiatePurchase but the shape of the call. Idempotent: the
+ * same email twice returns 'already_registered', which the UI treats as
+ * success rather than an error.
+ */
+export async function registerLivestream(input: {
+  name: string;
+  email: string;
+  phone: string;
+  attendeeType: AttendeeType;
+  marketingOptIn?: boolean;
+}): Promise<{ outcome: LivestreamRegistrationOutcome }> {
+  return apiJson<{ outcome: LivestreamRegistrationOutcome }>('/api/livestream', {
     method: 'POST',
     body: JSON.stringify(input),
   });
@@ -398,6 +418,13 @@ export async function resendTicketEmail(reference: string): Promise<void> {
 /** Admin only. Every export is written to the audit log server-side. */
 export async function exportOrdersCsv(): Promise<string> {
   const res = await fetch('/api/admin/export', { cache: 'no-store' });
+  if (!res.ok) throw new Error('Export failed. Are you signed in as an admin?');
+  return res.text();
+}
+
+/** The free livestream list, as its own file. Never merged with orders.csv. */
+export async function exportLivestreamCsv(): Promise<string> {
+  const res = await fetch('/api/admin/export?dataset=livestream', { cache: 'no-store' });
   if (!res.ok) throw new Error('Export failed. Are you signed in as an admin?');
   return res.text();
 }

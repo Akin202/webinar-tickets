@@ -30,6 +30,7 @@ import {
   voidTicket,
   issueComplimentaryTicket,
   exportOrdersCsv,
+  exportLivestreamCsv,
   setSalesOpen,
   resendTicketEmail,
   setTicketPrice,
@@ -350,15 +351,15 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  // Export CSV
-  const handleExportCSV = async () => {
+  // Export CSV. Two datasets, downloaded the same way, never the same file.
+  const downloadCsv = async (fetchCsv: () => Promise<string>, name: string) => {
     try {
-      const csvData = await exportOrdersCsv();
+      const csvData = await fetchCsv();
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `summit_orders_${Date.now()}.csv`);
+      link.setAttribute('download', `${name}_${Date.now()}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -367,6 +368,9 @@ export const AdminPage: React.FC = () => {
       triggerNotice('Failed to export CSV.');
     }
   };
+
+  const handleExportCSV = () => downloadCsv(exportOrdersCsv, 'summit_orders');
+  const handleExportLivestreamCSV = () => downloadCsv(exportLivestreamCsv, 'summit_livestream');
 
   const requestPriceChange = () => {
     const value = Number(priceNaira);
@@ -503,6 +507,16 @@ export const AdminPage: React.FC = () => {
               <span>Export CSV</span>
             </button>
 
+            <button
+              type="button"
+              id="admin-export-livestream-btn"
+              onClick={handleExportLivestreamCSV}
+              className="min-h-[36px] px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-violet-600" />
+              <span>Livestream CSV</span>
+            </button>
+
             <Link
               href="/scan"
               id="admin-open-scanner-btn"
@@ -592,6 +606,18 @@ export const AdminPage: React.FC = () => {
             </div>
             <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 truncate">
               Gateway {summary ? koboToNaira(summary.gatewayFeesKobo) : '—'}
+            </p>
+          </div>
+
+          <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-200 shadow-sm">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider block truncate">
+              Livestream
+            </span>
+            <div className="text-lg sm:text-xl font-bold font-mono text-gray-900 mt-1 truncate">
+              {summary ? summary.livestreamRegistrations.toLocaleString('en-NG') : '—'}
+            </div>
+            <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 truncate">
+              Free — no seat taken
             </p>
           </div>
 
@@ -757,7 +783,7 @@ export const AdminPage: React.FC = () => {
                   </select></label>
                 <label className="text-xs font-semibold text-gray-700">Audience
                   <select value={campaignAudience} onChange={(e) => setCampaignAudience(e.target.value as EmailCampaignAudience)} className="mt-1 w-full rounded border border-gray-300 p-2">
-                    <option value="all_paid">All paid buyers</option><option value="checked_in">Has checked in</option><option value="not_checked_in">Not checked in</option>
+                    <option value="all_paid">All paid buyers</option><option value="checked_in">Has checked in</option><option value="not_checked_in">Not checked in</option><option value="livestream">Livestream registrations</option>
                   </select></label>
               </div>
               {campaignKind === 'essential' && <p className="rounded bg-amber-50 p-2 text-xs text-amber-900">Use only for necessary information about this purchased event, not promotions.</p>}

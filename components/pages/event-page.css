@@ -410,6 +410,12 @@
   font-weight: 600;
   color: #ffffff;
 }
+/* The counter-off variant: a single scarcity line where the count and meter
+   used to sit, carrying the same top margin so the card does not reflow. */
+.sp-root .sp-seats__row--bare {
+  margin-top: 20px;
+  justify-content: flex-start;
+}
 .sp-seats__bar {
   height: 6px;
   margin-top: 9px;
@@ -513,6 +519,106 @@
   font-size: 13.5px;
   line-height: 1.5;
   color: var(--sp-dim);
+}
+
+/* ---------- livestream registration form ---------- */
+/* Fields follow DESIGN.md: 48px tall, 12px radius, Navy Subtle well,
+   1px hairline border, focus shifts the border to Focus Rose. */
+.sp-form {
+  display: grid;
+  gap: 14px;
+}
+.sp-field {
+  display: grid;
+  gap: 6px;
+}
+.sp-field label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--sp-muted);
+}
+.sp-field input,
+.sp-field select {
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: var(--brand-surface-subtle);
+  border: 1px solid var(--sp-line);
+  color: var(--sp-text);
+  font-family: var(--sp-font);
+  font-size: 16px;   /* 16px or iOS Safari zooms the page on focus */
+  width: 100%;
+  transition: border-color 180ms var(--sp-ease);
+}
+.sp-field select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--sp-dim) 50%),
+    linear-gradient(135deg, var(--sp-dim) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 21px, calc(100% - 15px) 21px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 42px;
+}
+.sp-field input::placeholder {
+  color: var(--sp-dim);
+}
+.sp-field input:focus-visible,
+.sp-field select:focus-visible,
+.sp-check input:focus-visible {
+  outline: 2px solid var(--sp-focus);
+  outline-offset: 3px;
+  border-color: var(--sp-focus);
+}
+.sp-field__hint {
+  font-size: 12.5px;
+  color: var(--sp-dim);
+}
+.sp-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--sp-muted);
+  cursor: pointer;
+}
+.sp-check input {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  flex: none;
+  accent-color: var(--sp-red);
+}
+.sp-formerror {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--brand-urgent, #ff8a8a);
+}
+.sp-formerror a {
+  color: inherit;
+  text-decoration: underline;
+}
+.sp-form .sp-btn[disabled] {
+  opacity: 0.55;
+  cursor: progress;
+  transform: none;
+}
+.sp-done {
+  display: grid;
+  gap: 8px;
+}
+.sp-done__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  color: var(--sp-text);
+}
+.sp-done__head svg {
+  width: 18px;
+  height: 18px;
+  color: var(--sp-red);
+  flex: none;
 }
 
 /* ---------- speakers ---------- */

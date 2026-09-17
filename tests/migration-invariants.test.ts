@@ -161,3 +161,58 @@ describe('summit migration', () => {
     );
   });
 });
+
+const livestreamSql = latestMigrationMatching('_livestream_registrations.sql');
+
+describe('livestream migration', () => {
+  it('keeps free sign-ups out of orders entirely', () => {
+    // The whole point of a separate table: capacity, SalesSummary,
+    // reconcile.mjs and the CSV export all sum public.orders. A migration that
+    // quietly wrote a free row there would eat one of the 100 seats.
+    expect(livestreamSql).toContain('create table public.livestream_registrations');
+    expect(livestreamSql).not.toMatch(/insert\s+into\s+public\.orders/i);
+  });
+
+  it('forces RLS and revokes the table from anon and authenticated', () => {
+    expect(livestreamSql).toContain(
+      'alter table public.livestream_registrations enable row level security'
+    );
+    expect(livestreamSql).toContain(
+      'alter table public.livestream_registrations force row level security'
+    );
+    expect(livestreamSql).toContain(
+      'revoke all on public.livestream_registrations from anon, authenticated'
+    );
+    // No policy grants a browser read access, so the table has none at all.
+    expect(livestreamSql).not.toMatch(/create policy/i);
+  });
+
+  it('never lets a browser call the writer directly', () => {
+    expect(livestreamSql).toMatch(
+      /revoke execute on function public\.register_livestream[\s\S]*?from public, anon, authenticated/
+    );
+  });
+
+  it('is idempotent on a repeat email rather than an error', () => {
+    // A visitor who taps Register twice must see success. Both halves matter:
+    // the early return for an existing row, and the on-conflict that closes
+    // the race between the lookup and the insert.
+    expect(livestreamSql).toContain("'already_registered'");
+    expect(livestreamSql).toMatch(/on conflict \(email\) do update/);
+    expect(livestreamSql).toMatch(/email\s+text not null unique/);
+  });
+
+  it('accepts only the attendee types the contract lists', () => {
+    expect(livestreamSql).toContain('attendee_type    public.attendee_type not null');
+    // The enum itself is pinned to ATTENDEE_TYPES by the summit migration test
+    // above; this just proves the livestream table reuses it instead of
+    // inventing a parallel set of values.
+    expect(ATTENDEE_TYPES.length).toBeGreaterThan(0);
+  });
+
+  it('gives the livestream its own campaign audience', () => {
+    expect(livestreamSql).toContain(
+      "alter type public.email_campaign_audience add value 'livestream'"
+    );
+  });
+});

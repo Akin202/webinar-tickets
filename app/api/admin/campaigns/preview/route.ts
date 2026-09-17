@@ -6,7 +6,7 @@ import { resolveCampaignRecipients } from '@/lib/api/campaigns';
 
 const schema = z.object({
   kind: z.enum(['essential', 'marketing']),
-  audience: z.enum(['all_paid', 'checked_in', 'not_checked_in']),
+  audience: z.enum(['all_paid', 'checked_in', 'not_checked_in', 'livestream']),
 });
 
 export async function POST(req: Request) {

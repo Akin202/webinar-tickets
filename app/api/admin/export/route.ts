@@ -28,6 +28,14 @@ export async function GET(req: Request) {
   }
 
   const supabase = getSupabaseAdminClient();
+
+  // Two datasets, one guarded endpoint: the buyer list, and the free
+  // livestream list. They are never merged — a livestream row is not an order
+  // and must not appear in a file anyone reconciles against Paystack.
+  if (new URL(req.url).searchParams.get('dataset') === 'livestream') {
+    return exportLivestream(supabase, auth.staff.id);
+  }
+
   const { data, error } = await supabase
     .from('orders')
     .select('reference, buyer_name, buyer_email, buyer_phone, attendee_type, quantity, total_kobo, status, created_at')
@@ -57,6 +65,45 @@ export async function GET(req: Request) {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': 'attachment; filename="orders.csv"',
+      'Cache-Control': 'no-store',
+    },
+  });
+}
+
+async function exportLivestream(
+  supabase: ReturnType<typeof getSupabaseAdminClient>,
+  staffId: string
+): Promise<NextResponse> {
+  const { data, error } = await supabase
+    .from('livestream_registrations')
+    .select('name, email, phone, attendee_type, marketing_opt_in, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('livestream export failed:', error);
+    return NextResponse.json({ error: 'export failed' }, { status: 500 });
+  }
+
+  // Same audit trail as the buyer export: this is still a list of real people.
+  await supabase.from('settings_audit').insert({
+    actor_id: staffId,
+    field: 'livestream_csv_export',
+    old_value: null,
+    new_value: `${data?.length ?? 0} rows`,
+  });
+
+  const headers = ['Name', 'Email', 'Phone', 'Attendee Type', 'Marketing Opt-In', 'Registered At'];
+  const rows = (data ?? []).map((r) =>
+    [r.name, r.email, r.phone, r.attendee_type ?? '', r.marketing_opt_in ? 'yes' : 'no', r.created_at]
+      .map(csvField)
+      .join(',')
+  );
+  const csv = [headers.join(','), ...rows].join('\n');
+
+  return new NextResponse(csv, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="livestream.csv"',
       'Cache-Control': 'no-store',
     },
   });

@@ -34,6 +34,25 @@ export type AttendeeType = (typeof ATTENDEE_TYPES)[number];
 export const TICKET_CODE_PREFIX = 'FIQ';
 export const TICKET_CODE_PATTERN = /FIQ-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}/;
 
+/**
+ * A free livestream sign-up. Deliberately NOT an Order and never stored in
+ * public.orders: capacity, SalesSummary, reconcile.mjs, the CSV export and the
+ * campaign audiences all sum orders, so a free row there would eat a seat.
+ * No money, no ticket, no QR — see the 20260917 migration.
+ */
+export interface LivestreamRegistration {
+  id: string;                    // uuid
+  name: string;
+  email: string;                 // lower-cased and trimmed; unique
+  phone: string;                 // +234XXXXXXXXXX
+  attendeeType: AttendeeType;
+  marketingOptIn: boolean;
+  createdAt: string;             // ISO 8601
+}
+
+/** What register_livestream() reports back. A repeat email is a success. */
+export type LivestreamRegistrationOutcome = 'registered' | 'already_registered';
+
 /** A purchase. One order may contain several tickets. */
 export interface Order {
   id: string;                    // uuid
@@ -119,6 +138,8 @@ export interface SalesSummary {
   salesClosed: boolean;
   currentPriceKobo: number;
   byChannel: Record<string, number>;
+  /** Free sign-ups. A count only — never added to ticketsSold or any total. */
+  livestreamRegistrations: number;
   lastUpdatedAt: string;
 }
 
@@ -316,7 +337,7 @@ export interface CheckoutValues {
 }
 
 export type EmailCampaignKind = 'essential' | 'marketing';
-export type EmailCampaignAudience = 'all_paid' | 'checked_in' | 'not_checked_in';
+export type EmailCampaignAudience = 'all_paid' | 'checked_in' | 'not_checked_in' | 'livestream';
 export type EmailCampaignStatus =
   | 'draft'
   | 'sending'

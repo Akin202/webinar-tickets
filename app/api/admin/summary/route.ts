@@ -13,17 +13,25 @@ export async function GET(req: Request) {
 
   const supabase = getSupabaseAdminClient();
 
-  const [settingsRes, ordersRes, ticketsRes] = await Promise.all([
+  const [settingsRes, ordersRes, ticketsRes, livestreamRes] = await Promise.all([
     supabase.from('event_settings').select('*').maybeSingle(),
     supabase
       .from('orders')
       .select('status, total_kobo, fee_kobo, service_charge_kobo, paystack_channel'),
     supabase.from('tickets').select('status'),
+    // Counted, never summed into anything: these rows are free and must not
+    // touch capacity, gross or the seat maths above.
+    supabase.from('livestream_registrations').select('id', { count: 'exact', head: true }),
   ]);
 
   if (settingsRes.error || ordersRes.error || ticketsRes.error || !settingsRes.data) {
     console.error('summary failed:', settingsRes.error, ordersRes.error, ticketsRes.error);
     return NextResponse.json({ error: 'summary failed' }, { status: 500 });
+  }
+  if (livestreamRes.error) {
+    // Not fatal: the money numbers are what this endpoint exists for, and a
+    // missing livestream count must not blank the whole admin dashboard.
+    console.error('summary: livestream count failed', livestreamRes.error);
   }
 
   const settings = settingsRes.data;
@@ -58,6 +66,7 @@ export async function GET(req: Request) {
       !settings.sales_open ||
       (settings.sales_hard_stop !== null && Date.now() > new Date(settings.sales_hard_stop).getTime()),
     currentPriceKobo: settings.current_price_kobo,
+    livestreamRegistrations: livestreamRes.count ?? 0,
     byChannel,
     lastUpdatedAt: new Date().toISOString(),
   };

@@ -231,3 +231,123 @@ export async function deliverTicketEmail(reference: string): Promise<EmailResult
     quantity: data.quantity,
   });
 }
+
+// ---- Livestream confirmation ----
+//
+// A free registration mints no ticket and carries no QR, so this is a plain
+// "you're on the list" note. The stream link is NOT in it: the link is sent
+// from /admin as a campaign the day before, so it cannot leak weeks early and
+// cannot go stale if the platform changes.
+
+interface LivestreamEmailInput {
+  name: string;
+  email: string;
+  alreadyRegistered: boolean;
+}
+
+function buildLivestreamHtml(input: LivestreamEmailInput): string {
+  const firstName = escapeHtml(input.name.trim().split(/\s+/)[0] || 'there');
+  const opening = input.alreadyRegistered
+    ? 'You were already on the livestream list, so there is nothing more to do.'
+    : "You're on the list for the livestream. It's free, and there's nothing to pay.";
+  return `<!doctype html><html><body style="margin:0;background:#f4f5f7;padding:24px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:Arial,sans-serif;">
+
+  <tr><td style="background:#0b0c10;color:${eventConfig.brand.primary};padding:24px;font-size:26px;font-weight:bold;">
+    ${escapeHtml(eventConfig.event.tagline)}
+  </td></tr>
+
+  <tr><td style="padding:24px 24px 8px;color:#303744;font-size:15px;line-height:1.65;">
+    <p style="margin:0 0 16px;">Hi ${firstName},</p>
+    <p style="margin:0 0 16px;">${escapeHtml(opening)}</p>
+    <p style="margin:0 0 16px;">
+      We send the stream link <strong>the day before</strong>, and a reminder
+      an hour before we start. Watch for it at this address.
+    </p>
+  </td></tr>
+
+  <tr><td style="padding:0 24px 24px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border-radius:8px;">
+      <tr><td style="padding:16px 18px;font-size:14px;color:#3f4654;line-height:1.7;">
+        <strong style="color:#0b0c10;">When</strong><br>${escapeHtml(doorsOpenLine())}
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="padding:0 24px 28px;font-size:14px;color:#3f4654;line-height:1.65;">
+    Want to be in the room instead? Seats are limited and there is no waitlist:
+    <a href="${siteUrl()}" style="color:#0b0c10;">${escapeHtml(siteUrl())}</a>
+  </td></tr>
+
+  <tr><td style="background:#f8f9fb;padding:18px 24px;font-size:12px;color:#6b7280;line-height:1.6;">
+    Questions? Message the organisers on WhatsApp:
+    <a href="https://wa.me/${eventConfig.support.whatsappNumber.replace(/\D/g, '')}" style="color:#0b0c10;">
+      ${escapeHtml(eventConfig.support.whatsappNumber)}
+    </a>
+  </td></tr>
+
+</table>
+</td></tr></table>
+</body></html>`;
+}
+
+function buildLivestreamText(input: LivestreamEmailInput): string {
+  return [
+    `${eventConfig.event.tagline} — ${eventConfig.event.name}`,
+    '',
+    `Hi ${input.name.trim().split(/\s+/)[0] || 'there'},`,
+    '',
+    input.alreadyRegistered
+      ? 'You were already on the livestream list, so there is nothing more to do.'
+      : "You're on the list for the livestream. It's free, and there's nothing to pay.",
+    '',
+    'We send the stream link the day before, and a reminder an hour before',
+    'we start. Watch for it at this address.',
+    '',
+    `When: ${doorsOpenLine()}`,
+    '',
+    `Want to be in the room instead? Limited seats, no waitlist: ${siteUrl()}`,
+    '',
+    `Help on WhatsApp: ${eventConfig.support.whatsappNumber}`,
+  ].join('\n');
+}
+
+/**
+ * Confirms a free registration. Never throws — a registration that is safely
+ * in the database must not fail because Resend had a bad minute, so the route
+ * logs the failure and still reports success to the visitor.
+ */
+export async function sendLivestreamEmail(input: LivestreamEmailInput): Promise<EmailResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !from) {
+    console.error('email: RESEND_API_KEY / RESEND_FROM_EMAIL not configured — livestream confirmation not sent');
+    return { ok: false, reason: 'Email is not configured on this deployment.' };
+  }
+
+  try {
+    const res = await fetch(RESEND_ENDPOINT, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from,
+        to: [input.email],
+        subject: `You're registered — ${eventConfig.event.tagline} livestream`,
+        html: buildLivestreamHtml(input),
+        text: buildLivestreamText(input),
+      }),
+    });
+    const body = (await res.json().catch(() => null)) as { id?: string; message?: string } | null;
+    if (!res.ok) {
+      const reason = body?.message ?? `Resend returned ${res.status}`;
+      console.error(`email: livestream confirmation to ${input.email} failed — ${reason}`);
+      return { ok: false, reason };
+    }
+    return { ok: true, id: body?.id ?? 'sent' };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : 'Network error contacting Resend';
+    console.error(`email: livestream confirmation to ${input.email} threw — ${reason}`);
+    return { ok: false, reason };
+  }
+}

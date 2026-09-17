@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { eventConfig } from '@/config/event.config';
 import { SeatMeter } from './SeatMeter';
+import { LivestreamForm } from './LivestreamForm';
 import { typographic } from './event-format';
 
 const { ticketing, seat, livestream, copy } = eventConfig;
@@ -72,7 +73,10 @@ export function TicketsSection({ state, onQuantityChange }: TicketsSectionProps)
               <span className="sp-money">{price}</span> <small>{seat.priceNote}</small>
             </p>
 
-            {eventConfig.featureFlags.showLiveSalesCounter && (
+            {/* With the counter off, the card says scarcity in words and
+                shows no number, no fraction and no meter — a meter leaks the
+                proportion sold even without a figure beside it. */}
+            {eventConfig.featureFlags.showLiveSalesCounter ? (
               <div className="sp-seats">
                 <p className="sp-seats__row">
                   <span>
@@ -82,6 +86,10 @@ export function TicketsSection({ state, onQuantityChange }: TicketsSectionProps)
                 </p>
                 <SeatMeter capacity={capacity} remaining={remaining} soldFraction={soldFraction} />
               </div>
+            ) : (
+              <p className="sp-seats__row sp-seats__row--bare">
+                <span className="sp-seats__status">{seatStatus}</span>
+              </p>
             )}
 
             <Includes lines={seat.includes} />
@@ -145,11 +153,7 @@ export function TicketsSection({ state, onQuantityChange }: TicketsSectionProps)
             </p>
             <Includes lines={livestream.includes} />
             <div className="sp-order">
-              {/* Replaced by the registration form when the livestream
-                  table and route ship. Never a button that goes nowhere. */}
-              <span className="sp-btn sp-btn--outline sp-btn--wide" aria-disabled="true">
-                {livestream.comingSoonLabel}
-              </span>
+              <LivestreamForm />
               <p className="sp-micro">{livestream.microcopy}</p>
             </div>
           </article>

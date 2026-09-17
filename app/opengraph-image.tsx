@@ -109,7 +109,7 @@ export default async function OpengraphImage() {
                 fontWeight: 800,
               }}
             >
-              {`${ticketing.capacity} ${copy.hero.seatsWord} · ${naira} ${copy.hero.priceSuffix}`}
+              {`${copy.hero.seatsPhrase} · ${naira} ${copy.hero.priceSuffix}`}
             </span>
           </div>
         </div>

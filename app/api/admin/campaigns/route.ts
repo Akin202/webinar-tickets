@@ -7,7 +7,7 @@ import { campaignFromRow, resolveCampaignRecipients } from '@/lib/api/campaigns'
 
 const schema = z.object({
   kind: z.enum(['essential', 'marketing']),
-  audience: z.enum(['all_paid', 'checked_in', 'not_checked_in']),
+  audience: z.enum(['all_paid', 'checked_in', 'not_checked_in', 'livestream']),
   subject: z.string().trim().min(1).max(150),
   message: z.string().trim().min(1).max(10000),
   // A dry run of the real thing: same campaign row, same recipient rows, same

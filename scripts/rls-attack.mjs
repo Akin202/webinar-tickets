@@ -83,6 +83,8 @@ const TABLES = [
   'marketing_preferences',
   'email_campaigns',
   'email_campaign_recipients',
+  // Free sign-ups, but still real names, emails and phone numbers.
+  'livestream_registrations',
 ];
 
 console.log(`\nRLS attack — ${URL_BASE}\n`);
@@ -141,6 +143,15 @@ let salesCurrentlyOpen = true;
 
 const PRIVILEGED = [
   ['get_check_in_manifest', {}],
+  // Writes a row and triggers an email. Service-role only: the public form
+  // posts to /api/livestream, never to this function.
+  ['register_livestream', {
+    p_name: 'RLS Attack Probe',
+    p_email: 'rls-attack@invalid.local',
+    p_phone: '+2348000000000',
+    p_attendee_type: 'student',
+    p_marketing_opt_in: false,
+  }],
   ['set_sales_open', { p_open: salesCurrentlyOpen }],
   ['set_ticket_price', { p_price_kobo: 300000 }],
   ['record_check_in', { p_code: NO_SUCH_CODE, p_device: 'rls-attack', p_scanned_at: new Date().toISOString() }],

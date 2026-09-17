@@ -53,6 +53,22 @@ describe('event config is launch-ready', () => {
     expect(feeFaq?.answer).toContain(naira);
   });
 
+  it('never shows a visitor how many seats are left', () => {
+    // Owner's call (2026-09-17): buyers see scarcity, not arithmetic. The
+    // capacity is still enforced in event_settings — it just never reaches a
+    // public string. This test fails if the number comes back into the copy.
+    expect(eventConfig.featureFlags.showLiveSalesCounter).toBe(false);
+
+    const capacity = String(eventConfig.ticketing.capacity);
+    const publicCopy = JSON.stringify([
+      eventConfig.event, eventConfig.seat, eventConfig.livestream,
+      eventConfig.copy, eventConfig.faq, eventConfig.seo, eventConfig.audiences,
+    ]);
+    expect(publicCopy).not.toContain(`${capacity} seat`);
+    expect(publicCopy).not.toContain(`${capacity} people`);
+    expect(publicCopy).not.toMatch(/only \d+ (seat|left)/i);
+  });
+
   it('uses a real https site URL', () => {
     expect(new URL(eventConfig.seo.siteUrl).protocol).toBe('https:');
   });
