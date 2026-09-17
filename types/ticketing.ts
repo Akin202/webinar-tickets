@@ -240,8 +240,8 @@ export interface OrderTotals {
  * Use strict equality, not `residual > 0`: the strict test also catches a
  * corrupt row, where the loose one would silently report pass-mode. Verified
  * exhaustively across unit prices either side of the ₦2,500 threshold,
- * quantities 1-10, service rates 0/7.5/10%, and amounts reaching the ₦2,000
- * fee cap — 420/420 cases, zero mismatches.
+ * quantities 1-10, per-seat service charges of ₦0/₦250/₦1,000, and amounts
+ * reaching the ₦2,000 fee cap — zero mismatches.
  *
  * This is why there is deliberately NO `feePassedToBuyer` column on Order:
  * the mode is already recoverable, so the field would be redundancy rather
@@ -251,13 +251,16 @@ export interface OrderTotals {
 export function computeOrderTotals(input: {
   quantity: number;
   unitPriceKobo: number;
-  serviceChargeRate: number;
+  serviceChargeKoboPerSeat: number;
   passFeeToBuyer: boolean;
 }): OrderTotals {
-  const { quantity, unitPriceKobo, serviceChargeRate, passFeeToBuyer } = input;
+  const { quantity, unitPriceKobo, serviceChargeKoboPerSeat, passFeeToBuyer } = input;
 
   const baseKobo = unitPriceKobo * quantity;
-  const serviceChargeKobo = Math.round(baseKobo * serviceChargeRate);
+  // A FLAT amount per seat, not a percentage of the price. Deliberate: /admin
+  // can change the live price (it drops to ₦100 for the pre-launch card test),
+  // and a rate would silently shrink the charge with it.
+  const serviceChargeKobo = serviceChargeKoboPerSeat * quantity;
   const subtotalKobo = baseKobo + serviceChargeKobo;
 
   // When the buyer covers the gateway fee we must gross up, so the organiser

@@ -56,7 +56,7 @@ export const EventPage: React.FC = () => {
   const totals = computeOrderTotals({
     quantity: orderQuantity,
     unitPriceKobo: priceKobo,
-    serviceChargeRate: ticketing.serviceChargeRate,
+    serviceChargeKoboPerSeat: ticketing.serviceChargeKoboPerSeat,
     passFeeToBuyer: ticketing.passFeeToBuyer,
   });
 

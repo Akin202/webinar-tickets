@@ -37,9 +37,20 @@ describe('event config is launch-ready', () => {
     }
   });
 
-  it('keeps "all in" pricing honest: no charge added on top of the price', () => {
-    expect(eventConfig.ticketing.serviceChargeRate).toBe(0);
-    expect(eventConfig.ticketing.passFeeToBuyer).toBe(false);
+  it('charges the buyer the service charge and the gateway fee', () => {
+    expect(eventConfig.ticketing.serviceChargeKoboPerSeat).toBe(25_000);
+    expect(eventConfig.ticketing.passFeeToBuyer).toBe(true);
+  });
+
+  it('keeps the fee copy pinned to the amount actually charged', () => {
+    // The seat card and the FAQ both name a naira figure. If someone changes
+    // serviceChargeKoboPerSeat without changing the copy, a buyer reads one
+    // number and is charged another — so fail the build instead.
+    const naira = `\u20a6${eventConfig.ticketing.serviceChargeKoboPerSeat / 100}`;
+    expect(eventConfig.seat.feeNote).toContain(naira);
+    const feeFaq = eventConfig.faq.find((entry) => entry.question.includes('more than'));
+    expect(feeFaq, 'the FAQ explaining the total must exist').toBeTruthy();
+    expect(feeFaq?.answer).toContain(naira);
   });
 
   it('uses a real https site URL', () => {

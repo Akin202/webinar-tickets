@@ -1,5 +1,14 @@
-import { Order, Ticket } from '@/types/ticketing';
+import { computeOrderTotals, Order, Ticket } from '@/types/ticketing';
 import { eventConfig } from '@/config/event.config';
+
+// Derived, not hardcoded: the dev preview should show the same money the real
+// checkout would, including the service charge and gateway fee.
+const SAMPLE_TOTALS = computeOrderTotals({
+  quantity: 2,
+  unitPriceKobo: eventConfig.ticketing.priceKobo,
+  serviceChargeKoboPerSeat: eventConfig.ticketing.serviceChargeKoboPerSeat,
+  passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
+});
 
 export const SAMPLE_ORDER: Order = {
   id: 'ord_sample_882194',
@@ -10,9 +19,9 @@ export const SAMPLE_ORDER: Order = {
   attendeeType: 'professional',
   quantity: 2,
   unitPriceKobo: eventConfig.ticketing.priceKobo,
-  serviceChargeKobo: Math.round(eventConfig.ticketing.priceKobo * 2 * eventConfig.ticketing.serviceChargeRate),
-  feeKobo: 0,
-  totalKobo: eventConfig.ticketing.priceKobo * 2,
+  serviceChargeKobo: SAMPLE_TOTALS.serviceChargeKobo,
+  feeKobo: SAMPLE_TOTALS.gatewayFeeKobo,
+  totalKobo: SAMPLE_TOTALS.totalKobo,
   status: 'paid',
   paystackChannel: 'card',
   createdAt: '2026-08-20T10:00:00Z',

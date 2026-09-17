@@ -38,11 +38,14 @@ export const eventConfig = {
     maxPerOrder: 5,
     lowStockThreshold: 15,          // show "only N left" below this
 
-    // "₦10,000 per person, all in": the organiser absorbs Paystack's fee and
-    // there is no platform charge on top. FlagIQ runs the event, so a service
-    // charge would be FlagIQ charging itself.
-    passFeeToBuyer: false,
-    serviceChargeRate: 0,
+    // The buyer pays the seat, a flat service charge per seat, and Paystack's
+    // gateway fee on top — so ₦10,000 per seat reaches FlagIQ intact
+    // (2026-09-17, owner's call; it used to be absorbed).
+    // FLAT per seat, not a rate: /admin can change the live price, and a
+    // percentage would shrink with it. computeOrderTotals grosses the total up
+    // so Paystack's cut of its own fee is covered too.
+    passFeeToBuyer: true,
+    serviceChargeKoboPerSeat: 25_000,   // ₦250 per seat
     serviceChargeLabel: "Service charge",
 
     // PRIMARY sales gate, controlled from /admin.
@@ -63,7 +66,12 @@ export const eventConfig = {
   seat: {
     tag: "In person · Lagos",
     title: "Summit seat",
-    priceNote: "per person, all in",
+    priceNote: "per seat, plus fees",
+    // Sits under the live total on the seat card. The ₦250 here must match
+    // ticketing.serviceChargeKoboPerSeat — tests/config.test.ts pins them
+    // together so the copy can never drift from what the buyer is charged.
+    feeNote:
+      "The total includes a ₦250 service charge per seat and the Paystack card fee.",
     includes: [
       "A seat in the room for the full day, 10:00 to 16:00",
       "Every session, including the two workshops",
@@ -96,9 +104,9 @@ export const eventConfig = {
   copy: {
     hero: {
       // The venue-and-price line under the headline reads
-      // "AI UniPod, University of Lagos. 100 seats, ₦10,000 all in."
+      // "AI UniPod, University of Lagos. 100 seats, ₦10,000 plus fees."
       seatsWord: "seats",
-      priceSuffix: "all in",
+      priceSuffix: "plus fees",
       seatCta: "Get a seat",
       livestreamCta: "Livestream",
       menuLabel: "Menu",
@@ -222,6 +230,11 @@ export const eventConfig = {
       question: "What do I get with a seat?",
       answer:
         "A seat for the full day, every session including both workshops, lunch and refreshments, the attendee-only Cohort 2 discount, and the networking block. There is nothing else to pay on the day.",
+    },
+    {
+      question: "Why is the total a bit more than ₦10,000?",
+      answer:
+        "The seat is ₦10,000. On top of that there is a ₦250 service charge per seat and the card fee Paystack charges for processing the payment. Checkout shows you every line and the exact total before you pay anything.",
     },
     {
       question: "I'm not in Lagos. Is the livestream really free?",

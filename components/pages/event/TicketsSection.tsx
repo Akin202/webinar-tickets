@@ -116,6 +116,7 @@ export function TicketsSection({ state, onQuantityChange }: TicketsSectionProps)
                   <p className="sp-total">
                     <span>Total</span> <b className="sp-money">{total}</b>
                   </p>
+                  <p className="sp-micro">{typographic(seat.feeNote)}</p>
                   <Link className="sp-btn sp-btn--primary sp-btn--wide" href={`/checkout?qty=${orderQuantity}`}>
                     Continue to checkout
                   </Link>

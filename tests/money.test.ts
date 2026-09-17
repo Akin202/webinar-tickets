@@ -4,13 +4,14 @@ import {
   paystackFeeKobo,
   grossUpForPaystackFee,
 } from '@/types/ticketing';
+import { eventConfig } from '@/config/event.config';
 
 /**
  * The money sweep the comment in types/ticketing.ts claims exists.
  *
  * Every one of these is a property that has to hold for any price the
- * organiser might set, not just the current ₦3,000 — the whole point of the
- * config file is that the next faculty changes the number.
+ * organiser might set, not just the current ₦10,000 — the whole point of the
+ * config file is that the next event changes the number.
  */
 
 const UNIT_PRICES = [
@@ -23,15 +24,22 @@ const UNIT_PRICES = [
   9_000_000, // ₦90,000 — into the ₦2,000 fee cap
 ];
 const QUANTITIES = [1, 2, 3, 4, 5];
-const SERVICE_RATES = [0, 0.075, 0.1];
+// Flat per-seat service charges, in kobo: none, the Summit's ₦250, and a
+// larger one, so the properties below are not tuned to today's number.
+const SERVICE_CHARGES_PER_SEAT = [0, 25_000, 100_000];
 
 function everyCase(fn: (t: ReturnType<typeof computeOrderTotals>, pass: boolean) => void) {
   for (const unitPriceKobo of UNIT_PRICES) {
     for (const quantity of QUANTITIES) {
-      for (const serviceChargeRate of SERVICE_RATES) {
+      for (const serviceChargeKoboPerSeat of SERVICE_CHARGES_PER_SEAT) {
         for (const passFeeToBuyer of [true, false]) {
           fn(
-            computeOrderTotals({ quantity, unitPriceKobo, serviceChargeRate, passFeeToBuyer }),
+            computeOrderTotals({
+              quantity,
+              unitPriceKobo,
+              serviceChargeKoboPerSeat,
+              passFeeToBuyer,
+            }),
             passFeeToBuyer
           );
         }
@@ -140,16 +148,50 @@ describe('computeOrderTotals', () => {
   });
 
   it('prices the live configuration the way the page claims', () => {
-    // ₦3,000 ticket, 7.5% service charge, buyer covers the gateway fee.
+    // The Summit as configured: ₦10,000 a seat, a flat ₦250 service charge
+    // per seat, and the buyer covering Paystack's fee on top.
     const t = computeOrderTotals({
       quantity: 1,
-      unitPriceKobo: 300_000,
-      serviceChargeRate: 0.075,
+      unitPriceKobo: eventConfig.ticketing.priceKobo,
+      serviceChargeKoboPerSeat: eventConfig.ticketing.serviceChargeKoboPerSeat,
+      passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
+    });
+    expect(t.baseKobo).toBe(1_000_000);
+    expect(t.serviceChargeKobo).toBe(25_000);
+    expect(t.subtotalKobo).toBe(1_025_000);
+    // FlagIQ is left with the seat and the service charge, intact.
+    expect(t.totalKobo - t.gatewayFeeKobo).toBe(1_025_000);
+    // A sanity band on what the buyer sees: a shade over ₦10,500, never ₦11,000.
+    expect(t.totalKobo).toBeGreaterThan(1_050_000);
+    expect(t.totalKobo).toBeLessThan(1_100_000);
+  });
+
+  it('scales the service charge with the number of seats', () => {
+    const one = computeOrderTotals({
+      quantity: 1,
+      unitPriceKobo: 1_000_000,
+      serviceChargeKoboPerSeat: 25_000,
       passFeeToBuyer: true,
     });
-    expect(t.baseKobo).toBe(300_000);
-    expect(t.serviceChargeKobo).toBe(22_500);
-    expect(t.subtotalKobo).toBe(322_500);
-    expect(t.totalKobo - t.gatewayFeeKobo).toBe(322_500);
+    const three = computeOrderTotals({
+      quantity: 3,
+      unitPriceKobo: 1_000_000,
+      serviceChargeKoboPerSeat: 25_000,
+      passFeeToBuyer: true,
+    });
+    expect(one.serviceChargeKobo).toBe(25_000);
+    expect(three.serviceChargeKobo).toBe(75_000);
+  });
+
+  it('keeps the service charge whole when an admin drops the price', () => {
+    // The pre-launch card test sets the live price to ₦100. A percentage-based
+    // charge would collapse to ₦2.50 with it; a flat one does not.
+    const t = computeOrderTotals({
+      quantity: 1,
+      unitPriceKobo: 10_000,
+      serviceChargeKoboPerSeat: 25_000,
+      passFeeToBuyer: true,
+    });
+    expect(t.serviceChargeKobo).toBe(25_000);
   });
 });

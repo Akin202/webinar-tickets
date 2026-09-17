@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     totals = computeOrderTotals({
       quantity: parsed.quantity,
       unitPriceKobo: settings.current_price_kobo,
-      serviceChargeRate: eventConfig.ticketing.serviceChargeRate,
+      serviceChargeKoboPerSeat: eventConfig.ticketing.serviceChargeKoboPerSeat,
       passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
     });
     const created = await supabase.rpc('create_pending_order', {

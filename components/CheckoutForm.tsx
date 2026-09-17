@@ -80,7 +80,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
   const totals = computeOrderTotals({
     quantity,
     unitPriceKobo,
-    serviceChargeRate: eventConfig.ticketing.serviceChargeRate,
+    serviceChargeKoboPerSeat: eventConfig.ticketing.serviceChargeKoboPerSeat,
     passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
   });
 
@@ -326,7 +326,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
           {/* Trust badges */}
           <div className="flex items-center gap-2.5 text-sm text-brand-muted">
             <ShieldCheck className="w-5 h-5 text-brand-dim flex-shrink-0" />
-            <span>You pay on Paystack: card, bank transfer or USSD. {!eventConfig.ticketing.passFeeToBuyer && eventConfig.ticketing.serviceChargeRate === 0 ? 'No fees on top.' : ''}</span>
+            <span>You pay on Paystack: card, bank transfer or USSD. The total above is final — nothing is added after this.</span>
           </div>
 
           {/* Submit Button */}

@@ -22,7 +22,7 @@ export const PriceTag: React.FC<PriceTagProps> = ({
   const totals = computeOrderTotals({
     quantity,
     unitPriceKobo,
-    serviceChargeRate: eventConfig.ticketing.serviceChargeRate,
+    serviceChargeKoboPerSeat: eventConfig.ticketing.serviceChargeKoboPerSeat,
     passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
   });
 
