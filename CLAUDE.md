@@ -2,7 +2,8 @@
 
 ## What this is
 Ticket sales and door check-in for **FlagIQ AI Summit '26**: 100 paid in-person
-seats (₦10,000, all in) plus a free livestream. Saturday 3 October 2026, AI
+seats (₦10,000 a seat, plus a ₦250 service charge per seat and the Paystack
+fee, both paid by the buyer) plus a free livestream. Saturday 3 October 2026, AI
 UniPod, University of Lagos. Sales open 15 September 2026.
 
 Forked from the sign-out after-party ticket app (August 2026), which took real
@@ -50,6 +51,12 @@ Resend · Vercel
 - **Capacity counts minted tickets plus live pending holds**, inside
   `create_pending_order` under a row lock. The hold interval must match between
   that function and `get_public_counter`.
+- **The public never sees a seat count** (owner, 2026-09-17). No capacity, no
+  "N left", no meter — `featureFlags.showLiveSalesCounter` is false and
+  `tests/config.test.ts` fails if a number returns to the copy. The count is
+  still enforced in `event_settings`; it is simply never displayed. Note the
+  `get_public_counter` RPC still returns the numbers to the browser, so they
+  remain readable in devtools.
 - **Livestream registrations never go in `orders`.** Capacity, `SalesSummary`,
   `reconcile.mjs`, CSV export and campaigns all sum `orders`, so free sign-ups
   there would eat seats. They get their own table.
