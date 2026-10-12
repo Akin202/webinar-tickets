@@ -1,20 +1,18 @@
-import { NextResponse, after } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
-import { paystackVerify } from '@/lib/api/paystack';
-import { deliverTicketEmail } from '@/lib/email';
 import { orderFromRow, ticketFromRow } from '@/lib/api/mappers';
 import { rateLimit, clientIp } from '@/lib/api/rate-limit';
-import { logSettleOutcome } from '@/lib/api/settle-log';
+import { verifyAndSettle } from '@/lib/api/settle';
 
 /**
  * The ticket page's data source. The reference is a bearer token — an
  * unguessable 69-bit code generated at checkout — so possession of the URL
  * is the authorisation, same model as an airline booking reference.
  *
- * Lazy verification: if the order is still pending (the buyer usually beats
- * the webhook home), ask Paystack directly and settle through the SAME
- * idempotent mark_order_paid the webhook uses. The client still decides
- * nothing — this is one server asking another.
+ * Lazy verification: if the order is still pending, ask Paystack directly
+ * and settle through the SAME idempotent mark_order_paid the sweep and the
+ * webhook use. The client still decides nothing — this is one server asking
+ * another.
  */
 export async function GET(
   req: Request,
@@ -51,35 +49,11 @@ export async function GET(
 
   if (order.status === 'pending' || order.status === 'abandoned') {
     try {
-      const verified = await paystackVerify(clean);
-      if (verified?.status === 'success') {
-        const { data: settled, error: settleError } = await supabase.rpc('mark_order_paid', {
-          p_reference: clean,
-          p_amount_kobo: verified.amountKobo,
-          p_channel: verified.channel,
-          p_raw: verified.raw,
-        });
-
-        // Paystack says this transaction succeeded, so a failure to settle it
-        // is money we have taken and not recorded. The webhook will retry the
-        // same call, but if it never arrives this log is the only trace.
-        if (settleError) {
-          console.error(`verify: mark_order_paid errored on ${clean}`, settleError);
-        }
-
-        // The buyer usually beats the webhook home, so this path is often the
-        // one that actually flips the order. Same 'paid'-only guard: whichever
-        // of the two lands second gets 'already_paid' and sends nothing.
-        const settledRow = Array.isArray(settled) ? settled[0] : settled;
-        if (!settleError) {
-          logSettleOutcome('verify', clean, verified.amountKobo, settledRow?.outcome);
-        }
-        if (settledRow?.outcome === 'paid') {
-          after(async () => {
-            const result = await deliverTicketEmail(clean);
-            if (!result.ok) console.error(`order: ticket email for ${clean} — ${result.reason}`);
-          });
-        }
+      // The buyer arrives here straight from the Paystack popup, so this path
+      // usually flips the order. The sweep and the webhook use the same
+      // idempotent settle, so whichever lands second is a no-op.
+      const attempt = await verifyAndSettle(supabase, clean, 'verify');
+      if (attempt.kind !== 'not_paid') {
         const { data: fresh } = await supabase
           .from('orders')
           .select('*')
@@ -88,8 +62,8 @@ export async function GET(
         if (fresh) order = fresh;
       }
     } catch (err) {
-      // Verify being down is not fatal — the webhook will settle it.
-      console.warn('lazy verify failed (webhook will settle):', err);
+      // Verify being down is not fatal — the settle-pending sweep retries it.
+      console.warn('lazy verify failed (sweep will settle):', err);
     }
   }
 

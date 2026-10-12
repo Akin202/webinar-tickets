@@ -144,6 +144,7 @@ export async function POST(req: Request) {
       email: parsed.buyerEmail,
       amountKobo: totals.totalKobo,
       reference,
+      // Only used by the hosted-page fallback; the popup ignores it.
       callbackUrl: `${siteUrl}/ticket/${reference}`,
       metadata: {
         buyer_name: parsed.buyerName,
@@ -153,7 +154,13 @@ export async function POST(req: Request) {
         event: eventConfig.event.name,
       },
     });
-    return NextResponse.json({ authorizationUrl: init.authorizationUrl, reference });
+    // accessCode opens the Paystack popup on our own page; authorizationUrl is
+    // the hosted-page fallback for when the popup script cannot load.
+    return NextResponse.json({
+      accessCode: init.accessCode,
+      authorizationUrl: init.authorizationUrl,
+      reference,
+    });
   } catch (err) {
     console.error('paystack initialize failed:', err);
 

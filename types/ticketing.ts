@@ -176,7 +176,7 @@ export interface StaffUser {
 export type PurchaseState =
   | { status: "idle" }
   | { status: "validating" }
-  | { status: "redirecting"; authorizationUrl: string }
+  | { status: "paying" }                              // Paystack popup open over the page
   | { status: "confirming" }                          // returned from Paystack, verifying
   | { status: "success"; order: Order; tickets: Ticket[] }
   | { status: "sold_out" }

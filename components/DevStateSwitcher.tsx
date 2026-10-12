@@ -70,8 +70,8 @@ export const DevStateSwitcher: React.FC<DevStateSwitcherProps> = ({
     { label: 'Idle (Standard Form)', state: { status: 'idle' } },
     { label: 'Validating (Submitting)', state: { status: 'validating' } },
     {
-      label: 'Redirecting (Paystack Interstitial)',
-      state: { status: 'redirecting', authorizationUrl: '#' },
+      label: 'Paying (Paystack Popup Open)',
+      state: { status: 'paying' },
     },
     { label: 'Confirming (Payment Interstitial)', state: { status: 'confirming' } },
     ...(sampleOrder

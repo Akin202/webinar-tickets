@@ -43,8 +43,13 @@ Resend · Vercel
 
 ## Hard rules
 - **All money is integer kobo.** The client never decides an order is paid;
-  only `mark_order_paid` does, via the webhook or the lazy verify on
-  `/api/orders/[reference]`. Totals are computed server-side.
+  only `mark_order_paid` does, via the lazy verify on `/api/orders/[reference]`,
+  the settle-pending sweep (`/api/cron/settle-pending`, daily at 23:00 UTC
+  because Vercel Hobby allows no more, 48h lookback, needs `CRON_SECRET`),
+  or the webhook. Totals are computed server-side.
+- **Checkout is the Paystack popup** (`@paystack/inline-js`, 2026-10-12), with
+  the hosted page as fallback. The FlagIQ Paystack business is shared across
+  apps and has one webhook URL, so this app must never depend on the webhook.
 - **The `event_settings` row is what's enforced**, not config. Capacity, price
   and the sales hard stop live there; config only describes them, and the
   invariant tests compare the two.

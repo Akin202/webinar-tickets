@@ -6,6 +6,7 @@
       "name": "react-example",
       "dependencies": {
         "@hookform/resolvers": "^5.9.1",
+        "@paystack/inline-js": "^2.26.0",
         "@supabase/ssr": "^0.12.4",
         "@supabase/supabase-js": "^2.112.3",
         "@tailwindcss/postcss": "^4.3.3",
@@ -182,6 +183,8 @@
     "@noble/curves": ["@noble/curves@1.9.7", "", { "dependencies": { "@noble/hashes": "1.8.0" } }, "sha512-gbKGcRUYIjA3/zCCNaWDciTMFI0dCkvou3TL8Zmy5Nc7sJ47a0jtOeZoTaMxkuqRo9cRhjOdZJXegxYE5FN/xw=="],
 
     "@noble/hashes": ["@noble/hashes@1.8.0", "", {}, "sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A=="],
+
+    "@paystack/inline-js": ["@paystack/inline-js@2.26.0", "", {}, "sha512-3R1ewkV/zQ/zlIkKry7AQyzeXmTmmXxiDIY/52zFXySfmiwxv3OQ2lozxxIEY5Zw2kqfB7WVjhqQY1RcB4i0wQ=="],
 
     "@rollup/rollup-android-arm-eabi": ["@rollup/rollup-android-arm-eabi@4.62.4", "", { "os": "android", "cpu": "arm" }, "sha512-RrPokAb7dmbxFoeO3TloqHyOjgye8RkBhSqmp4aJMIex4c9r46ZstPnleDQOq1t46VOVjwIuwNogIqbodV1Vvg=="],
 

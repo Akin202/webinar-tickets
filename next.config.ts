@@ -17,8 +17,10 @@ const securityHeaders = [
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   {
     key: 'Permissions-Policy',
-    // Camera stays available — /scan needs it. Everything else off.
-    value: 'geolocation=(), microphone=(), payment=(), usb=()',
+    // Camera stays available — /scan needs it. Payment is delegated only to
+    // the Paystack popup's iframe, for its Apple Pay / Google Pay buttons.
+    // Everything else off.
+    value: 'geolocation=(), microphone=(), payment=(self "https://checkout.paystack.com"), usb=()',
   },
   {
     key: 'Strict-Transport-Security',

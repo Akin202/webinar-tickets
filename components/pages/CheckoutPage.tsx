@@ -23,6 +23,7 @@ import {
   listOrders,
   getOrderByReference,
   getPublicSalesCounter,
+  type PurchaseStart,
 } from '@/lib/data-access';
 import { IS_DEV } from '@/lib/dev-mode';
 import { useDevState } from '@/components/dev/DevStateProvider';
@@ -41,9 +42,10 @@ export const CheckoutPage: React.FC = () => {
 
   // Internal state when not overridden by dev switcher
   const [internalState, setInternalState] = useState<PurchaseState>({ status: 'idle' });
-  // Reference of the in-flight purchase, so the dev simulate buttons can
-  // confirm the real order rather than reaching for a mock fixture.
-  const [activeReference, setActiveReference] = useState<string | null>(null);
+  // The in-flight purchase: its access code reopens the same Paystack popup
+  // after a cancel (a fresh order would hold a second set of seats), and its
+  // reference lets the dev simulate buttons confirm the real order.
+  const [activePurchase, setActivePurchase] = useState<PurchaseStart | null>(null);
   // Suppresses a flash of the purchase form before availability is known. A
   // buyer starting to type into a form that then vanishes is worse than a
   // brief spinner. Becomes a server-side check in Session 1, at which point
@@ -110,16 +112,9 @@ export const CheckoutPage: React.FC = () => {
         marketingOptIn: values.marketingOptIn,
       });
 
-      setActiveReference(res.reference);
-      setPurchaseState({
-        status: 'redirecting',
-        authorizationUrl: res.authorizationUrl,
-      });
-
-      // Hand off to Paystack's hosted checkout. Paystack redirects back to
-      // /ticket/[reference], where the server verifies payment — this client
-      // never decides payment status.
-      window.location.assign(res.authorizationUrl);
+      setActivePurchase(res);
+      setPurchaseState({ status: 'paying' });
+      await openPaystackPopup(res);
     } catch (err: any) {
       if (err?.code === 'sold_out') {
         setPurchaseState({ status: 'sold_out' });
@@ -134,6 +129,30 @@ export const CheckoutPage: React.FC = () => {
     }
   };
 
+  /**
+   * Opens Paystack's popup over this page. On success the buyer goes to
+   * /ticket/[reference], where the server verifies payment — this client
+   * never decides payment status. Closing the popup leaves the 'paying'
+   * panel up, which can reopen the same transaction.
+   */
+  const openPaystackPopup = async ({ accessCode, authorizationUrl, reference }: PurchaseStart) => {
+    // The hosted page is the fallback: a script that will not load on a bad
+    // connection must not strand a buyer whose seats are already held.
+    const useHostedPage = () => window.location.assign(authorizationUrl);
+    try {
+      const { default: PaystackPop } = await import('@paystack/inline-js');
+      new PaystackPop().resumeTransaction(accessCode, {
+        onSuccess: () => {
+          setPurchaseState({ status: 'confirming' });
+          router.push(`/ticket/${reference}`);
+        },
+        onError: useHostedPage,
+      });
+    } catch {
+      useHostedPage();
+    }
+  };
+
   const handleRetry = () => {
     setPurchaseState({ status: 'idle' });
   };
@@ -144,8 +163,8 @@ export const CheckoutPage: React.FC = () => {
    */
   const simulatePaymentSuccess = async () => {
     try {
-      if (activeReference) {
-        const confirmed = await confirmPurchase(activeReference);
+      if (activePurchase) {
+        const confirmed = await confirmPurchase(activePurchase.reference);
         setPurchaseState({ status: 'success', ...confirmed });
         return;
       }
@@ -182,11 +201,11 @@ export const CheckoutPage: React.FC = () => {
         </div>
 
         {/* ========================================================
-            STATE 1: REDIRECTING (Full-screen Interstitial)
+            STATE 1: PAYING (Paystack popup open over this page)
         ======================================================== */}
-        {purchaseState.status === 'redirecting' && (
+        {purchaseState.status === 'paying' && (
           <div
-            id="state-redirecting-interstitial"
+            id="state-paying-interstitial"
             className="max-w-xl mx-auto my-12 p-8 sm:p-12 rounded-2xl bg-brand-card border border-brand-border text-center space-y-6"
           >
             <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-subtle text-brand-primary flex items-center justify-center">
@@ -195,10 +214,10 @@ export const CheckoutPage: React.FC = () => {
 
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-text">
-                Taking you to Paystack&hellip;
+                Finish paying in the Paystack window
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
-                Your seats are held while you pay on Paystack’s page.
+                Your seats are held while you pay.
               </p>
             </div>
 
@@ -207,10 +226,30 @@ export const CheckoutPage: React.FC = () => {
             </div>
 
             <div className="pt-2 flex flex-col gap-3">
+              {activePurchase && (
+                <>
+                  <button
+                    type="button"
+                    id="reopen-payment-btn"
+                    onClick={() => openPaystackPopup(activePurchase)}
+                    className="min-h-[48px] px-6 py-3 rounded-xl bg-brand-primary text-white font-bold text-sm hover:bg-brand-primary-hover transition-colors"
+                  >
+                    Reopen the payment window
+                  </button>
+                  {/* For a transfer or USSD payer who finished on another
+                      screen: the ticket page verifies with Paystack itself. */}
+                  <Link
+                    href={`/ticket/${activePurchase.reference}`}
+                    className="min-h-[48px] px-6 py-3 rounded-xl border border-brand-border text-brand-text font-semibold text-sm flex items-center justify-center hover:bg-brand-subtle transition-colors"
+                  >
+                    Already paid? Check your ticket
+                  </Link>
+                </>
+              )}
               {IS_DEV && (
                 <button
                   type="button"
-                  id="redirect-simulated-success-btn"
+                  id="paying-simulated-success-btn"
                   onClick={() => {
                     setPurchaseState({ status: 'confirming' });
                     setTimeout(simulatePaymentSuccess, 1000);

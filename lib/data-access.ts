@@ -121,13 +121,21 @@ export async function setSalesOpen(open: boolean): Promise<void> {
   }
 }
 
+export interface PurchaseStart {
+  accessCode: string;
+  authorizationUrl: string;
+  reference: string;
+}
+
 /**
  * Starts a real Paystack transaction. The server computes the amount from
- * config — nothing money-shaped leaves this client. The returned
- * authorizationUrl is Paystack's hosted checkout; navigate to it.
+ * config — nothing money-shaped leaves this client. Open the Paystack popup
+ * with accessCode; authorizationUrl is the hosted checkout, kept as the
+ * fallback for when the popup cannot load.
  */
 // Signature changed on purpose for the Summit: attendeeType was added. Required
 // server-side — the checkout route rejects a paying order without it.
+// Changed again on 2026-10-12: the result gained accessCode for the popup.
 export async function initiatePurchase(input: {
   buyerName: string;
   buyerEmail: string;
@@ -135,8 +143,8 @@ export async function initiatePurchase(input: {
   attendeeType: AttendeeType;
   quantity: number;
   marketingOptIn?: boolean;
-}): Promise<{ authorizationUrl: string; reference: string }> {
-  return apiJson<{ authorizationUrl: string; reference: string }>('/api/checkout', {
+}): Promise<PurchaseStart> {
+  return apiJson<PurchaseStart>('/api/checkout', {
     method: 'POST',
     body: JSON.stringify(input),
   });

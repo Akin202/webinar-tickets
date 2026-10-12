@@ -7,9 +7,12 @@ import { rateLimit, clientIp } from '@/lib/api/rate-limit';
 import { readCappedText, MAX_WEBHOOK_BODY_BYTES } from '@/lib/api/body-limit';
 
 /**
- * THE authority on payment status. Nothing else marks an order paid — the
- * order-status route's lazy verify goes through the same idempotent
- * mark_order_paid function, so whichever path lands second is a no-op.
+ * One of three settle paths, all through the same idempotent mark_order_paid,
+ * so whichever lands second is a no-op. Since 2026-10-12 it is the optional
+ * one: the FlagIQ Paystack business is shared and its single webhook URL may
+ * point at another app. The lazy verify on /api/orders/[reference] and the
+ * settle-pending sweep (/api/cron/settle-pending) settle without it. Kept so
+ * that pointing the webhook back here still works.
  *
  * Paystack signs the RAW request body with the account's secret key
  * (HMAC-SHA512, x-paystack-signature). There is no separate webhook secret.

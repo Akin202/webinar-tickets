@@ -3,9 +3,9 @@ import 'server-only';
 /**
  * Every outcome `mark_order_paid` can return, logged in one place.
  *
- * Two paths settle an order — the Paystack webhook and the lazy verify on
- * /api/orders/[reference] — and they were reporting different subsets of the
- * same answers. `paid_no_capacity` and `conflict` were reported by neither,
+ * Three paths settle an order — the Paystack webhook, the lazy verify on
+ * /api/orders/[reference], and the settle-pending sweep — and the first two
+ * were once reporting different subsets of the same answers. `paid_no_capacity` and `conflict` were reported by neither,
  * despite migration 20260819012502 promising "an error-level log in the
  * webhook and verify routes". A buyer whose money landed but whose ticket was
  * never minted left a settings_audit row and nothing else.
@@ -22,7 +22,7 @@ export type SettleOutcome =
   | 'conflict';
 
 export function logSettleOutcome(
-  source: 'webhook' | 'verify',
+  source: 'webhook' | 'verify' | 'cron',
   reference: string,
   amountKobo: number,
   outcome: string | undefined
