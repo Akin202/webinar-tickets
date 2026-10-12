@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import { eventConfig } from '@/config/event.config';
 import { EVENT_NAME, WHATSAPP_HREF, typographic } from './event-format';
 
-const { event, audiences, faq, copy } = eventConfig;
+const { event, audiences, organisers, partners, faq, support, copy } = eventConfig;
 
 /** Who the room is for: three plain statements, divided by rules, no card shells. */
 export function AudienceSection() {
@@ -21,6 +21,68 @@ export function AudienceSection() {
             </div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+/** About the organisers: the same divided list as the audiences, one item each. */
+export function OrganisersSection() {
+  return (
+    <section className="sp-band" aria-labelledby="organisers-heading">
+      <div className="sp-shell">
+        <div className="sp-head">
+          <h2 id="organisers-heading">{copy.organisers.heading}</h2>
+        </div>
+        <div className="sp-who">
+          {organisers.map((organiser) => (
+            <div key={organiser.name} className="sp-who__item">
+              <h3>{organiser.name}</h3>
+              <p>{typographic(organiser.body)}</p>
+              {organiser.url && (
+                <a className="sp-who__link" href={organiser.url} target="_blank" rel="noopener noreferrer">
+                  {new URL(organiser.url).host}
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Partner logos from config, or a plain placeholder line while the list is empty. */
+export function PartnersSection() {
+  return (
+    <section className="sp-band" aria-labelledby="partners-heading">
+      <div className="sp-shell">
+        <div className="sp-head">
+          <h2 id="partners-heading">{copy.partners.heading}</h2>
+        </div>
+        {partners.length === 0 ? (
+          <p className="sp-partners__tba">{copy.partners.placeholder}</p>
+        ) : (
+          <ul className="sp-partners">
+            {partners.map((partner) => {
+              const logo = (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={partner.logoUrl} alt={partner.name} height={48} loading="lazy" decoding="async" />
+              );
+              return (
+                <li key={partner.name}>
+                  {partner.url ? (
+                    <a href={partner.url} target="_blank" rel="noopener noreferrer">
+                      {logo}
+                    </a>
+                  ) : (
+                    logo
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </section>
   );
@@ -94,7 +156,7 @@ export function EventFooter() {
     <footer className="sp-foot">
       <div className="sp-shell sp-foot__in">
         <span>
-          {EVENT_NAME} · {event.venueName}, {event.venueArea}
+          {EVENT_NAME} · {event.venueName}, {event.venueArea} · Powered by {event.poweredBy}
         </span>
         <nav className="sp-foot__links" aria-label="Footer">
           <a href="#tickets">Tickets</a>
@@ -102,6 +164,9 @@ export function EventFooter() {
           <a href="#faq">FAQ</a>
           <a href={WHATSAPP_HREF} target="_blank" rel="noopener noreferrer">
             WhatsApp
+          </a>
+          <a href={support.linkedinUrl} target="_blank" rel="noopener noreferrer">
+            LinkedIn
           </a>
           <Link href="/cookies">Cookies</Link>
         </nav>

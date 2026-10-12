@@ -11,7 +11,14 @@ import { DayPreview } from './event/DayPreview';
 import { TicketsSection, type SeatState } from './event/TicketsSection';
 import { SpeakersSection } from './event/SpeakersSection';
 import { ProgrammeSection } from './event/ProgrammeSection';
-import { AudienceSection, Closer, EventFooter, FaqSection } from './event/ReadingSections';
+import {
+  AudienceSection,
+  Closer,
+  EventFooter,
+  FaqSection,
+  OrganisersSection,
+  PartnersSection,
+} from './event/ReadingSections';
 import './event-page.css';
 
 /**
@@ -104,6 +111,8 @@ export const EventPage: React.FC = () => {
         <SpeakersSection />
         <ProgrammeSection />
         <AudienceSection />
+        <OrganisersSection />
+        <PartnersSection />
         <FaqSection />
         <Closer price={price} />
       </main>

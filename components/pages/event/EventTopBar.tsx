@@ -47,7 +47,7 @@ export function EventTopBar({ linkBase = '' }: EventTopBarProps) {
   return (
     <header className="sp-top">
       <div className="sp-shell sp-top__in">
-        <Link className="sp-top__logo" href="/" aria-label={`${event.hostedBy} — ${event.name}`}>
+        <Link className="sp-top__logo" href="/" aria-label={`${event.name}, powered by ${event.poweredBy}`}>
           <Image src="/assets/flagiq-logo-trim.png" alt="" width={252} height={289} priority />
         </Link>
         <nav className="sp-top__wide" aria-label="Page sections">

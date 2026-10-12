@@ -72,4 +72,12 @@ describe('event config is launch-ready', () => {
   it('uses a real https site URL', () => {
     expect(new URL(eventConfig.seo.siteUrl).protocol).toBe('https:');
   });
+
+  it('has a partners placeholder, and self-hosts any partner logo', () => {
+    // An empty list renders the placeholder, so it must say something.
+    expect(eventConfig.copy.partners.placeholder.trim()).not.toBe('');
+    for (const partner of eventConfig.partners) {
+      expect(partner.logoUrl, `${partner.name} logo must live under /assets/`).toMatch(/^\/assets\//);
+    }
+  });
 });

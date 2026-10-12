@@ -1,5 +1,5 @@
 /* ============================================================
-   FlagIQ AI Summit '26 — public event page.
+   Flag Skool Summit — public event page.
 
    A dark conference page: deep navy ground, one light top strip, white
    Figtree headlines, mono only for times and money, signal red only for
@@ -199,6 +199,14 @@
 }
 .sp-hero__sub span {
   display: block;
+}
+.sp-root .sp-hero__powered {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sp-muted);
 }
 .sp-hero__actions {
   display: grid;
@@ -760,6 +768,41 @@
   line-height: 1.6;
   color: var(--sp-muted);
   max-width: 60ch;
+}
+
+.sp-who__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 15px;
+  color: #ffffff;
+  text-underline-offset: 3px;
+}
+.sp-who__link:hover {
+  color: var(--sp-focus);
+}
+
+/* ---------- partners ---------- */
+.sp-root .sp-partners__tba {
+  margin-top: 20px;
+  padding-block: 22px;
+  border-top: 1px solid var(--sp-line);
+  font-size: 17px;
+  color: var(--sp-muted);
+}
+.sp-partners {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px 40px;
+  margin-top: 28px;
+  padding: 0;
+  list-style: none;
+}
+.sp-partners img {
+  display: block;
+  width: auto;
+  height: 48px;
 }
 
 /* ---------- faq ---------- */

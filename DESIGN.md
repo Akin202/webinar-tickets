@@ -1,5 +1,5 @@
 ---
-name: FlagIQ AI Summit '26
+name: Flag Skool Summit
 description: Dark conference ticketing pages for a 100-seat, one-day AI summit in Lagos.
 colors:
   signal-red: "#E3173E"
@@ -122,7 +122,7 @@ components:
     height: "63px"
 ---
 
-# Design System: FlagIQ AI Summit '26
+# Design System: Flag Skool Summit
 
 ## Overview
 

@@ -94,10 +94,13 @@ export default async function OpengraphImage() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-          <div style={{ display: 'flex', maxWidth: 820, fontSize: 124, lineHeight: 0.95, fontWeight: 800, letterSpacing: -4, color: '#ffffff' }}>
+          <div style={{ display: 'flex', maxWidth: 820, fontSize: 112, lineHeight: 0.95, fontWeight: 800, letterSpacing: -4, color: '#ffffff' }}>
             {EVENT_NAME}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, fontSize: 36, fontWeight: 800, color: '#eef1f6' }}>
+          <div style={{ display: 'flex', fontSize: 24, fontWeight: 800, letterSpacing: 4, color: '#b8c2d6' }}>
+            {`POWERED BY ${event.poweredBy.toUpperCase()}`}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, fontSize: 30, fontWeight: 800, color: '#eef1f6', whiteSpace: 'nowrap' }}>
             <span>{`${event.venueName}, ${event.venueArea}.`}</span>
             <span
               style={{
@@ -107,6 +110,7 @@ export default async function OpengraphImage() {
                 background: eventConfig.brand.primary,
                 color: '#ffffff',
                 fontWeight: 800,
+                whiteSpace: 'nowrap',
               }}
             >
               {`${copy.hero.seatsPhrase} · ${naira} ${copy.hero.priceSuffix}`}

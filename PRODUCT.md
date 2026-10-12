@@ -15,7 +15,7 @@ web
 - **Livestream viewers:** outside Lagos or not paying; they register free and get a link. Registration is not live yet.
 
 ## Product Purpose
-Sell the 100 in-person seats for **FlagIQ AI Summit '26** (Saturday 3 October 2026, 10:00–16:00, AI UniPod, University of Lagos), run free livestream registration, and admit each ticket exactly once at the door.
+Sell the 100 in-person seats for **Flag Skool Summit**, powered by FlagIQ (Saturday 31 October 2026, 10:00–16:00, AI UniPod, University of Lagos), run free livestream registration, and admit each ticket exactly once at the door.
 
 Success, all confirmed goals:
 1. Seats sold, up to the 100 cap.
@@ -39,7 +39,7 @@ FlagIQ, an AI agency and education brand and the parent of Flag Skool, runs a on
 - Checkout asks one segmentation question: student or fresh graduate / working professional / founder or business owner.
 - A QR ticket is issued only after payment settles; the ticket link lets the buyer rename the holder.
 - Livestream: free, stored separately, never counts against seats. **Undecided:** registration ships "this week"; until then the card must say so, never a dead button.
-- The seat includes: the full day, every session including two workshops, lunch and refreshments, the Flag Skool Cohort 2 discount, structured networking, and Flag Skool community entry on Telegram.
+- The seat includes: the full day, every talk, lunch and refreshments, Flag Skool community access, the one-time Flag Skool Cohort 2 discount, and networking with builders, professionals and founders.
 - Speakers: Prof. Chika Yinka-Banjo (Director, AI UniPod; host), Michael Pepper, Saheed Niyi, and one more confirmed the week of 22 September. **Undecided:** roles for Pepper and Niyi, and the final speaker.
 - Every event-specific string lives in `config/event.config.ts`. Performance budget: LCP under 2.5s on slow mobile data; the OG image stays under 300KB.
 

@@ -31,6 +31,23 @@ function latestMigrationMatching(suffix: string): string {
   return readFileSync(resolve(MIGRATIONS_DIR, file), 'utf8');
 }
 
+const HARD_STOP_DECLARATION = /v_hard_stop\s+constant timestamptz := timestamptz '([^']+)'/;
+
+/**
+ * The hard stop the database ends up with: the value from the newest migration
+ * that writes one. The Summit seeded it; a reschedule later moved it.
+ */
+function latestHardStop(): string {
+  const file = readdirSync(MIGRATIONS_DIR)
+    .filter((name) => name.endsWith('.sql'))
+    .sort()
+    .filter((name) => HARD_STOP_DECLARATION.test(readFileSync(resolve(MIGRATIONS_DIR, name), 'utf8')))
+    .pop();
+
+  if (!file) throw new Error('No migration declares v_hard_stop');
+  return readFileSync(resolve(MIGRATIONS_DIR, file), 'utf8').match(HARD_STOP_DECLARATION)![1];
+}
+
 const intervalsIn = (text: string) =>
   [...text.matchAll(/interval '(\d+) minutes'/g)].map((m) => m[1]);
 
@@ -143,14 +160,16 @@ describe('summit migration', () => {
     expect(summitSql).toContain('check (attendee_type is not null or total_kobo = 0)');
   });
 
-  it('seeds the capacity, price and hard stop the config advertises', () => {
+  it('seeds the capacity and price the config advertises', () => {
     const capacity = summitSql.match(/v_capacity\s+constant integer\s+:= (\d+);/);
     const price = summitSql.match(/v_price\s+constant integer\s+:= (\d+);/);
-    const hardStop = summitSql.match(/v_hard_stop constant timestamptz := timestamptz '([^']+)'/);
 
     expect(Number(capacity![1])).toBe(eventConfig.ticketing.capacity);
     expect(Number(price![1])).toBe(eventConfig.ticketing.priceKobo);
-    expect(new Date(hardStop![1]).toISOString()).toBe(
+  });
+
+  it('ends on the hard stop the config advertises', () => {
+    expect(new Date(latestHardStop()).toISOString()).toBe(
       new Date(eventConfig.ticketing.salesHardStopAt).toISOString()
     );
   });

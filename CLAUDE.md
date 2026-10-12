@@ -1,10 +1,15 @@
-# FlagIQ AI Summit '26 — ticketing
+# Flag Skool Summit (powered by FlagIQ) — ticketing
 
 ## What this is
-Ticket sales and door check-in for **FlagIQ AI Summit '26**: 100 paid in-person
-seats (₦10,000 a seat, plus a ₦250 service charge per seat and the Paystack
-fee, both paid by the buyer) plus a free livestream. Saturday 3 October 2026, AI
-UniPod, University of Lagos. Sales open 15 September 2026.
+Ticket sales and door check-in for **Flag Skool Summit**, powered by FlagIQ: 100
+paid in-person seats (₦10,000 a seat, plus a ₦250 service charge per seat and
+the Paystack fee, both paid by the buyer) plus a free livestream. Saturday 31
+October 2026, AI UniPod, University of Lagos. Sales opened 15 September 2026
+and close Friday 30 October 23:59 WAT.
+
+Renamed from "FlagIQ AI Summit '26" and moved from 3 October on 2026-10-12
+(owner's call). The `FIQ` ticket prefix and `FIQ26` order references stay:
+they are pinned in SQL and printed on tickets already issued.
 
 Forked from the sign-out after-party ticket app (August 2026), which took real
 money in production. Checkout, webhook settlement, QR tickets, the offline
@@ -18,7 +23,7 @@ The build plan, with phases and decisions, is `summit-ticket-page-build-plan.md`
 Two screens carry this build. The landing page is marketing; these are the product.
 1. **Checkout.** Real money from real strangers, in a room of 100 people who
    know each other. Paid-but-no-ticket or ticket-but-not-paid is a public failure.
-2. **The door scanner on 3 October.** Staff phones on bad venue wifi, a queue
+2. **The door scanner on 31 October.** Staff phones on bad venue wifi, a queue
    waiting. It must work offline and never admit a code twice.
 
 Buyers are in Lagos on mid-tier Android phones on metered data. Support
@@ -92,7 +97,7 @@ Resend · Vercel
   `event/top-bar.css`, which checkout and the ticket page also render.
 - Figtree has no ₦ glyph: pages get it from the system font; the OG image
   loads Noto Sans from `assets/fonts/` as a fallback. Keep the OG image under
-  300KB (currently ~48KB). Display apostrophes go through `typographic()`;
+  300KB (currently ~53KB). Display apostrophes go through `typographic()`;
   config strings stay ASCII.
 - `/admin` and `/scan` are tools with their own dense, high-contrast look
   (`--tool-*`, `--scan-*`). Do not restyle them toward the public page.

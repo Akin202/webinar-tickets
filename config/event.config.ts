@@ -12,15 +12,18 @@ import type { AttendeeType } from '@/types/ticketing';
 
 export const eventConfig = {
   event: {
-    name: "FlagIQ AI Summit '26",
-    nameHighlight: "AI Summit",   // set in Flag Red inside the hero headline
-    shortName: "AI Summit '26",
+    name: "Flag Skool Summit",
+    nameHighlight: "Summit",   // set in Flag Red inside the hero headline
+    shortName: "Flag Skool Summit",
     eyebrow: "One room · One day · limited seats",
     lede:
-      "A full day on where AI actually is right now, what it means for your work, and what you can do with it on Monday morning. Live at the AI UniPod, University of Lagos.",
-    tagline: "AI Summit '26",
-    hostedBy: "FlagIQ",
-    date: "2026-10-03",
+      "A one-day summit on what's happening in AI right now and what young Nigerians can do with it. Live at the AI UniPod, University of Lagos.",
+    tagline: "Flag Skool Summit",
+    hostedBy: "Flag Skool",
+    // Shown as "Powered by FlagIQ" in the hero, footer and link preview.
+    poweredBy: "FlagIQ",
+    // Moved from 3 October on 2026-10-12 (owner's call).
+    date: "2026-10-31",
     // West Africa Time. Nigeria does not observe DST, so this is constant.
     utcOffset: "+01:00",
     doorsOpen: "10:00",   // 24h clock
@@ -56,9 +59,9 @@ export const eventConfig = {
     // PRIMARY sales gate, controlled from /admin.
     salesOpen: true,
 
-    // BACKSTOP ONLY. Must equal the value the Summit migration writes to
-    // event_settings — tests/migration-invariants.test.ts compares them.
-    salesHardStopAt: "2026-10-02T23:59:00+01:00",
+    // BACKSTOP ONLY. Must equal the value the latest hard-stop migration writes
+    // to event_settings — tests/migration-invariants.test.ts compares them.
+    salesHardStopAt: "2026-10-30T23:59:00+01:00",
   },
 
   /** Checkout's one segmentation question. Values are pinned to the contract. */
@@ -79,11 +82,11 @@ export const eventConfig = {
       "The total includes a ₦250 service charge per seat and the Paystack card fee.",
     includes: [
       "A seat in the room for the full day, 10:00 to 16:00",
-      "Every session, including the two workshops",
+      "Every talk, and first-hand insight into where AI is heading",
       "Lunch and refreshments",
+      "Access to the Flag Skool community",
       "A one-time Flag Skool Cohort 2 discount, for attendees only",
-      "Structured networking with the speakers and the room",
-      "Entry to the Flag Skool community on Telegram",
+      "Networking with builders, professionals and founders",
     ],
     microcopy:
       "Card, bank transfer and USSD through Paystack. Your QR ticket arrives the moment payment clears.",
@@ -96,7 +99,7 @@ export const eventConfig = {
     includes: [
       "Every main-stage talk, streamed live",
       "Live Q&A in the chat",
-      "Entry to the Flag Skool community on Telegram",
+      "Access to the Flag Skool community",
       "The recording, sent to you afterwards",
     ],
     microcopy:
@@ -113,7 +116,7 @@ export const eventConfig = {
       phoneHint: "Nigerian number, e.g. 0801 234 5678",
       attendeeTypeLabel: "Which sounds most like you?",
       attendeeTypePlaceholder: "Choose one",
-      marketingLabel: "Send me occasional updates from FlagIQ",
+      marketingLabel: "Send me occasional updates from Flag Skool and FlagIQ",
       // Shown after a first-time registration and a repeat one. Both are a
       // success: a repeat must never read as an error, or people register
       // again and again.
@@ -150,7 +153,7 @@ export const eventConfig = {
       eyebrow: "Two ways in",
       heading: "Be in the room, or watch it live.",
       body:
-        "Seats are limited, and the room is the only place the networking, the workshops and the Cohort 2 discount happen. The livestream is free and always will be.",
+        "Seats are limited, and the room is the only place the networking, the lunch and the Cohort 2 discount happen. The livestream is free and always will be.",
     },
     speakers: {
       eyebrow: "Speaking",
@@ -172,6 +175,15 @@ export const eventConfig = {
       eyebrow: "Before you pay",
       heading: "The questions we'll get anyway.",
     },
+    organisers: {
+      eyebrow: "Who's behind it",
+      heading: "Who is behind it.",
+    },
+    partners: {
+      heading: "Partners",
+      // Shown while the partners list below is empty.
+      placeholder: "Partners to be announced",
+    },
     closer: {
       heading: "One room. One Saturday.",
       body: "Everyone leaves with something they can use on Monday. That's the whole promise.",
@@ -181,8 +193,6 @@ export const eventConfig = {
   // photoUrl null renders an initials placeholder. announced:false is the
   // "one more to come" card — flipping it is the second announcement moment.
   speakers: [
-    { id: "solarin-akintunde", name: "Solarin Akintunde", role: null, photoUrl: null, announced: true },
-    { id: "michael-pepper", name: "Michael Pepper", role: null, photoUrl: null, announced: true },
     {
       id: "chika-yinka-banjo",
       name: "Prof. Chika Yinka-Banjo",
@@ -190,13 +200,27 @@ export const eventConfig = {
       photoUrl: null,
       announced: true,
     },
-    { id: "saheed-niyi", name: "Saheed Niyi", role: null, photoUrl: null, announced: true },
+    {
+      id: "michael-pepper",
+      name: "Michael Pepper",
+      role: "AI Systems & Personal Branding Strategist",
+      photoUrl: null,
+      announced: true,
+    },
+    { id: "saheed-niyi", name: "Saheed Niyi", role: "Founder, YarnGPT", photoUrl: null, announced: true },
     {
       id: "tba",
-      name: "One more to come",
-      role: "The final speaker is confirmed in the week of 22 September.",
+      name: "To be announced",
+      role: "One more speaker, named closer to the day.",
       photoUrl: null,
       announced: false,
+    },
+    {
+      id: "solarin-akintunde",
+      name: "Solarin Akintunde Oluwatobi",
+      role: "Co-Founder & CEO, FlagIQ. Founder, Flag Skool. Opens the summit.",
+      photoUrl: null,
+      announced: true,
     },
   ] as ReadonlyArray<{
     id: string;
@@ -207,19 +231,19 @@ export const eventConfig = {
   }>,
 
   programme: [
-    { time: "10:00", title: "Doors open, registration and coffee", durationMins: 30 },
-    { time: "10:30", title: "Opening — and how FlagIQ started", durationMins: 25, speakerId: "solarin-akintunde" },
-    { time: "10:55", title: "A talk on AI", durationMins: 20, speakerId: "solarin-akintunde" },
+    { time: "10:00", title: "Doors open", durationMins: 30 },
+    { time: "10:30", title: "Opening & the FlagIQ story", durationMins: 25, speakerId: "solarin-akintunde" },
+    { time: "10:55", title: "Where AI is today", durationMins: 20, speakerId: "solarin-akintunde" },
     { time: "11:15", title: "Prof. Chika Yinka-Banjo", durationMins: 25, speakerId: "chika-yinka-banjo" },
     { time: "11:40", title: "Where we are now", durationMins: 20, speakerId: "solarin-akintunde" },
-    { time: "12:00", title: "What you can do with it", durationMins: 25, speakerId: "solarin-akintunde" },
-    { time: "12:25", title: "Testimonials from the community", durationMins: 15 },
+    { time: "12:00", title: "What you can do", durationMins: 25, speakerId: "solarin-akintunde" },
+    { time: "12:25", title: "Testimonials", durationMins: 15 },
     { time: "12:40", title: "Break — lunch and networking", durationMins: 40, isBreak: true },
     { time: "13:20", title: "Michael Pepper", durationMins: 30, speakerId: "michael-pepper" },
-    { time: "13:50", title: "To be announced", durationMins: 25, speakerId: "tba" },
+    { time: "13:50", title: "Guest speaker — to be announced", durationMins: 25, speakerId: "tba" },
     { time: "14:15", title: "Saheed Niyi", durationMins: 25, speakerId: "saheed-niyi" },
-    { time: "14:40", title: "Product launch", durationMins: 30, isLaunch: true },
-    { time: "15:10", title: "Open networking", durationMins: 50 },
+    { time: "14:40", title: "Launch: the Flag Skool learning platform & community", durationMins: 30, isLaunch: true },
+    { time: "15:10", title: "Networking", durationMins: 50 },
     { time: "16:00", title: "Close", durationMins: null },
   ] as ReadonlyArray<{
     time: string;
@@ -258,7 +282,7 @@ export const eventConfig = {
     {
       question: "What do I get with a seat?",
       answer:
-        "A seat for the full day, every session including both workshops, lunch and refreshments, the attendee-only Cohort 2 discount, and the networking block. There is nothing else to pay on the day.",
+        "A seat for the full day, every talk, lunch and refreshments, access to the Flag Skool community, the attendee-only Cohort 2 discount, and the networking block. There is nothing else to pay on the day.",
     },
     {
       question: "Why is the total a bit more than ₦10,000?",
@@ -268,7 +292,7 @@ export const eventConfig = {
     {
       question: "I'm not in Lagos. Is the livestream really free?",
       answer:
-        "Really free. Every main-stage talk is streamed and you get the recording afterwards. What you won't get is the room, the workshops and the networking, which is the honest reason to travel.",
+        "Really free. Every main-stage talk is streamed and you get the recording afterwards. What you won't get is the room, the lunch and the networking, which is the honest reason to travel.",
     },
     {
       question: "What if it sells out?",
@@ -276,6 +300,24 @@ export const eventConfig = {
         "Seats are limited and there is no overbooking. When the last one sells, that's it — there is no waitlist. The livestream stays free.",
     },
   ],
+
+  /** "About the organisers". */
+  organisers: [
+    {
+      name: "Flag Skool",
+      body: "An AI education community that has trained over 750 young Nigerians to use AI in their work and study.",
+      url: null,
+    },
+    {
+      name: "FlagIQ",
+      body: "An AI consultation and transformation agency in Lagos.",
+      url: "https://flagiq.org",
+    },
+  ] as ReadonlyArray<{ name: string; body: string; url: string | null }>,
+
+  // Empty shows copy.partners.placeholder. Add a logo (self-hosted under
+  // /public/assets/partners) and the section switches to the logo row.
+  partners: [] as ReadonlyArray<{ name: string; logoUrl: string; url: string | null }>,
 
   brand: {
     primary: "#E3173E",   // signal red: primary actions and the launch marker (white on it 4.7:1)
@@ -303,10 +345,11 @@ export const eventConfig = {
 
   support: {
     whatsappNumber: "+2348139927805",
-    whatsappMessage: "Hi, I need help with my AI Summit ticket",
+    whatsappMessage: "Hi, I need help with my Flag Skool Summit ticket",
     // Must be a real inbox. A host that is a CNAME to Vercel cannot hold MX.
     email: "admin@flagiq.org",
     organiserName: "FlagIQ",
+    linkedinUrl: "https://www.linkedin.com/in/solarinakintunde1",
   },
 
   legal: {
@@ -321,9 +364,9 @@ export const eventConfig = {
     // Also the fallback when NEXT_PUBLIC_SITE_URL is unset — it decides where
     // Paystack sends buyers back to. Must always name a host we control.
     siteUrl: "https://webinar.flagiq.org",
-    title: "FlagIQ AI Summit '26 — 3 October, AI UniPod",
+    title: "Flag Skool Summit — 31 October, AI UniPod",
     description:
-      "One room, one day, limited seats. Where AI actually is right now and what to do with it on Monday. In person at the AI UniPod, University of Lagos, or free on the livestream.",
+      "A one-day summit on what's happening in AI right now and what young Nigerians can do with it. Saturday 31 October at the AI UniPod, University of Lagos, or free on the livestream. Powered by FlagIQ.",
   },
 
   featureFlags: {

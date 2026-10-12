@@ -11,13 +11,13 @@ const { event, support, programme, speakers } = eventConfig;
 const LAGOS = 'Africa/Lagos';
 const doorsOpen = new Date(doorsOpenIso);
 
-/** "SATURDAY 3 OCTOBER 2026" */
+/** "SATURDAY 31 OCTOBER 2026" */
 export const DATE_FULL_CAPS = doorsOpen
   .toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: LAGOS })
   .replace(',', '')
   .toUpperCase();
 
-/** "3 October 2026" */
+/** "31 October 2026" */
 export const DATE_LONG = doorsOpen.toLocaleDateString('en-GB', {
   day: 'numeric',
   month: 'long',

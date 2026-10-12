@@ -36,6 +36,7 @@ export function EventHero({ price }: EventHeroProps) {
           {DATE_FULL_CAPS} <span aria-hidden="true">·</span> {HOURS}
         </p>
         <h1 id="hero-heading">{EVENT_NAME}</h1>
+        <p className="sp-hero__powered">Powered by {event.poweredBy}</p>
         <p className="sp-hero__sub">
           <span>
             {event.venueName}, {event.venueArea}.
