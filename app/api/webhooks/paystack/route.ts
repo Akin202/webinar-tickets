@@ -2,6 +2,7 @@ import { NextResponse, after } from 'next/server';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { deliverTicketEmail } from '@/lib/email';
+import { sendTicketConfirmation } from '@/lib/ticket-confirmation';
 import { logSettleOutcome } from '@/lib/api/settle-log';
 import { rateLimit, clientIp } from '@/lib/api/rate-limit';
 import { readCappedText, MAX_WEBHOOK_BODY_BYTES } from '@/lib/api/body-limit';
@@ -99,6 +100,9 @@ export async function POST(req: Request) {
     // Nothing here may affect the 200 — Paystack retries non-2xx, and a
     // bounced email is not a reason to reprocess a payment.
     after(async () => {
+      if (row.order_id) {
+        await sendTicketConfirmation(row.order_id);
+      }
       const result = await deliverTicketEmail(reference);
       if (!result.ok) console.error(`webhook: ticket email for ${reference} — ${result.reason}`);
     });

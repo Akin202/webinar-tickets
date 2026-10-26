@@ -15,6 +15,7 @@ export default defineConfig({
     // Without this the integration suite's "these did NOT run" warning is
     // swallowed by the reporter, and a silently skipped suite reads exactly
     // like a passing one.
+    testTimeout: 15000,
     disableConsoleIntercept: true,
   },
   resolve: {

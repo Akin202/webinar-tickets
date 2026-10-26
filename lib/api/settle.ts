@@ -4,6 +4,7 @@ import { after } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { paystackVerify } from '@/lib/api/paystack';
 import { deliverTicketEmail } from '@/lib/email';
+import { sendTicketConfirmation } from '@/lib/ticket-confirmation';
 import { logSettleOutcome } from '@/lib/api/settle-log';
 
 export type VerifySource = 'verify' | 'cron';
@@ -56,6 +57,18 @@ export async function verifyAndSettle(
   logSettleOutcome(source, reference, verified.amountKobo, outcome);
   if (outcome === 'paid') {
     after(async () => {
+      let orderId = settledRow?.order_id;
+      if (!orderId) {
+        const { data: ord } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('reference', reference)
+          .maybeSingle();
+        orderId = ord?.id;
+      }
+      if (orderId) {
+        await sendTicketConfirmation(orderId, supabase);
+      }
       const result = await deliverTicketEmail(reference);
       if (!result.ok) console.error(`${source}: ticket email for ${reference} — ${result.reason}`);
     });

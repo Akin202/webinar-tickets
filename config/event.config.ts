@@ -225,7 +225,7 @@ export const eventConfig = {
       id: "solarin-akintunde",
       name: "Solarin Akintunde Oluwatobi",
       role: "Co-Founder & CEO, FlagIQ. Founder, Flag Skool. Opens the summit.",
-      photoUrl: null,
+      photoUrl: "/assets/speakers/solarin-akintunde.webp",
       announced: true,
     },
   ] as ReadonlyArray<{

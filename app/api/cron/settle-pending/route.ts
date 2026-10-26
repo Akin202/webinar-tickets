@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { verifyAndSettle } from '@/lib/api/settle';
+import { sendTicketConfirmation } from '@/lib/ticket-confirmation';
 
 /**
  * The settle-pending sweep. The FlagIQ Paystack business is shared by several
@@ -73,5 +74,36 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ checked: rows?.length ?? 0, settled, failed });
+  // Retry paid orders where confirmation email has not been sent and paid_at is older than 2 minutes
+  const twoMinutesAgo = new Date(Date.now() - 2 * 60_000).toISOString();
+  const { data: unsentRows, error: unsentError } = await supabase
+    .from('orders')
+    .select('id')
+    .eq('status', 'paid')
+    .is('confirmation_email_sent_at', null)
+    .lte('paid_at', twoMinutesAgo)
+    .order('paid_at', { ascending: false })
+    .limit(MAX_PER_RUN);
+
+  let confirmationsRetried = 0;
+  if (unsentError) {
+    console.error('settle-pending: unsent confirmations lookup failed', unsentError);
+  } else {
+    for (const { id } of (unsentRows ?? []) as { id: string }[]) {
+      try {
+        const res = await sendTicketConfirmation(id, supabase);
+        if (res.ok && !res.skipped) confirmationsRetried += 1;
+      } catch (err) {
+        console.warn(`settle-pending: confirmation retry failed for order ${id}`, err);
+      }
+    }
+  }
+
+  return NextResponse.json({
+    checked: rows?.length ?? 0,
+    settled,
+    failed,
+    confirmationsRetried,
+  });
 }
+

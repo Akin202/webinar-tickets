@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import path from 'node:path';
 
 /**
  * Security headers. No CSP with 'unsafe-inline' theatre — Next injects
@@ -29,6 +30,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.resolve('.'),
   reactStrictMode: true,
   poweredByHeader: false,
   images: {

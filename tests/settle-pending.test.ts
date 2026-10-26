@@ -16,12 +16,16 @@ const SECRET = 'cron_secret_for_tests';
 const rpc = vi.fn();
 const paystackVerify = vi.fn();
 const after = vi.fn();
+const sendTicketConfirmation = vi.fn();
 const query = {
   select: vi.fn(),
   in: vi.fn(),
   gte: vi.fn(),
   order: vi.fn(),
   limit: vi.fn(),
+  eq: vi.fn(),
+  is: vi.fn(),
+  lte: vi.fn(),
 };
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -29,6 +33,9 @@ vi.mock('@/lib/supabase/admin', () => ({
 }));
 vi.mock('@/lib/api/paystack', () => ({ paystackVerify }));
 vi.mock('@/lib/email', () => ({ deliverTicketEmail: vi.fn() }));
+vi.mock('@/lib/ticket-confirmation', () => ({
+  sendTicketConfirmation: (...args: unknown[]) => sendTicketConfirmation(...args),
+}));
 vi.mock('next/server', async () => {
   const actual = await vi.importActual<typeof import('next/server')>('next/server');
   return { ...actual, after };
@@ -45,7 +52,10 @@ function request(authorization: string | null): Request {
 }
 
 function pendingOrders(...references: string[]) {
-  query.limit.mockResolvedValue({ data: references.map((reference) => ({ reference })), error: null });
+  query.limit.mockReset();
+  query.limit
+    .mockResolvedValueOnce({ data: references.map((reference) => ({ reference })), error: null })
+    .mockResolvedValueOnce({ data: [], error: null });
 }
 
 function paystackSays(status: string, amountKobo = 1_050_000) {
@@ -57,7 +67,16 @@ beforeEach(() => {
   rpc.mockReset().mockResolvedValue({ data: [{ outcome: 'paid' }], error: null });
   paystackVerify.mockReset();
   after.mockReset();
-  for (const fn of [query.select, query.in, query.gte, query.order]) {
+  sendTicketConfirmation.mockReset().mockResolvedValue({ ok: true });
+  for (const fn of [
+    query.select,
+    query.in,
+    query.gte,
+    query.order,
+    query.eq,
+    query.is,
+    query.lte,
+  ]) {
     fn.mockReset().mockReturnValue(query);
   }
   query.limit.mockReset();
@@ -109,12 +128,27 @@ describe('settle-pending sweep', () => {
     const res = await GET(request(`Bearer ${SECRET}`));
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ checked: 3, settled: 1, failed: 1 });
+    expect(await res.json()).toEqual({ checked: 3, settled: 1, failed: 1, confirmationsRetried: 0 });
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith('mark_order_paid', expect.objectContaining({
       p_reference: 'FIQ26-PAID',
       p_amount_kobo: 1_050_000,
     }));
+  });
+
+  it('retries unsent confirmations for paid orders older than 2 minutes', async () => {
+    query.limit.mockReset();
+    query.limit
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [{ id: 'order-uuid-1' }, { id: 'order-uuid-2' }], error: null });
+
+    const res = await GET(request(`Bearer ${SECRET}`));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ checked: 0, settled: 0, failed: 0, confirmationsRetried: 2 });
+    expect(query.eq).toHaveBeenCalledWith('status', 'paid');
+    expect(query.is).toHaveBeenCalledWith('confirmation_email_sent_at', null);
+    expect(sendTicketConfirmation).toHaveBeenCalledWith('order-uuid-1', expect.anything());
+    expect(sendTicketConfirmation).toHaveBeenCalledWith('order-uuid-2', expect.anything());
   });
 });
 

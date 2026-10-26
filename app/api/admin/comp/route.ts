@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { z } from 'zod';
 import { requireStaffRequest } from '@/lib/api/staff-guard';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
+import { sendTicketConfirmation } from '@/lib/ticket-confirmation';
 import { normaliseNgPhone } from '@/types/ticketing';
 import { ticketFromRow } from '@/lib/api/mappers';
 import { generateReference } from '@/lib/api/reference';
@@ -90,6 +91,10 @@ export async function POST(req: Request) {
     console.error('comp mint failed:', paidError);
     return NextResponse.json({ error: 'Could not issue ticket.' }, { status: 500 });
   }
+
+  after(async () => {
+    await sendTicketConfirmation(createdRow.order_id, supabase);
+  });
 
   const { data: ticketRow, error: ticketError } = await supabase
     .from('tickets')
