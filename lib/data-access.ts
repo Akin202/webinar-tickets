@@ -143,6 +143,7 @@ export async function initiatePurchase(input: {
   attendeeType: AttendeeType;
   quantity: number;
   marketingOptIn?: boolean;
+  promoCode?: string;
 }): Promise<PurchaseStart> {
   return apiJson<PurchaseStart>('/api/checkout', {
     method: 'POST',

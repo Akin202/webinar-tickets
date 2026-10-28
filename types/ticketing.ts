@@ -334,6 +334,7 @@ export interface CheckoutValues {
   attendeeType: AttendeeType;
   quantity: number;
   marketingOptIn: boolean;
+  promoCode?: string;
 }
 
 export type EmailCampaignKind = 'essential' | 'marketing';

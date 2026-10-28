@@ -1,7 +1,7 @@
 import { eventConfig } from '@/config/event.config';
 import { DATE_FULL_CAPS, EVENT_NAME, HOURS } from './event-format';
 
-const { event, ticketing, copy } = eventConfig;
+const { event, ticketing, copy, livestream } = eventConfig;
 
 type EventHeroProps = {
   /** Live price from the sales counter, already formatted ("₦10,000"). */
@@ -49,10 +49,12 @@ export function EventHero({ price }: EventHeroProps) {
           <a className="sp-btn sp-btn--primary" href="#tickets">
             {copy.hero.seatCta}
           </a>
-          <a className="sp-btn sp-btn--outline" href="#livestream">
+          {livestream.open && (
+            <a className="sp-btn sp-btn--outline" href="#livestream">
             <PlayMark />
             {copy.hero.livestreamCta}
-          </a>
+            </a>
+          )}
         </div>
       </div>
     </section>

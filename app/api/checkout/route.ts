@@ -17,6 +17,7 @@ const checkoutSchema = z.object({
   attendeeType: z.enum(ATTENDEE_TYPES),
   quantity: z.number().int().min(1).max(eventConfig.ticketing.maxPerOrder),
   marketingOptIn: z.boolean().optional().default(false),
+  promoCode: z.string().trim().max(50).optional(),
 });
 
 export async function POST(req: Request) {
@@ -79,6 +80,54 @@ export async function POST(req: Request) {
 
   const reference = generateReference();
   const supabase = getSupabaseAdminClient();
+
+  const isPromo = Boolean(
+    parsed.promoCode &&
+    parsed.promoCode.trim().toUpperCase() === eventConfig.promo.code
+  );
+
+  if (isPromo) {
+    if (parsed.quantity > eventConfig.promo.maxQuantity) {
+      return NextResponse.json(
+        { error: 'Livestream promo code is valid for 1 seat only.', code: 'promo_limit' },
+        { status: 400 }
+      );
+    }
+    const { data: registration } = await supabase
+      .from('livestream_registrations')
+      .select('id')
+      .eq('email', parsed.buyerEmail.toLowerCase())
+      .maybeSingle();
+
+    if (!registration) {
+      return NextResponse.json(
+        {
+          error:
+            'This discount code is exclusive to registered livestream attendees. Please checkout using the email you registered with.',
+          code: 'promo_ineligible',
+        },
+        { status: 403 }
+      );
+    }
+
+    const { data: existingPaid } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('buyer_email', parsed.buyerEmail.toLowerCase())
+      .eq('status', 'paid')
+      .eq('unit_price_kobo', eventConfig.promo.discountPriceKobo)
+      .maybeSingle();
+
+    if (existingPaid) {
+      return NextResponse.json(
+        {
+          error: 'This email has already claimed a discounted summit seat.',
+          code: 'promo_already_used',
+        },
+        { status: 409 }
+      );
+    }
+  }
   let totals: ReturnType<typeof computeOrderTotals> | null = null;
   let outcome: string | null = null;
   let createError: unknown = null;
@@ -93,7 +142,7 @@ export async function POST(req: Request) {
     }
     totals = computeOrderTotals({
       quantity: parsed.quantity,
-      unitPriceKobo: settings.current_price_kobo,
+      unitPriceKobo: isPromo ? eventConfig.promo.discountPriceKobo : settings.current_price_kobo,
       serviceChargeKoboPerSeat: eventConfig.ticketing.serviceChargeKoboPerSeat,
       passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
     });
@@ -109,6 +158,7 @@ export async function POST(req: Request) {
       p_total_kobo: totals.totalKobo,
       p_marketing_opt_in: parsed.marketingOptIn,
       p_attendee_type: parsed.attendeeType,
+      p_promo_code: isPromo ? eventConfig.promo.code : null,
     });
     createError = created.error;
     const createdRow = (Array.isArray(created.data) ? created.data[0] : created.data) as { outcome?: string } | null;
@@ -121,6 +171,18 @@ export async function POST(req: Request) {
   }
   if (outcome === 'sales_closed') {
     return NextResponse.json({ error: 'Ticket sales are currently closed.', code: 'sales_closed' }, { status: 409 });
+  }
+  if (outcome === 'promo_already_used') {
+    return NextResponse.json(
+      { error: 'This email has already claimed a discounted summit seat.', code: 'promo_already_used' },
+      { status: 409 }
+    );
+  }
+  if (outcome === 'promo_ineligible') {
+    return NextResponse.json(
+      { error: 'This promo code is exclusive to registered livestream attendees.', code: 'promo_ineligible' },
+      { status: 403 }
+    );
   }
   if (outcome === 'sold_out') {
     return NextResponse.json({ error: 'Not enough tickets remaining.', code: 'sold_out' }, { status: 409 });
@@ -152,6 +214,7 @@ export async function POST(req: Request) {
         quantity: parsed.quantity,
         attendee_type: parsed.attendeeType,
         event: eventConfig.event.name,
+        promo_code: isPromo ? eventConfig.promo.code : undefined,
       },
     });
     // accessCode opens the Paystack popup on our own page; authorizationUrl is

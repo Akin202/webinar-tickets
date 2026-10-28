@@ -6,6 +6,7 @@ import { rateLimit, clientIp } from '@/lib/api/rate-limit';
 import { readCappedJson, cappedBodyError } from '@/lib/api/body-limit';
 import { readDeviceId, isDeviceIdConfigured } from '@/lib/api/device-id';
 import { sendLivestreamEmail } from '@/lib/email';
+import { eventConfig } from '@/config/event.config';
 
 /**
  * Free livestream registration.
@@ -25,6 +26,12 @@ const livestreamSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  if (!eventConfig.livestream.open) {
+    return NextResponse.json(
+      { error: 'Livestream registration is currently closed.' },
+      { status: 403 }
+    );
+  }
   const ip = clientIp(req);
 
   // Same layering as checkout: the device cookie is stamped on the page view,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,7 +18,7 @@ import { QuantityStepper } from '@/components/QuantityStepper';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 export interface CheckoutFormProps {
-  initialValues?: Partial<CheckoutValues>;
+  initialValues?: Partial<CheckoutValues> & { promoCode?: string };
   purchaseState: PurchaseState; // controlled from outside
   onSubmit: (values: CheckoutValues) => void; // fire and forget
   unitPriceKobo: number;
@@ -74,12 +74,72 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
     },
   });
 
+  const [promoInput, setPromoInput] = useState(initialValues?.promoCode || '');
+  const [promoApplied, setPromoApplied] = useState<{
+    code: string;
+    discountUnitPriceKobo: number;
+    message: string;
+  } | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+
+  const validateAndApplyPromo = async (codeToValidate: string, emailToValidate: string) => {
+    const trimmedCode = codeToValidate.trim().toUpperCase();
+    const trimmedEmail = emailToValidate.trim().toLowerCase();
+
+    if (!trimmedCode) {
+      setPromoError('Please enter a promo code');
+      return;
+    }
+    if (!trimmedEmail) {
+      setPromoError('Please enter your email above first');
+      return;
+    }
+
+    setIsValidatingPromo(true);
+    setPromoError(null);
+
+    try {
+      const res = await fetch('/api/promo/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: trimmedCode, email: trimmedEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.valid) {
+        setPromoApplied(null);
+        setPromoError(data.error || 'Invalid promo code');
+      } else {
+        setPromoApplied({
+          code: data.code,
+          discountUnitPriceKobo: data.discountUnitPriceKobo,
+          message: data.message,
+        });
+        setValue('quantity', 1);
+        setPromoError(null);
+      }
+    } catch {
+      setPromoError('Unable to validate code. Please retry.');
+    } finally {
+      setIsValidatingPromo(false);
+    }
+  };
+
+  const emailValue = watch('email');
+
+  useEffect(() => {
+    if (initialValues?.promoCode && emailValue && emailValue.includes('@') && emailValue.includes('.')) {
+      void validateAndApplyPromo(initialValues.promoCode, emailValue);
+    }
+  }, [initialValues?.promoCode, emailValue]);
+
   const quantity = watch('quantity') || 1;
+  const effectiveUnitPriceKobo = promoApplied ? promoApplied.discountUnitPriceKobo : unitPriceKobo;
   // Single source of truth for what an order costs — the server computes the
   // authoritative total with this same function.
   const totals = computeOrderTotals({
     quantity,
-    unitPriceKobo,
+    unitPriceKobo: effectiveUnitPriceKobo,
     serviceChargeKoboPerSeat: eventConfig.ticketing.serviceChargeKoboPerSeat,
     passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
   });
@@ -98,8 +158,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       email: data.email,
       phone: normaliseNgPhone(data.phone),
       attendeeType: data.attendeeType,
-      quantity: data.quantity,
+      quantity: promoApplied ? 1 : data.quantity,
       marketingOptIn: data.marketingOptIn,
+      promoCode: promoApplied ? promoApplied.code : undefined,
     });
   };
 
@@ -275,21 +336,92 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
               control={control}
               render={({ field }) => (
                 <QuantityStepper
-                  value={field.value}
+                  value={promoApplied ? 1 : field.value}
                   min={1}
-                  max={eventConfig.ticketing.maxPerOrder}
+                  max={promoApplied ? 1 : eventConfig.ticketing.maxPerOrder}
                   onChange={field.onChange}
-                  disabled={isDisabled}
+                  disabled={isDisabled || Boolean(promoApplied)}
                 />
               )}
             />
+          </div>
+
+          {/* Promo Code Input */}
+          <div className="space-y-2 py-3 border-b border-brand-border">
+            <label htmlFor="promoCodeInput" className="block text-xs font-semibold uppercase tracking-wider text-brand-muted">
+              Discount code
+            </label>
+            {promoApplied ? (
+              <div
+                className="p-3 rounded-xl bg-brand-surface border border-emerald-500/40 flex items-center justify-between gap-3 text-sm"
+                role="status"
+              >
+                <div>
+                  <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4" /> {promoApplied.code} applied
+                  </span>
+                  <p className="text-xs text-brand-muted mt-0.5">{promoApplied.message}</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => {
+                    setPromoApplied(null);
+                    setPromoError(null);
+                    setPromoInput('');
+                  }}
+                  className="text-xs font-semibold text-brand-muted hover:text-white underline transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    id="promoCodeInput"
+                    type="text"
+                    disabled={isDisabled || isValidatingPromo}
+                    value={promoInput}
+                    onChange={(e) => {
+                      setPromoInput(e.target.value.toUpperCase());
+                      if (promoError) setPromoError(null);
+                    }}
+                    placeholder="e.g. STREAM2SUMMIT"
+                    className="min-h-[44px] flex-1 px-3.5 rounded-xl bg-brand-subtle border border-brand-border text-brand-text text-sm uppercase placeholder:normal-case placeholder:text-brand-dim focus:border-brand-accent transition-colors"
+                  />
+                  <button
+                    type="button"
+                    disabled={isDisabled || isValidatingPromo || !promoInput.trim()}
+                    onClick={() => validateAndApplyPromo(promoInput, watch('email'))}
+                    className="min-h-[44px] px-4 rounded-xl bg-brand-surface border border-brand-border text-brand-text font-bold text-xs hover:border-brand-border-strong hover:bg-brand-card-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isValidatingPromo ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
+                  </button>
+                </div>
+                {promoError && (
+                  <p className="text-xs text-brand-urgent" role="alert">
+                    {promoError}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Pricing Breakdown */}
           <div className="space-y-2.5 text-sm">
             <div className="flex items-center justify-between text-brand-muted">
               <span>Price per seat</span>
-              <span className="font-mono text-brand-text">{koboToNaira(unitPriceKobo)}</span>
+              <span className="font-mono text-brand-text">
+                {promoApplied ? (
+                  <>
+                    <span className="line-through text-brand-dim mr-2">{koboToNaira(unitPriceKobo)}</span>
+                    <span className="text-emerald-400 font-bold">{koboToNaira(effectiveUnitPriceKobo)}</span>
+                  </>
+                ) : (
+                  koboToNaira(unitPriceKobo)
+                )}
+              </span>
             </div>
 
             <div className="flex items-center justify-between text-brand-muted">

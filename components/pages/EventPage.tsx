@@ -83,8 +83,12 @@ export const EventPage: React.FC = () => {
           : 'Limited seats available';
 
   const unavailableNote = isSoldOut
-    ? `Every seat is taken. There is no waitlist — the livestream is still free.`
-    : 'Online sales are closed. The livestream is still free.';
+    ? (eventConfig.livestream.open
+        ? `Every seat is taken. There is no waitlist — the livestream is still free.`
+        : `Every seat is taken. There is no waitlist.`)
+    : (eventConfig.livestream.open
+        ? 'Online sales are closed. The livestream is still free.'
+        : 'Online sales are closed.');
 
   const seatState: SeatState = {
     capacity,

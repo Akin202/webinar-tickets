@@ -56,13 +56,20 @@ export const CheckoutPage: React.FC = () => {
   // is not rendered until the availability check finishes, so there is no
   // server/client mismatch to hydrate.
   const [initialQuantity, setInitialQuantity] = useState<number>(1);
+  const [initialPromo, setInitialPromo] = useState<string>('');
+  const [initialEmail, setInitialEmail] = useState<string>('');
 
   // Whether the form can be shown at all. Without this the sales_closed and
   // sold_out screens existed but nothing ever reached them — the admin toggle
   // would have been invisible to buyers.
   useEffect(() => {
     let cancelled = false;
-    const requested = Number(new URLSearchParams(window.location.search).get('qty'));
+    const sp = new URLSearchParams(window.location.search);
+    const requested = Number(sp.get('qty'));
+    const urlPromo = sp.get('code') || sp.get('promo') || '';
+    const urlEmail = sp.get('email') || '';
+    if (urlPromo) setInitialPromo(urlPromo);
+    if (urlEmail) setInitialEmail(urlEmail);
     if (Number.isInteger(requested) && requested >= 1) {
       setInitialQuantity(Math.min(requested, eventConfig.ticketing.maxPerOrder));
     }
@@ -110,6 +117,7 @@ export const CheckoutPage: React.FC = () => {
         attendeeType: values.attendeeType,
         quantity: values.quantity,
         marketingOptIn: values.marketingOptIn,
+        promoCode: values.promoCode,
       });
 
       setActivePurchase(res);
@@ -382,11 +390,11 @@ export const CheckoutPage: React.FC = () => {
                 thing still on offer is the free livestream. */}
             <div className="pt-5 border-t border-brand-border text-left space-y-2">
               <h2 className="text-base font-bold text-brand-text">
-                You can still watch it live
+                {eventConfig.livestream.open ? 'You can still watch it live' : 'Sold out'}
               </h2>
               <p className="text-sm text-brand-muted leading-relaxed">
-                There is no waitlist. The livestream is free and does not count against
-                the seats. <Link href="/#livestream" className="underline">Join the livestream</Link>.
+                {eventConfig.livestream.open ? 'There is no waitlist. The livestream is free and does not count against' : 'There is no waitlist.'}
+                {eventConfig.livestream.open && (<>the seats. <Link href="/#livestream" className="underline">Join the livestream</Link>.</>)}
               </p>
             </div>
 
@@ -413,8 +421,8 @@ export const CheckoutPage: React.FC = () => {
                 Ticket sales are closed.
               </h1>
               <p className="text-base text-brand-muted mt-2 leading-relaxed">
-                Online ticket sales for {EVENT_NAME} are closed. The livestream
-                is still free &mdash; <Link href="/#livestream" className="underline">join it here</Link>.
+                Online ticket sales for {EVENT_NAME} are closed.{eventConfig.livestream.open && ' The livestream'}
+                {eventConfig.livestream.open && (<> is still free &mdash; <Link href="/#livestream" className="underline">join it here</Link>.</>)}
               </p>
             </div>
 
@@ -497,7 +505,11 @@ export const CheckoutPage: React.FC = () => {
             </div>
 
             <CheckoutForm
-              initialValues={{ quantity: initialQuantity }}
+              initialValues={{
+                quantity: initialPromo ? 1 : initialQuantity,
+                email: initialEmail,
+                promoCode: initialPromo,
+              }}
               onSubmit={handleFormSubmit}
               purchaseState={purchaseState}
               unitPriceKobo={currentPriceKobo}

@@ -146,15 +146,15 @@ export function TicketsSection({ state, onQuantityChange }: TicketsSectionProps)
           <article className="sp-way sp-way--free" id="livestream" aria-labelledby="livestream-title">
             <div className="sp-way__head">
               <h3 id="livestream-title">{livestream.title}</h3>
-              <p className="sp-chip">{livestream.tag}</p>
+              <p className="sp-chip">{livestream.open ? livestream.tag : livestream.closedTag}</p>
             </div>
             <p className="sp-way__price">
-              <span className="sp-money">Free</span> <small>{livestream.priceNote}</small>
+              <span className="sp-money">{livestream.open ? 'Free' : 'Closed'}</span> <small>{livestream.open ? livestream.priceNote : livestream.closedPriceNote}</small>
             </p>
             <Includes lines={livestream.includes} />
             <div className="sp-order">
               <LivestreamForm />
-              <p className="sp-micro">{livestream.microcopy}</p>
+              {livestream.open && <p className="sp-micro">{livestream.microcopy}</p>}
             </div>
           </article>
         </div>

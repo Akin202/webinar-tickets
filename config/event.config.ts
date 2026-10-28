@@ -93,6 +93,12 @@ export const eventConfig = {
   },
 
   livestream: {
+    open: false,
+    closedTag: "Registration closed",
+    closedPriceNote: "no longer available",
+    closedHeading: "Registration is closed",
+    closedBody:
+      "Free online registration is closed for now. In-person summit seats are still available in the room.",
     tag: "Online · Free",
     title: "Livestream",
     priceNote: "no card needed",
@@ -373,6 +379,12 @@ export const eventConfig = {
     title: "Flag Skool Summit — 31 October, AI UniPod",
     description:
       "A one-day summit on what's happening in AI right now and what young Nigerians can do with it. Saturday 31 October at the AI UniPod, University of Lagos, or free on the livestream. Powered by FlagIQ.",
+  },
+
+  promo: {
+    code: "STREAM2SUMMIT",
+    discountPriceKobo: 300_000,
+    maxQuantity: 1,
   },
 
   featureFlags: {

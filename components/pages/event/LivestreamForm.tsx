@@ -24,6 +24,18 @@ type Status =
  * an error — the server reports `already_registered` and the panel says so.
  */
 export function LivestreamForm() {
+  if (!livestream.open) {
+    return (
+      <div className="sp-done" role="status" style={{ display: 'grid', gap: '16px' }}>
+        <p className="sp-micro" style={{ fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
+          {typographic(livestream.closedBody)}
+        </p>
+        <a className="sp-btn sp-btn--primary sp-btn--wide" href="#tickets">
+          Get a Summit seat
+        </a>
+      </div>
+    );
+  }
   const fieldId = useId();
   const [status, setStatus] = useState<Status>({ state: 'idle' });
   const [values, setValues] = useState({
