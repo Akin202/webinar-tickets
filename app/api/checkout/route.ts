@@ -146,7 +146,7 @@ export async function POST(req: Request) {
       serviceChargeKoboPerSeat: eventConfig.ticketing.serviceChargeKoboPerSeat,
       passFeeToBuyer: eventConfig.ticketing.passFeeToBuyer,
     });
-    const created = await supabase.rpc('create_pending_order', {
+    const rpcParams: Record<string, unknown> = {
       p_reference: reference,
       p_buyer_name: parsed.buyerName,
       p_buyer_email: parsed.buyerEmail,
@@ -158,15 +158,21 @@ export async function POST(req: Request) {
       p_total_kobo: totals.totalKobo,
       p_marketing_opt_in: parsed.marketingOptIn,
       p_attendee_type: parsed.attendeeType,
-      p_promo_code: isPromo ? eventConfig.promo.code : null,
-    });
+    };
+    if (isPromo) {
+      rpcParams.p_promo_code = eventConfig.promo.code;
+    }
+    const created = await supabase.rpc('create_pending_order', rpcParams);
     createError = created.error;
     const createdRow = (Array.isArray(created.data) ? created.data[0] : created.data) as { outcome?: string } | null;
     outcome = createdRow?.outcome ?? null;
     if (outcome !== 'price_changed') break;
   }
-  if (createError || !outcome || !totals || outcome === 'price_changed') {
+  if (createError || !outcome || !totals) {
     console.error('create_pending_order failed:', createError);
+    return NextResponse.json({ error: 'Failed to process ticket reservation. Please retry.' }, { status: 500 });
+  }
+  if (outcome === 'price_changed') {
     return NextResponse.json({ error: 'The ticket price just changed. Please retry.' }, { status: 409 });
   }
   if (outcome === 'sales_closed') {

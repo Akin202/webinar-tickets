@@ -2,6 +2,11 @@
 -- Allows STREAM2SUMMIT promo code for livestream attendees at N3,000 (300,000 kobo),
 -- capped strictly at 1 ticket per livestream email.
 
+-- Drop previous 11-argument overload so Postgres replaces cleanly without signature collision
+drop function if exists public.create_pending_order(
+  text, text, text, text, integer, integer, integer, integer, integer, boolean, public.attendee_type
+);
+
 create or replace function public.create_pending_order(
   p_reference text, p_buyer_name text, p_buyer_email text, p_buyer_phone text,
   p_quantity integer, p_unit_price_kobo integer, p_service_charge_kobo integer,
@@ -79,4 +84,3 @@ $$;
 revoke execute on function public.create_pending_order(
   text, text, text, text, integer, integer, integer, integer, integer, boolean, public.attendee_type, text
 ) from public, anon, authenticated;
-
