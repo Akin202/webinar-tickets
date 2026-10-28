@@ -74,7 +74,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
     },
   });
 
-  const [promoInput, setPromoInput] = useState(initialValues?.promoCode || '');
+
   const [promoApplied, setPromoApplied] = useState<{
     code: string;
     discountUnitPriceKobo: number;
@@ -346,67 +346,22 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
             />
           </div>
 
-          {/* Promo Code Input */}
-          <div className="space-y-2 py-3 border-b border-brand-border">
-            <label htmlFor="promoCodeInput" className="block text-xs font-semibold uppercase tracking-wider text-brand-muted">
-              Discount code
-            </label>
-            {promoApplied ? (
+          {/* Active Promo Notice (URL-activated only) */}
+          {promoApplied && (
+            <div className="py-3 border-b border-brand-border">
               <div
-                className="p-3 rounded-xl bg-brand-surface border border-emerald-500/40 flex items-center justify-between gap-3 text-sm"
+                className="p-3.5 rounded-xl bg-brand-surface border border-emerald-500/40 flex items-center justify-between gap-3 text-sm"
                 role="status"
               >
                 <div>
                   <span className="font-bold text-emerald-400 flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4" /> {promoApplied.code} applied
+                    <ShieldCheck className="w-4 h-4" /> Special attendee rate applied
                   </span>
                   <p className="text-xs text-brand-muted mt-0.5">{promoApplied.message}</p>
                 </div>
-                <button
-                  type="button"
-                  disabled={isDisabled}
-                  onClick={() => {
-                    setPromoApplied(null);
-                    setPromoError(null);
-                    setPromoInput('');
-                  }}
-                  className="text-xs font-semibold text-brand-muted hover:text-white underline transition-colors"
-                >
-                  Remove
-                </button>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    id="promoCodeInput"
-                    type="text"
-                    disabled={isDisabled || isValidatingPromo}
-                    value={promoInput}
-                    onChange={(e) => {
-                      setPromoInput(e.target.value.toUpperCase());
-                      if (promoError) setPromoError(null);
-                    }}
-                    placeholder="e.g. STREAM2SUMMIT"
-                    className="min-h-[44px] flex-1 px-3.5 rounded-xl bg-brand-subtle border border-brand-border text-brand-text text-sm uppercase placeholder:normal-case placeholder:text-brand-dim focus:border-brand-accent transition-colors"
-                  />
-                  <button
-                    type="button"
-                    disabled={isDisabled || isValidatingPromo || !promoInput.trim()}
-                    onClick={() => validateAndApplyPromo(promoInput, watch('email'))}
-                    className="min-h-[44px] px-4 rounded-xl bg-brand-surface border border-brand-border text-brand-text font-bold text-xs hover:border-brand-border-strong hover:bg-brand-card-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isValidatingPromo ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
-                  </button>
-                </div>
-                {promoError && (
-                  <p className="text-xs text-brand-urgent" role="alert">
-                    {promoError}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Pricing Breakdown */}
           <div className="space-y-2.5 text-sm">

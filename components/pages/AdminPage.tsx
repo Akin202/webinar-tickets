@@ -159,6 +159,10 @@ export const AdminPage: React.FC = () => {
 
   // Modal Dialogs
   const [isCompModalOpen, setIsCompModalOpen] = useState<boolean>(false);
+  const [isLivestreamModalOpen, setIsLivestreamModalOpen] = useState<boolean>(false);
+  const [livestreamName, setLivestreamName] = useState<string>('');
+  const [livestreamEmail, setLivestreamEmail] = useState<string>('');
+  const [livestreamBusy, setLivestreamBusy] = useState<boolean>(false);
   const [compName, setCompName] = useState<string>('');
   const [compPhone, setCompPhone] = useState<string>('');
 
@@ -333,6 +337,33 @@ export const AdminPage: React.FC = () => {
   };
 
   // Issue complimentary ticket handler
+  const handleAddLivestream = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!livestreamEmail.trim() || !livestreamName.trim()) return;
+    setLivestreamBusy(true);
+    try {
+      const res = await fetch('/api/admin/livestream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: livestreamName.trim(),
+          email: livestreamEmail.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to add livestream registration');
+      triggerNotice(`Added ${livestreamEmail} to livestream registrations.`);
+      setIsLivestreamModalOpen(false);
+      setLivestreamName('');
+      setLivestreamEmail('');
+      void loadData();
+    } catch (err: any) {
+      triggerNotice(err instanceof Error ? err.message : 'Failed to add registration');
+    } finally {
+      setLivestreamBusy(false);
+    }
+  };
+
   const handleIssueComp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!compName.trim()) return;
@@ -1411,6 +1442,75 @@ export const AdminPage: React.FC = () => {
                   className="flex-1 min-h-[44px] py-2 bg-gray-900 hover:bg-black text-white rounded-xl font-bold"
                 >
                   Issue Pass
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: Add Livestream Registration
+      ======================================================== */}
+      {isLivestreamModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
+        >
+          <div className="w-full max-w-md bg-white rounded-2xl border border-gray-300 shadow-2xl p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto my-auto">
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900">Add Livestream Attendee</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Register an email as a livestream attendee to test campaigns and exclusive discounts.
+              </p>
+            </div>
+
+            <form onSubmit={handleAddLivestream} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={livestreamName}
+                  onChange={(e) => setLivestreamName(e.target.value)}
+                  placeholder="e.g. Test Attendee"
+                  className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-xl text-gray-900 text-sm focus:border-gray-900 focus:outline-none"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">
+                  Email Address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={livestreamEmail}
+                  onChange={(e) => setLivestreamEmail(e.target.value)}
+                  placeholder="e.g. test@example.com"
+                  className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-xl text-gray-900 text-sm focus:border-gray-900 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-gray-200">
+                <button
+                  type="button"
+                  disabled={livestreamBusy}
+                  onClick={() => setIsLivestreamModalOpen(false)}
+                  className="flex-1 min-h-[44px] py-2 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={livestreamBusy || !livestreamEmail || !livestreamName}
+                  className="flex-1 min-h-[44px] py-2 bg-gray-900 hover:bg-black text-white rounded-xl font-bold disabled:opacity-50"
+                >
+                  {livestreamBusy ? 'Adding…' : 'Add Attendee'}
                 </button>
               </div>
             </form>
