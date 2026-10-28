@@ -350,7 +350,7 @@ export const eventConfig = {
   },
 
   support: {
-    whatsappNumber: "+2348139927805",
+    whatsappNumber: "+2349067123103",
     whatsappMessage: "Hi, I need help with my Flag Skool Summit ticket",
     // Must be a real inbox. A host that is a CNAME to Vercel cannot hold MX.
     email: "admin@flagiq.org",
